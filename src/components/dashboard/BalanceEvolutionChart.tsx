@@ -1,5 +1,5 @@
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, CartesianGrid } from 'recharts';
-import { BalanceEvolutionData } from '../../types/financial';
+import type { BalanceEvolutionData } from '../../types/financial';
 
 interface BalanceEvolutionChartProps {
   data: BalanceEvolutionData[];
@@ -24,7 +24,8 @@ export function BalanceEvolutionChart({ data }: BalanceEvolutionChartProps) {
               contentStyle={{ backgroundColor: '#111827', borderColor: '#243041', borderRadius: '8px' }}
               itemStyle={{ color: '#00e676', fontWeight: 'bold' }}
               labelStyle={{ color: '#94A3B8' }}
-              formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Saldo']}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Saldo']}
             />
             <Area 
               type="monotone" 

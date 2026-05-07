@@ -1,6 +1,6 @@
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';
-import { CategoryExpenseData } from '../../types/financial';
+import type { CategoryExpenseData } from '../../types/financial';
 
 interface CategoryExpenseChartProps {
   data: CategoryExpenseData[];
@@ -29,7 +29,8 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
             <Tooltip 
               contentStyle={{ backgroundColor: '#111827', borderColor: '#243041', borderRadius: '8px' }}
               itemStyle={{ fontWeight: 'bold' }}
-              formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Gasto']}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Gasto']}
             />
           </PieChart>
         </ResponsiveContainer>
