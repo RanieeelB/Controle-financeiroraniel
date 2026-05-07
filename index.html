@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d9488" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Controle Financeiro</title>
+  </head>
+  <body>
+    <main class="app">
+      <h1>Controle Financeiro</h1>
+
+      <section class="saldo" aria-label="Resumo financeiro">
+        <p>Saldo atual</p>
+        <strong id="saldo">R$ 0,00</strong>
+        <div class="resumo">
+          <span>Receitas: <b id="total-receitas">R$ 0,00</b></span>
+          <span>Despesas: <b id="total-despesas">R$ 0,00</b></span>
+        </div>
+      </section>
+
+      <section aria-label="Novo lançamento">
+        <form id="form-lancamento" class="formulario">
+          <label>
+            Descrição
+            <input id="descricao" name="descricao" type="text" required maxlength="80" />
+          </label>
+
+          <label>
+            Valor
+            <input id="valor" name="valor" type="number" step="0.01" min="0.01" required />
+          </label>
+
+          <label>
+            Tipo
+            <select id="tipo" name="tipo" required>
+              <option value="receita">Receita</option>
+              <option value="despesa">Despesa</option>
+            </select>
+          </label>
+
+          <button type="submit">Adicionar</button>
+        </form>
+      </section>
+
+      <section aria-label="Lista de lançamentos">
+        <h2>Lançamentos</h2>
+        <ul id="lista-lancamentos" class="lista"></ul>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
