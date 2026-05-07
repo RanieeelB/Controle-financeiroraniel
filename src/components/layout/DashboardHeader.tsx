@@ -1,6 +1,10 @@
 import { CalendarDays } from 'lucide-react';
 
-export function DashboardHeader() {
+interface DashboardHeaderProps {
+  onOpenNewTransaction: () => void;
+}
+
+export function DashboardHeader({ onOpenNewTransaction }: DashboardHeaderProps) {
   return (
     <header className="bg-surface/80 dark:bg-surface/80 backdrop-blur-md text-primary dark:text-primary sticky top-0 z-40 border-b border-outline-variant dark:border-outline-variant flex justify-between items-center w-full h-24 px-xl">
       <div className="flex flex-col">
@@ -15,7 +19,10 @@ export function DashboardHeader() {
         <button className="px-md py-sm rounded border border-[#243041] text-on-surface-variant font-label-md text-[14px] font-semibold hover:bg-surface-container-high transition-all">
           Exportar PDF
         </button>
-        <button className="px-md py-sm rounded bg-primary text-on-primary font-label-md text-[14px] font-semibold hover:bg-primary-fixed transition-all shadow-[0_0_15px_rgba(0,230,118,0.2)]">
+        <button 
+          onClick={onOpenNewTransaction}
+          className="px-md py-sm rounded bg-primary text-on-primary font-label-md text-[14px] font-semibold hover:bg-primary-fixed transition-all shadow-[0_0_15px_rgba(0,230,118,0.2)]"
+        >
           Novo lançamento
         </button>
       </div>
