@@ -1,7 +1,15 @@
 import { AppSidebar } from './components/layout/AppSidebar';
 import { DashboardHeader } from './components/layout/DashboardHeader';
 import { SummaryCardsGrid } from './components/dashboard/SummaryCardsGrid';
-import { summaryCardsMock } from './data/financial-dashboard-mock';
+import { BalanceEvolutionChart } from './components/dashboard/BalanceEvolutionChart';
+import { CategoryExpenseChart } from './components/dashboard/CategoryExpenseChart';
+import { MonthlyAnalysisCard } from './components/dashboard/MonthlyAnalysisCard';
+import { 
+  summaryCardsMock, 
+  balanceEvolutionMock,
+  categoryExpenseMock,
+  monthlyAnalysisMock
+} from './data/financial-dashboard-mock';
 
 function App() {
   return (
@@ -16,6 +24,19 @@ function App() {
 
         <div className="flex-1 p-xl max-w-[1440px] w-full mx-auto space-y-xl relative z-10">
           <SummaryCardsGrid data={summaryCardsMock} />
+          
+          {/* Charts & Complex Data */}
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-md">
+            <BalanceEvolutionChart data={balanceEvolutionMock} />
+            
+            <div className="flex flex-col gap-md">
+              <CategoryExpenseChart data={categoryExpenseMock} />
+              <MonthlyAnalysisCard 
+                data={monthlyAnalysisMock} 
+                committedPercentage={summaryCardsMock.committedIncome} 
+              />
+            </div>
+          </section>
         </div>
       </main>
     </div>
