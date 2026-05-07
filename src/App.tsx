@@ -1,5 +1,7 @@
 import { AppSidebar } from './components/layout/AppSidebar';
 import { DashboardHeader } from './components/layout/DashboardHeader';
+import { SummaryCardsGrid } from './components/dashboard/SummaryCardsGrid';
+import { summaryCardsMock } from './data/financial-dashboard-mock';
 
 function App() {
   return (
@@ -13,10 +15,7 @@ function App() {
         <DashboardHeader />
 
         <div className="flex-1 p-xl max-w-[1440px] w-full mx-auto space-y-xl relative z-10">
-          {/* Main dashboard content will go here */}
-          <div className="h-full w-full flex items-center justify-center border-2 border-dashed border-outline-variant/30 rounded-xl min-h-[400px]">
-            <p className="text-on-surface-variant font-body-md">Dashboard Content Area</p>
-          </div>
+          <SummaryCardsGrid data={summaryCardsMock} />
         </div>
       </main>
     </div>
