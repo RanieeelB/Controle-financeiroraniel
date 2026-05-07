@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Controle Financeiro">
+  <rect width="512" height="512" rx="96" fill="#0d9488" />
+  <path fill="#ffffff" d="M128 264h56v120h-56zm100-96h56v216h-56zm100 48h56v168h-56z"/>
+  <circle cx="156" cy="180" r="28" fill="#99f6e4" />
+  <path fill="#99f6e4" d="M238 118h140v28H238z"/>
+</svg>
