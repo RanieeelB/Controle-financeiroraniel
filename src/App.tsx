@@ -9,18 +9,21 @@ import { UpcomingBills } from './components/dashboard/UpcomingBills';
 import { CreditCardInvoices } from './components/dashboard/CreditCardInvoices';
 import { FinancialGoalCard } from './components/dashboard/FinancialGoalCard';
 import { NewTransactionModal } from './components/dashboard/NewTransactionModal';
-import { 
-  summaryCardsMock, 
-  balanceEvolutionMock,
-  categoryExpenseMock,
-  monthlyAnalysisMock,
-  upcomingBillsMock,
-  creditCardInvoicesMock,
-  financialGoalsMock
-} from './data/financial-dashboard-mock';
+import { useDashboardData } from './hooks/useDashboardData';
 
 function App() {
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState(false);
+  
+  const { 
+    upcomingBills, 
+    creditCardInvoices, 
+    financialGoals, 
+    summaryCards, 
+    balanceEvolution, 
+    categoryExpense, 
+    monthlyAnalysis, 
+    isLoading 
+  } = useDashboardData();
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex selection:bg-primary-container selection:text-on-primary-container relative">
@@ -33,31 +36,39 @@ function App() {
         <DashboardHeader onOpenNewTransaction={() => setIsNewTransactionModalOpen(true)} />
 
         <div className="flex-1 p-xl max-w-[1440px] w-full mx-auto space-y-xl relative z-10">
-          <SummaryCardsGrid data={summaryCardsMock} />
-          
-          {/* Charts & Complex Data */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-md">
-            <BalanceEvolutionChart data={balanceEvolutionMock} />
-            
-            <div className="flex flex-col gap-md">
-              <CategoryExpenseChart data={categoryExpenseMock} />
-              <MonthlyAnalysisCard 
-                data={monthlyAnalysisMock} 
-                committedPercentage={summaryCardsMock.committedIncome} 
-              />
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          </section>
+          ) : (
+            <>
+              <SummaryCardsGrid data={summaryCards} />
+              
+              {/* Charts & Complex Data */}
+              <section className="grid grid-cols-1 lg:grid-cols-3 gap-md">
+                <BalanceEvolutionChart data={balanceEvolution} />
+                
+                <div className="flex flex-col gap-md">
+                  <CategoryExpenseChart data={categoryExpense} />
+                  <MonthlyAnalysisCard 
+                    data={monthlyAnalysis} 
+                    committedPercentage={summaryCards.committedIncome} 
+                  />
+                </div>
+              </section>
 
-          {/* Bottom Data Rows */}
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-xl">
-            <UpcomingBills data={upcomingBillsMock} />
-            
-            {/* Right Column: Faturas & Metas */}
-            <div className="flex flex-col gap-md">
-              <CreditCardInvoices data={creditCardInvoicesMock} />
-              <FinancialGoalCard data={financialGoalsMock} />
-            </div>
-          </section>
+              {/* Bottom Data Rows */}
+              <section className="grid grid-cols-1 lg:grid-cols-3 gap-xl">
+                <UpcomingBills data={upcomingBills} />
+                
+                {/* Right Column: Faturas & Metas */}
+                <div className="flex flex-col gap-md">
+                  <CreditCardInvoices data={creditCardInvoices} />
+                  <FinancialGoalCard data={financialGoals} />
+                </div>
+              </section>
+            </>
+          )}
         </div>
       </main>
 
