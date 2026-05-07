@@ -33,7 +33,6 @@ form.addEventListener("submit", (event) => {
 
   salvarLancamentos();
   form.reset();
-  tipoInput.value = "receita";
   descricaoInput.focus();
   render();
 });
