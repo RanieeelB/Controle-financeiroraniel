@@ -6,13 +6,15 @@ import { CategoryExpenseChart } from './components/dashboard/CategoryExpenseChar
 import { MonthlyAnalysisCard } from './components/dashboard/MonthlyAnalysisCard';
 import { UpcomingBills } from './components/dashboard/UpcomingBills';
 import { CreditCardInvoices } from './components/dashboard/CreditCardInvoices';
+import { FinancialGoalCard } from './components/dashboard/FinancialGoalCard';
 import { 
   summaryCardsMock, 
   balanceEvolutionMock,
   categoryExpenseMock,
   monthlyAnalysisMock,
   upcomingBillsMock,
-  creditCardInvoicesMock
+  creditCardInvoicesMock,
+  financialGoalsMock
 } from './data/financial-dashboard-mock';
 
 function App() {
@@ -49,6 +51,7 @@ function App() {
             {/* Right Column: Faturas & Metas */}
             <div className="flex flex-col gap-md">
               <CreditCardInvoices data={creditCardInvoicesMock} />
+              <FinancialGoalCard data={financialGoalsMock} />
             </div>
           </section>
         </div>
