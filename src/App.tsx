@@ -4,11 +4,13 @@ import { SummaryCardsGrid } from './components/dashboard/SummaryCardsGrid';
 import { BalanceEvolutionChart } from './components/dashboard/BalanceEvolutionChart';
 import { CategoryExpenseChart } from './components/dashboard/CategoryExpenseChart';
 import { MonthlyAnalysisCard } from './components/dashboard/MonthlyAnalysisCard';
+import { UpcomingBills } from './components/dashboard/UpcomingBills';
 import { 
   summaryCardsMock, 
   balanceEvolutionMock,
   categoryExpenseMock,
-  monthlyAnalysisMock
+  monthlyAnalysisMock,
+  upcomingBillsMock
 } from './data/financial-dashboard-mock';
 
 function App() {
@@ -35,6 +37,15 @@ function App() {
                 data={monthlyAnalysisMock} 
                 committedPercentage={summaryCardsMock.committedIncome} 
               />
+            </div>
+          </section>
+
+          {/* Bottom Data Rows */}
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-xl">
+            <UpcomingBills data={upcomingBillsMock} />
+            
+            {/* Right Column: Faturas & Metas will go here */}
+            <div className="flex flex-col gap-md">
             </div>
           </section>
         </div>
