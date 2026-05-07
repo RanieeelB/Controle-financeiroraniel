@@ -1,0 +1,121 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.app {
+  width: min(680px, 100%);
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+  padding: 1.2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+.saldo {
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: #fff;
+  border-radius: 0.8rem;
+  padding: 1rem;
+}
+
+.saldo strong {
+  display: block;
+  font-size: 1.8rem;
+}
+
+.resumo {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.formulario {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.formulario label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.formulario input,
+.formulario select,
+.formulario button {
+  font: inherit;
+  border-radius: 0.6rem;
+  border: 1px solid #cbd5e1;
+  padding: 0.55rem 0.7rem;
+}
+
+.formulario button {
+  cursor: pointer;
+  border-color: #0d9488;
+  background: #0d9488;
+  color: #fff;
+  font-weight: 600;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.lista li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.8rem;
+}
+
+.lista li small {
+  display: block;
+  color: #64748b;
+}
+
+.receita {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.despesa {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.lista button {
+  border: 0;
+  border-radius: 0.45rem;
+  background: #fee2e2;
+  color: #b91c1c;
+  cursor: pointer;
+  padding: 0.4rem 0.55rem;
+}
