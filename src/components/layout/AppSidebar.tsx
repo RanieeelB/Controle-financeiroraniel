@@ -1,3 +1,4 @@
+import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   ArrowDownToLine,
@@ -13,16 +14,16 @@ import {
 import { cn } from '../../lib/utils'; // I will create a utils file
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '#', active: true },
-  { label: 'Entradas', icon: ArrowDownToLine, href: '#' },
-  { label: 'Gastos', icon: ShoppingCart, href: '#' },
-  { label: 'Cartões', icon: CreditCard, href: '#' },
-  { label: 'Faturas', icon: ReceiptText, href: '#' },
-  { label: 'Contas Fixas', icon: CalendarDays, href: '#' },
-  { label: 'Investimentos', icon: TrendingUp, href: '#' },
-  { label: 'Metas', icon: Target, href: '#' },
-  { label: 'Relatórios', icon: BarChart3, href: '#' },
-  { label: 'Configurações', icon: Settings, href: '#' },
+  { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
+  { label: 'Entradas', icon: ArrowDownToLine, href: '/entradas' },
+  { label: 'Gastos', icon: ShoppingCart, href: '/gastos' },
+  { label: 'Cartões', icon: CreditCard, href: '/cartoes' },
+  { label: 'Faturas', icon: ReceiptText, href: '/faturas' },
+  { label: 'Contas Fixas', icon: CalendarDays, href: '/contas-fixas' },
+  { label: 'Investimentos', icon: TrendingUp, href: '/investimentos' },
+  { label: 'Metas', icon: Target, href: '/metas' },
+  { label: 'Relatórios', icon: BarChart3, href: '/relatorios' },
+  { label: 'Configurações', icon: Settings, href: '/configuracoes' },
 ];
 
 export function AppSidebar() {
@@ -39,19 +40,19 @@ export function AppSidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
-            <a
+            <NavLink
               key={item.label}
-              href={item.href}
-              className={cn(
+              to={item.href}
+              className={({ isActive }) => cn(
                 "flex items-center gap-md px-md py-sm rounded-lg transition-all duration-200 active:scale-95",
-                item.active 
+                isActive 
                   ? "text-primary dark:text-primary font-bold border-r-2 border-primary bg-primary-container/10" 
                   : "text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-variant dark:hover:bg-surface-variant"
               )}
             >
               <Icon size={20} />
               <span>{item.label}</span>
-            </a>
+            </NavLink>
           );
         })}
       </div>

@@ -1,15 +1,21 @@
 import { CalendarDays } from 'lucide-react';
 
 interface DashboardHeaderProps {
+  title?: string;
+  subtitle?: string;
   onOpenNewTransaction: () => void;
 }
 
-export function DashboardHeader({ onOpenNewTransaction }: DashboardHeaderProps) {
+export function DashboardHeader({ 
+  title = "Olá, Raniel", 
+  subtitle = "Aqui está o resumo financeiro de Maio de 2026", 
+  onOpenNewTransaction 
+}: DashboardHeaderProps) {
   return (
     <header className="bg-surface/80 dark:bg-surface/80 backdrop-blur-md text-primary dark:text-primary sticky top-0 z-40 border-b border-outline-variant dark:border-outline-variant flex justify-between items-center w-full h-24 px-xl">
       <div className="flex flex-col">
-        <h2 className="font-h1 text-[32px] font-semibold text-on-background leading-tight">Olá, Raniel</h2>
-        <p className="font-body-md text-[16px] text-on-surface-variant">Aqui está o resumo financeiro de Maio de 2026</p>
+        <h2 className="font-h1 text-[32px] font-semibold text-on-background leading-tight">{title}</h2>
+        <p className="font-body-md text-[16px] text-on-surface-variant">{subtitle}</p>
       </div>
 
       <div className="flex items-center gap-md">
