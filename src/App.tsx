@@ -3,6 +3,13 @@ import { Layout } from './components/layout/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Incomes } from './pages/Incomes';
 import { Expenses } from './pages/Expenses';
+import { Cards } from './pages/Cards';
+import { Invoices } from './pages/Invoices';
+import { FixedBills } from './pages/FixedBills';
+import { Investments } from './pages/Investments';
+import { Goals } from './pages/Goals';
+import { Reports } from './pages/Reports';
+import { Settings } from './pages/Settings';
 
 function App() {
   return (
@@ -12,15 +19,13 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="entradas" element={<Incomes />} />
           <Route path="gastos" element={<Expenses />} />
-          
-          {/* Placeholder for other routes */}
-          <Route path="cartoes" element={<div className="text-on-surface">Página de Cartões em breve</div>} />
-          <Route path="faturas" element={<div className="text-on-surface">Página de Faturas em breve</div>} />
-          <Route path="contas-fixas" element={<div className="text-on-surface">Página de Contas Fixas em breve</div>} />
-          <Route path="investimentos" element={<div className="text-on-surface">Página de Investimentos em breve</div>} />
-          <Route path="metas" element={<div className="text-on-surface">Página de Metas em breve</div>} />
-          <Route path="relatorios" element={<div className="text-on-surface">Página de Relatórios em breve</div>} />
-          <Route path="configuracoes" element={<div className="text-on-surface">Página de Configurações em breve</div>} />
+          <Route path="cartoes" element={<Cards />} />
+          <Route path="faturas" element={<Invoices />} />
+          <Route path="contas-fixas" element={<FixedBills />} />
+          <Route path="investimentos" element={<Investments />} />
+          <Route path="metas" element={<Goals />} />
+          <Route path="relatorios" element={<Reports />} />
+          <Route path="configuracoes" element={<Settings />} />
         </Route>
       </Routes>
     </Router>
