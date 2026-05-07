@@ -5,12 +5,14 @@ import { BalanceEvolutionChart } from './components/dashboard/BalanceEvolutionCh
 import { CategoryExpenseChart } from './components/dashboard/CategoryExpenseChart';
 import { MonthlyAnalysisCard } from './components/dashboard/MonthlyAnalysisCard';
 import { UpcomingBills } from './components/dashboard/UpcomingBills';
+import { CreditCardInvoices } from './components/dashboard/CreditCardInvoices';
 import { 
   summaryCardsMock, 
   balanceEvolutionMock,
   categoryExpenseMock,
   monthlyAnalysisMock,
-  upcomingBillsMock
+  upcomingBillsMock,
+  creditCardInvoicesMock
 } from './data/financial-dashboard-mock';
 
 function App() {
@@ -44,8 +46,9 @@ function App() {
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-xl">
             <UpcomingBills data={upcomingBillsMock} />
             
-            {/* Right Column: Faturas & Metas will go here */}
+            {/* Right Column: Faturas & Metas */}
             <div className="flex flex-col gap-md">
+              <CreditCardInvoices data={creditCardInvoicesMock} />
             </div>
           </section>
         </div>
