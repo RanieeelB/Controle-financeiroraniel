@@ -102,6 +102,8 @@ function render() {
       totalDespesas += lancamento.valor;
     }
 
+    const lancamentoIdSeguro = escapeHtml(lancamento.id);
+
     li.innerHTML = `
       <div>
         <strong>${escapeHtml(lancamento.descricao)}</strong>
@@ -111,7 +113,7 @@ function render() {
         <span class="${tipoClasse}">${
       lancamento.tipo === "receita" ? "+" : "-"
     } ${formatarMoeda(lancamento.valor)}</span>
-        <button type="button" data-action="remover" data-id="${lancamento.id}" aria-label="Remover lançamento">✕</button>
+        <button type="button" data-action="remover" data-id="${lancamentoIdSeguro}" aria-label="Remover lançamento">✕</button>
       </div>
     `;
 

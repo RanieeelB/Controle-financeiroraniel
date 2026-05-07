@@ -1,5 +1,12 @@
 const CACHE_NAME = "controle-financeiro-v1";
-const APP_SHELL = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./assets/icon.svg"];
+const APP_SHELL = [
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./app.js",
+  "./manifest.webmanifest",
+  "./assets/icon.svg",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -26,7 +33,7 @@ self.addEventListener("fetch", (event) => {
 
       return fetch(event.request)
         .then((response) => {
-          if (!response || response.status !== 200 || (response.type !== "basic" && response.type !== "cors")) {
+          if (!isValidResponse(response)) {
             return response;
           }
 
@@ -38,3 +45,7 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+function isValidResponse(response) {
+  return response && response.status === 200 && (response.type === "basic" || response.type === "cors");
+}
