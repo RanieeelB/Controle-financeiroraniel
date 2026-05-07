@@ -1,4 +1,4 @@
-import { CreditCardInvoice } from '../../types/financial';
+import type { CreditCardInvoice } from '../../types/financial';
 
 interface CreditCardInvoicesProps {
   data: CreditCardInvoice[];

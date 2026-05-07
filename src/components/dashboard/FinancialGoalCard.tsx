@@ -1,4 +1,4 @@
-import { FinancialGoal } from '../../types/financial';
+import type { FinancialGoal } from '../../types/financial';
 
 interface FinancialGoalCardProps {
   data: FinancialGoal[];

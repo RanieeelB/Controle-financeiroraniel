@@ -1,4 +1,4 @@
-import { X, Payments, ShoppingCart, CreditCard, CalendarToday, TrendingUp, CalendarMonth, ExpandMore, Layers, CheckCircle } from 'lucide-react';
+import { X, Banknote, ShoppingCart, CreditCard, CalendarDays, TrendingUp, Calendar, ChevronDown, Layers, CheckCircle } from 'lucide-react';
 
 interface NewTransactionModalProps {
   isOpen: boolean;
@@ -41,7 +41,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                 <label className="cursor-pointer">
                   <input type="radio" name="type" value="entrada" className="peer sr-only" defaultChecked />
                   <div className="flex flex-col items-center justify-center p-md bg-[#080B12] border border-[#243041] rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 transition-all text-on-surface-variant peer-checked:text-primary">
-                    <Payments className="mb-xs" size={24} />
+                    <Banknote className="mb-xs" size={24} />
                     <span className="font-label-md text-[12px]">Entrada</span>
                   </div>
                 </label>
@@ -62,7 +62,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                 <label className="cursor-pointer">
                   <input type="radio" name="type" value="fixa" className="peer sr-only" />
                   <div className="flex flex-col items-center justify-center p-md bg-[#080B12] border border-[#243041] rounded-lg peer-checked:border-tertiary peer-checked:bg-tertiary/10 transition-all text-on-surface-variant peer-checked:text-tertiary">
-                    <CalendarToday className="mb-xs" size={24} />
+                    <CalendarDays className="mb-xs" size={24} />
                     <span className="font-label-md text-[12px]">Fixa</span>
                   </div>
                 </label>
@@ -108,7 +108,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                     type="date" 
                     className="w-full bg-[#080B12] border border-[#243041] rounded-lg pl-xl pr-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors [color-scheme:dark] outline-none" 
                   />
-                  <CalendarMonth className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none ml-xs" size={20} />
+                  <Calendar className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none ml-xs" size={20} />
                 </div>
               </div>
               <div>
@@ -121,7 +121,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                     <option value="transporte">Transporte</option>
                     <option value="saude">Saúde</option>
                   </select>
-                  <ExpandMore className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
+                  <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
                 </div>
               </div>
             </div>
@@ -137,7 +137,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                     <option value="debito">Cartão de Débito</option>
                     <option value="dinheiro">Dinheiro</option>
                   </select>
-                  <ExpandMore className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
+                  <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
                 </div>
               </div>
               <div>
@@ -147,7 +147,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                     <option value="black">Mastercard Black (Final 4321)</option>
                     <option value="platinum">Visa Platinum (Final 9876)</option>
                   </select>
-                  <ExpandMore className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
+                  <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
                 </div>
               </div>
             </div>

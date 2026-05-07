@@ -1,4 +1,4 @@
-import { MonthlyAnalysis } from '../../types/financial';
+import type { MonthlyAnalysis } from '../../types/financial';
 
 interface MonthlyAnalysisCardProps {
   data: MonthlyAnalysis;

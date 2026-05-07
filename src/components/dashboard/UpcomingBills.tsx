@@ -1,5 +1,5 @@
 import { Wifi, Zap, Landmark } from 'lucide-react';
-import { UpcomingBill } from '../../types/financial';
+import type { UpcomingBill } from '../../types/financial';
 
 interface UpcomingBillsProps {
   data: UpcomingBill[];

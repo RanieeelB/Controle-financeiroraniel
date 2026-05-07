@@ -1,5 +1,5 @@
 import { Wallet, ArrowDownToLine, AlertTriangle, PiggyBank, CreditCard, ReceiptText, TrendingUp } from 'lucide-react';
-import { SummaryCards } from '../../types/financial';
+import type { SummaryCards } from '../../types/financial';
 
 interface SummaryCardsGridProps {
   data: SummaryCards;
