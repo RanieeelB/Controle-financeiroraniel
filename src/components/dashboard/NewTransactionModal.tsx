@@ -5,10 +5,11 @@ import {
   CheckCircle,
   ChevronDown,
   Layers,
+  Plus,
   ShoppingCart,
   X,
 } from 'lucide-react';
-import { createFinancialTransaction } from '../../lib/financialActions';
+import { createCategory, createFinancialTransaction } from '../../lib/financialActions';
 import { getInstallmentAmount, parseCurrencyValue } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
@@ -20,10 +21,12 @@ interface NewTransactionModalProps {
 }
 
 type TransactionType = Transaction['type'];
+type CategoryType = 'entrada' | 'gasto' | 'ambos';
 type PaymentMethod = 'pix' | 'credito' | 'dinheiro' | 'transferencia';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+const categoryColors = ['#75ff9e', '#7bd0ff', '#ffba79', '#ffb4ab', '#859585'];
 
 export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProps) {
   const [type, setType] = useState<TransactionType>('entrada');
@@ -36,10 +39,16 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
   const [totalInstallments, setTotalInstallments] = useState(1);
   const [currentInstallment, setCurrentInstallment] = useState(1);
   const [notes, setNotes] = useState('');
+  const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryType, setNewCategoryType] = useState<CategoryType>('gasto');
+  const [newCategoryColor, setNewCategoryColor] = useState(categoryColors[0]);
+  const [categoryError, setCategoryError] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const { categories } = useCategories(type);
+  const { categories, refetch: refetchCategories } = useCategories(type);
   const { cards } = useCreditCards();
 
   const parsedAmount = useMemo(() => parseCurrencyValue(amount), [amount]);
@@ -59,6 +68,11 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
     setTotalInstallments(1);
     setCurrentInstallment(1);
     setNotes('');
+    setIsCategoryFormOpen(false);
+    setNewCategoryName('');
+    setNewCategoryType('gasto');
+    setNewCategoryColor(categoryColors[0]);
+    setCategoryError('');
     setError('');
   }
 
@@ -66,6 +80,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
     setType(nextType);
     setCategoryId('');
     setPaymentMethod(nextType === 'entrada' ? 'pix' : 'dinheiro');
+    setNewCategoryType(nextType);
     setCardId('');
     setTotalInstallments(1);
     setCurrentInstallment(1);
@@ -115,6 +130,36 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
       setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar o lançamento.');
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleCreateCategory() {
+    setCategoryError('');
+
+    if (!newCategoryName.trim()) {
+      setCategoryError('Informe o nome da categoria.');
+      return;
+    }
+
+    setIsCreatingCategory(true);
+    try {
+      const category = await createCategory({
+        name: newCategoryName,
+        type: newCategoryType,
+        color: newCategoryColor,
+      });
+      await refetchCategories();
+      if (category.type === type || category.type === 'ambos') {
+        setCategoryId(category.id);
+      }
+      setNewCategoryName('');
+      setNewCategoryType(type);
+      setNewCategoryColor(categoryColors[0]);
+      setIsCategoryFormOpen(false);
+    } catch (submitError) {
+      setCategoryError(submitError instanceof Error ? submitError.message : 'Não foi possível criar a categoria.');
+    } finally {
+      setIsCreatingCategory(false);
     }
   }
 
@@ -224,8 +269,19 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                 </div>
               </label>
               <label>
-                <span className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
-                  Categoria
+                <span className="flex items-center justify-between font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
+                  <span>Categoria</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCategoryType(type);
+                      setIsCategoryFormOpen(current => !current);
+                    }}
+                    className="inline-flex items-center gap-xs text-[12px] normal-case text-primary hover:text-primary-fixed transition-colors"
+                  >
+                    <Plus size={14} />
+                    Nova categoria
+                  </button>
                 </span>
                 <div className="relative">
                   <select
@@ -242,6 +298,66 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                 </div>
               </label>
             </div>
+
+            {isCategoryFormOpen && (
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_10rem_auto] gap-md p-md bg-surface border border-outline-variant rounded-lg">
+                <label>
+                  <span className="block font-label-md text-[12px] text-on-surface-variant mb-xs uppercase">
+                    Nova categoria
+                  </span>
+                  <input
+                    value={newCategoryName}
+                    onChange={event => setNewCategoryName(event.target.value)}
+                    className="w-full bg-background border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline outline-none"
+                    placeholder="Ex: Academia"
+                  />
+                </label>
+                <label>
+                  <span className="block font-label-md text-[12px] text-on-surface-variant mb-xs uppercase">
+                    Tipo
+                  </span>
+                  <div className="relative">
+                    <select
+                      value={newCategoryType}
+                      onChange={event => setNewCategoryType(event.target.value as CategoryType)}
+                      className="w-full bg-background border border-outline-variant rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none"
+                    >
+                      <option value="entrada">Entrada</option>
+                      <option value="gasto">Gasto</option>
+                      <option value="ambos">Ambos</option>
+                    </select>
+                    <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
+                  </div>
+                </label>
+                <div className="flex items-end gap-sm">
+                  <div className="flex gap-xs pb-xs">
+                    {categoryColors.map(color => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setNewCategoryColor(color)}
+                        className={`w-7 h-7 rounded-full border transition-transform ${newCategoryColor === color ? 'border-on-surface scale-110' : 'border-outline-variant'}`}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Cor ${color}`}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCreateCategory}
+                    disabled={isCreatingCategory}
+                    className="mb-0 px-md py-sm rounded-lg bg-primary text-on-primary font-label-md text-[13px] font-semibold hover:bg-primary-fixed disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isCreatingCategory ? 'Criando...' : 'Criar'}
+                  </button>
+                </div>
+                {categoryError && (
+                  <div className="md:col-span-3 rounded-lg border border-error/40 bg-error-container/20 px-md py-sm text-on-error-container text-[13px]">
+                    {categoryError}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-md p-md bg-surface border border-outline-variant rounded-lg">
               <label>
