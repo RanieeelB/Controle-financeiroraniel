@@ -6,7 +6,6 @@ import type {
   CategoryExpenseData,
   CreditCard,
   FinancialGoal,
-  FixedBill,
   DynamicFixedBill,
   MonthlyAnalysis,
   SummaryCards,
