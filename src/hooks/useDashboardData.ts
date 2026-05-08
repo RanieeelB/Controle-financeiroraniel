@@ -76,10 +76,52 @@ export function useDashboardData(monthRange?: MonthRange) {
         amount: Number(transaction.amount),
       })) as Transaction[];
 
-      const mappedBills = (billsResult.data ?? []).map((bill: Record<string, unknown>) => ({
-        ...bill,
-        amount: Number(bill.amount),
-      })) as FixedBill[];
+      const today = new Date();
+      const currentMonth = today.getMonth() + 1;
+      const currentYear = today.getFullYear();
+      
+      const [viewYear, viewMonth] = monthRange 
+        ? monthRange.monthKey.split('-').map(Number) 
+        : [currentYear, currentMonth];
+
+      const isViewingCurrentMonth = viewYear === currentYear && viewMonth === currentMonth;
+      const isViewingPastMonth = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
+
+      // Create a set of paid bill IDs for the selected month
+      const paidBillIds = new Set(
+        mappedTransactions
+          .filter(tx => tx.notes?.includes('fixed_bill:'))
+          .map(tx => tx.notes?.replace('fixed_bill:', ''))
+      );
+
+      const mappedBills = (billsResult.data ?? []).map((bill: Record<string, unknown>) => {
+        const amount = Number(bill.amount);
+        const isPaidThisMonth = paidBillIds.has(bill.id as string);
+        let dynamicStatus: 'pago' | 'pendente' | 'atrasado' = 'pendente';
+        let daysOverdue = 0;
+
+        if (isPaidThisMonth) {
+          dynamicStatus = 'pago';
+        } else {
+          if (isViewingPastMonth) {
+            dynamicStatus = 'atrasado';
+          } else if (isViewingCurrentMonth) {
+            const dueDay = Number(bill.due_day);
+            const currentDay = today.getDate();
+            if (currentDay > dueDay) {
+              dynamicStatus = 'atrasado';
+              daysOverdue = currentDay - dueDay;
+            }
+          }
+        }
+
+        return {
+          ...bill,
+          amount,
+          dynamicStatus,
+          daysOverdue
+        };
+      }) as any[];
 
       const mappedCards = (cardsResult.data ?? []).map((card: Record<string, unknown>) => ({
         ...card,

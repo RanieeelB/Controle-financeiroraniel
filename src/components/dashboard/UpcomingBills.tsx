@@ -17,7 +17,7 @@ const iconMap: Record<string, React.ElementType> = {
   receipt: ReceiptText,
 };
 
-export function UpcomingBills({ data }: UpcomingBillsProps) {
+export function UpcomingBills({ data }: { data: any[] }) {
   const [isPaying, setIsPaying] = useState<string | null>(null);
 
   if (data.length === 0) {
@@ -31,7 +31,7 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
     );
   }
 
-  async function handlePay(bill: FixedBill) {
+  async function handlePay(bill: any) {
     if (isPaying) return;
     setIsPaying(bill.id);
     try {
@@ -60,9 +60,11 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
           <tbody className="text-[14px]">
             {data.map((bill) => {
               const IconComponent = iconMap[bill.icon] || ReceiptText;
+              const status = bill.dynamicStatus || bill.status || 'pendente';
+              const isAtrasado = status === 'atrasado';
               
               return (
-                <tr key={bill.id} className="border-b border-outline-variant/30 hover:bg-surface-variant/30 transition-colors">
+                <tr key={bill.id} className={`border-b border-outline-variant/30 hover:bg-surface-variant/30 transition-colors ${isAtrasado ? 'bg-error-container/5' : ''}`}>
                   <td className="p-md flex items-center gap-sm">
                     <div className="p-xs bg-surface-container rounded">
                       <IconComponent className="text-on-surface-variant" size={16} />
@@ -72,26 +74,31 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
                   <td className="p-md font-numeral-lg text-[16px] font-medium">
                     R$ {bill.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="p-md">Dia {bill.due_day}</td>
+                  <td className={`p-md ${isAtrasado ? 'text-error font-medium' : ''}`}>Dia {bill.due_day}</td>
                   <td className="p-md">
-                    <span className={`px-2 py-1 rounded text-[12px] ${
-                      bill.status === 'pago' ? 'bg-primary-container/20 text-primary' :
-                      bill.status === 'atrasado' ? 'bg-error-container text-on-error-container' :
-                      'bg-surface-container-high text-on-surface-variant'
-                    }`}>
-                      {bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider text-center w-20 ${
+                        status === 'pago' ? 'bg-primary-container/20 text-primary border border-primary/30' :
+                        status === 'atrasado' ? 'bg-error-container text-on-error-container border border-error/50' :
+                        'bg-surface-container-high text-on-surface-variant border border-outline-variant'
+                      }`}>
+                        {status === 'pago' ? 'Pago' : status === 'atrasado' ? 'Atrasado' : 'Pendente'}
+                      </span>
+                      {isAtrasado && bill.daysOverdue > 0 && (
+                        <span className="text-[10px] text-error mt-1">{bill.daysOverdue}d atraso</span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-md text-center">
                     <button
                       onClick={() => handlePay(bill)}
-                      disabled={bill.status === 'pago' || isPaying === bill.id}
+                      disabled={status === 'pago' || isPaying === bill.id}
                       className={`p-1 rounded transition-all ${
-                        bill.status === 'pago' 
+                        status === 'pago' 
                           ? 'text-primary bg-primary/5 cursor-not-allowed' 
                           : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
                       }`}
-                      title={bill.status === 'pago' ? 'Conta já paga' : 'Pagar conta'}
+                      title={status === 'pago' ? 'Conta já paga neste mês' : 'Pagar conta'}
                     >
                       {isPaying === bill.id ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
