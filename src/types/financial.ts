@@ -101,6 +101,8 @@ export interface Investment {
   amount_invested: number;
   current_value: number;
   return_percentage: number;
+  monthly_contribution: number;
+  last_auto_contribution_at: string | null;
   created_at: string;
 }
 

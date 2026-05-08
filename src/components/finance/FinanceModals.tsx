@@ -390,6 +390,7 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
   const [category, setCategory] = useState<InvestmentCategory>('renda_fixa');
   const [amountInvested, setAmountInvested] = useState('');
   const [currentValue, setCurrentValue] = useState('');
+  const [monthlyContribution, setMonthlyContribution] = useState('');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -399,6 +400,8 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
 
     const invested = parseCurrencyValue(amountInvested);
     const current = parseCurrencyValue(currentValue);
+    const monthly = monthlyContribution.trim() ? parseCurrencyValue(monthlyContribution) : 0;
+    
     if (!name.trim()) {
       setError('Informe o nome do investimento ou caixinha.');
       return;
@@ -410,7 +413,14 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
 
     setIsSaving(true);
     try {
-      await createInvestment({ name, ticker, category, amountInvested: invested, currentValue: current });
+      await createInvestment({ 
+        name, 
+        ticker, 
+        category, 
+        amountInvested: invested, 
+        currentValue: current,
+        monthlyContribution: monthly || 0
+      });
       onClose();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar o investimento.');
@@ -454,6 +464,11 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
             <input value={currentValue} onChange={event => setCurrentValue(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
           </label>
         </div>
+        
+        <label>
+          <span className={labelClass}>Aporte mensal automático (Todo dia 1)</span>
+          <input value={monthlyContribution} onChange={event => setMonthlyContribution(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+        </label>
 
         <ErrorMessage error={error} />
 
@@ -600,6 +615,56 @@ export function FinancialGoalModal({ onClose }: { onClose: () => void }) {
           <SubmitButton isSaving={isSaving}>Salvar meta</SubmitButton>
         </div>
       </form>
+    </ModalShell>
+  );
+}
+
+import type { MonthProjection } from '../../hooks/useProjections';
+
+export function ProjectionDetailsModal({ projection, onClose }: { projection: MonthProjection; onClose: () => void }) {
+  return (
+    <ModalShell title={`Detalhes: ${projection.label}`} subtitle="Previsão de gastos e aportes para este mês." onClose={onClose}>
+      <div className="max-h-[70vh] overflow-y-auto p-lg space-y-lg">
+        <div className="grid grid-cols-3 gap-md">
+          <div className="p-md bg-surface-container rounded-lg border border-outline-variant">
+            <span className={labelClass}>Faturas</span>
+            <p className="font-numeral-lg text-[18px] text-primary">R$ {fmt(projection.breakdown.creditCards)}</p>
+          </div>
+          <div className="p-md bg-surface-container rounded-lg border border-outline-variant">
+            <span className={labelClass}>Fixos</span>
+            <p className="font-numeral-lg text-[18px] text-secondary">R$ {fmt(projection.breakdown.fixedBills)}</p>
+          </div>
+          <div className="p-md bg-surface-container rounded-lg border border-outline-variant">
+            <span className={labelClass}>Aportes</span>
+            <p className="font-numeral-lg text-[18px] text-tertiary">R$ {fmt(projection.breakdown.investments)}</p>
+          </div>
+        </div>
+
+        <div className="space-y-sm">
+          <h4 className={labelClass}>Detalhamento</h4>
+          <div className="space-y-xs">
+            {projection.details.map((detail, idx) => (
+              <div key={idx} className="flex items-center justify-between p-sm bg-surface rounded-lg border border-outline-variant/30">
+                <div className="flex flex-col">
+                  <span className="font-body-md text-on-surface">{detail.description}</span>
+                  <span className="text-[11px] uppercase tracking-wider text-on-surface-variant opacity-70">
+                    {detail.type === 'card' ? 'Cartão' : detail.type === 'fixed' ? 'Conta Fixa' : 'Investimento'}
+                  </span>
+                </div>
+                <span className="font-numeral-md text-on-surface">R$ {fmt(detail.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-md bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between">
+          <span className="font-semibold text-on-surface">Total Estimado</span>
+          <span className="font-numeral-lg text-[22px] text-primary">R$ {fmt(projection.total)}</span>
+        </div>
+      </div>
+      <div className="p-lg border-t border-outline-variant flex justify-end">
+        <button type="button" onClick={onClose} className="px-lg py-sm bg-surface-variant text-on-surface-variant rounded-lg hover:bg-outline-variant/20 transition-all font-semibold">Fechar</button>
+      </div>
     </ModalShell>
   );
 }

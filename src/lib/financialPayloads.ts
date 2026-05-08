@@ -41,6 +41,7 @@ export interface InvestmentPayloadInput {
   category: InvestmentCategory;
   amountInvested: number;
   currentValue: number;
+  monthlyContribution?: number;
 }
 
 export interface InvestmentDepositPayloadInput {
@@ -165,6 +166,7 @@ export function buildFixedBillPayload(input: FixedBillPayloadInput) {
 export function buildInvestmentPayload(input: InvestmentPayloadInput) {
   const amountInvested = roundCurrency(input.amountInvested);
   const currentValue = roundCurrency(input.currentValue);
+  const monthlyContribution = roundCurrency(input.monthlyContribution ?? 0);
   const returnPercentage = amountInvested > 0
     ? roundCurrency(((currentValue - amountInvested) / amountInvested) * 100)
     : 0;
@@ -175,6 +177,7 @@ export function buildInvestmentPayload(input: InvestmentPayloadInput) {
     category: input.category,
     amount_invested: amountInvested,
     current_value: currentValue,
+    monthly_contribution: monthlyContribution,
     return_percentage: returnPercentage,
   };
 }
