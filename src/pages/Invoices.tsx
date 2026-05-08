@@ -1,12 +1,15 @@
 import { CreditCard, Plus, ShoppingBag, Filter, Inbox } from 'lucide-react';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { InvoicePurchaseModal } from '../components/finance/FinanceModals';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { deleteInvoicePurchase } from '../lib/financialActions';
+import type { LayoutContext } from '../components/layout/Layout';
 
 export function Invoices() {
-  const { cards, invoiceItems, isLoading, refetch } = useCreditCards();
+  const { selectedMonthRange } = useOutletContext<LayoutContext>();
+  const { cards, invoiceItems, isLoading, refetch } = useCreditCards(selectedMonthRange);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 

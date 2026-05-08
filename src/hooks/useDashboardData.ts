@@ -27,9 +27,11 @@ const defaultAnalysis: MonthlyAnalysis = {
   actionText: 'Começar agora',
 };
 
+import type { MonthRange } from '../lib/monthSelection';
+
 const fallbackExpenseColors = ['#75ff9e', '#7bd0ff', '#ffba79', '#859585', '#ffb4ab'];
 
-export function useDashboardData() {
+export function useDashboardData(monthRange?: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fixedBills, setFixedBills] = useState<FixedBill[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
@@ -40,15 +42,26 @@ export function useDashboardData() {
   const [monthlyAnalysis, setMonthlyAnalysis] = useState<MonthlyAnalysis>(defaultAnalysis);
   const [isLoading, setIsLoading] = useState(true);
 
+  const startDate = monthRange?.startDate;
+  const endDate = monthRange?.endDate;
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
 
     try {
+      let txQuery = supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false });
+      if (startDate) txQuery = txQuery.gte('date', startDate);
+      if (endDate) txQuery = txQuery.lt('date', endDate);
+
+      let invoiceQuery = supabase.from('invoice_items').select('amount');
+      if (startDate) invoiceQuery = invoiceQuery.gte('date', startDate);
+      if (endDate) invoiceQuery = invoiceQuery.lt('date', endDate);
+
       const [txResult, billsResult, cardsResult, invoiceResult, goalsResult] = await Promise.all([
-        supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false }),
+        txQuery,
         supabase.from('fixed_bills').select('*, category:categories(*)').order('due_day', { ascending: true }),
         supabase.from('credit_cards').select('*').order('created_at', { ascending: true }),
-        supabase.from('invoice_items').select('amount'),
+        invoiceQuery,
         supabase.from('financial_goals').select('*').order('created_at', { ascending: true }),
       ]);
 
@@ -110,7 +123,7 @@ export function useDashboardData() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {

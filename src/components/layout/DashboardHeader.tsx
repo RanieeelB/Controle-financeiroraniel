@@ -1,27 +1,40 @@
-import { CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 
 interface DashboardHeaderProps {
   title?: string;
-  subtitle?: string;
+  monthLabel: string;
+  onPreviousMonth: () => void;
+  onNextMonth: () => void;
   onOpenNewTransaction: () => void;
 }
 
 export function DashboardHeader({ 
-  title = "Olá, Raniel", 
-  subtitle = "Aqui está o resumo financeiro de Maio de 2026", 
+  title = "Dashboard", 
+  monthLabel,
+  onPreviousMonth,
+  onNextMonth,
   onOpenNewTransaction 
 }: DashboardHeaderProps) {
+  const { signOut } = useAuth();
+
   return (
     <header className="bg-surface/80 dark:bg-surface/80 backdrop-blur-md text-primary dark:text-primary sticky top-0 z-40 border-b border-outline-variant dark:border-outline-variant flex justify-between items-center w-full h-24 px-xl">
       <div className="flex flex-col">
         <h2 className="font-h1 text-[32px] font-semibold text-on-background leading-tight">{title}</h2>
-        <p className="font-body-md text-[16px] text-on-surface-variant">{subtitle}</p>
+        {/* Month Navigation */}
+        <div className="flex items-center gap-sm mt-xs">
+          <button onClick={onPreviousMonth} className="p-0.5 text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-primary/10">
+            <ChevronLeft size={18} />
+          </button>
+          <span className="font-body-md text-[14px] text-on-surface-variant min-w-[140px] text-center">{monthLabel}</span>
+          <button onClick={onNextMonth} className="p-0.5 text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-primary/10">
+            <ChevronRight size={18} />
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-md">
-        <button className="p-sm rounded-full text-on-surface-variant hover:bg-surface-container-high transition-all active:scale-95 duration-150">
-          <CalendarDays size={24} />
-        </button>
         <button className="px-md py-sm rounded border border-[#243041] text-on-surface-variant font-label-md text-[14px] font-semibold hover:bg-surface-container-high transition-all">
           Exportar PDF
         </button>
@@ -30,6 +43,13 @@ export function DashboardHeader({
           className="px-md py-sm rounded bg-primary text-on-primary font-label-md text-[14px] font-semibold hover:bg-primary-fixed transition-all shadow-[0_0_15px_rgba(0,230,118,0.2)]"
         >
           Novo lançamento
+        </button>
+        <button 
+          onClick={() => signOut()}
+          className="p-sm rounded-full text-on-surface-variant hover:bg-error-container/20 hover:text-error transition-all"
+          title="Sair"
+        >
+          <LogOut size={20} />
         </button>
       </div>
     </header>

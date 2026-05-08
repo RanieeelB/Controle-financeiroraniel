@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
 import { emitFinancialDataChanged } from './financialEvents';
+
+async function getUserId(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) throw new Error('Usuário não autenticado.');
+  return session.user.id;
+}
 import {
   buildCreditCardPayload,
   buildFinancialGoalPayload,
@@ -50,10 +56,12 @@ export async function createFinancialTransaction(input: CreateFinancialTransacti
   }
 
   const transactionPayload = buildTransactionPayload(input);
+  const userId = await getUserId();
   const { error } = await supabase
     .from('transactions')
     .insert({
       ...transactionPayload,
+      user_id: userId,
       notes: invoiceItemId ? buildLinkedRecordNote('invoice_item', invoiceItemId) : transactionPayload.notes,
     });
 
@@ -73,10 +81,12 @@ export async function createCreditPurchase(input: InvoicePurchasePayloadInput) {
     categoryId: input.categoryId,
     totalInstallments: input.totalInstallments,
   });
+  const userId = await getUserId();
   const { error } = await supabase
     .from('transactions')
     .insert({
       ...transactionPayload,
+      user_id: userId,
       notes: buildLinkedRecordNote('invoice_item', invoiceItem.id),
     });
 
@@ -85,9 +95,10 @@ export async function createCreditPurchase(input: InvoicePurchasePayloadInput) {
 }
 
 export async function createCreditCard(input: CreditCardPayloadInput) {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('credit_cards')
-    .insert(buildCreditCardPayload(input));
+    .insert({ ...buildCreditCardPayload(input), user_id: userId });
 
   if (error) throw error;
   emitFinancialDataChanged();
@@ -104,18 +115,20 @@ export async function updateCreditCard(cardId: string, input: CreditCardPayloadI
 }
 
 export async function createFixedBill(input: FixedBillPayloadInput) {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('fixed_bills')
-    .insert(buildFixedBillPayload(input));
+    .insert({ ...buildFixedBillPayload(input), user_id: userId });
 
   if (error) throw error;
   emitFinancialDataChanged();
 }
 
 export async function createInvestment(input: InvestmentPayloadInput) {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('investments')
-    .insert(buildInvestmentPayload(input));
+    .insert({ ...buildInvestmentPayload(input), user_id: userId });
 
   if (error) throw error;
   emitFinancialDataChanged();
@@ -229,18 +242,20 @@ export async function deleteInvestmentDeposit(input: { deposit: InvestmentDeposi
 }
 
 export async function createFinancialGoal(input: FinancialGoalPayloadInput) {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('financial_goals')
-    .insert(buildFinancialGoalPayload(input));
+    .insert({ ...buildFinancialGoalPayload(input), user_id: userId });
 
   if (error) throw error;
   emitFinancialDataChanged();
 }
 
 async function insertInvoicePurchase(input: InvoicePurchasePayloadInput) {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('invoice_items')
-    .insert(buildInvoicePurchasePayload(input))
+    .insert({ ...buildInvoicePurchasePayload(input), user_id: userId })
     .select('id')
     .single();
 

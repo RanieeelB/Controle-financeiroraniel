@@ -2,11 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
 import type { CreditCard, InvoiceItem } from '../types/financial';
+import type { MonthRange } from '../lib/monthSelection';
 
-export function useCreditCards() {
+export function useCreditCards(monthRange?: MonthRange) {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const startDate = monthRange?.startDate;
+  const endDate = monthRange?.endDate;
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -23,10 +27,14 @@ export function useCreditCards() {
         })) as CreditCard[]);
       }
 
-      const { data: itemsData, error: itemsErr } = await supabase
+      let itemsQuery = supabase
         .from('invoice_items')
         .select('*, category:categories(*), credit_card:credit_cards(*)')
         .order('date', { ascending: false });
+      if (startDate) itemsQuery = itemsQuery.gte('date', startDate);
+      if (endDate) itemsQuery = itemsQuery.lt('date', endDate);
+
+      const { data: itemsData, error: itemsErr } = await itemsQuery;
       if (itemsErr) throw itemsErr;
       if (itemsData) {
         setInvoiceItems(itemsData.map((i: Record<string, unknown>) => ({
@@ -39,13 +47,10 @@ export function useCreditCards() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      void fetchData();
-    }, 0);
-
+    const timeout = window.setTimeout(() => { void fetchData(); }, 0);
     return () => window.clearTimeout(timeout);
   }, [fetchData]);
 

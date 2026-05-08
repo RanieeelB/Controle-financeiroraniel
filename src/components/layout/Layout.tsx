@@ -3,12 +3,25 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { NewTransactionModal } from '../dashboard/NewTransactionModal';
+import { getCurrentMonthKey, buildMonthRange, moveMonth, formatMonthLabel } from '../../lib/monthSelection';
+import type { MonthRange } from '../../lib/monthSelection';
+
+// Context type shared with child pages via Outlet context
+export interface LayoutContext {
+  selectedMonthRange: MonthRange;
+}
 
 export function Layout() {
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState(false);
+  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const location = useLocation();
 
-  // Basic title mapping based on route path
+  const selectedMonthRange = buildMonthRange(selectedMonthKey);
+  const monthLabel = formatMonthLabel(selectedMonthKey);
+
+  const handlePreviousMonth = () => setSelectedMonthKey(prev => moveMonth(prev, -1));
+  const handleNextMonth = () => setSelectedMonthKey(prev => moveMonth(prev, 1));
+
   const getPageTitle = () => {
     switch (location.pathname) {
       case '/': return 'Dashboard';
@@ -25,11 +38,6 @@ export function Layout() {
     }
   };
 
-  const getPageSubtitle = () => {
-    // We could make this dynamic, but for now a static month/year is fine as per mock
-    return 'Maio 2026';
-  };
-
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex selection:bg-primary-container selection:text-on-primary-container relative">
       <AppSidebar />
@@ -40,12 +48,14 @@ export function Layout() {
         
         <DashboardHeader 
           title={getPageTitle()}
-          subtitle={getPageSubtitle()}
+          monthLabel={monthLabel}
+          onPreviousMonth={handlePreviousMonth}
+          onNextMonth={handleNextMonth}
           onOpenNewTransaction={() => setIsNewTransactionModalOpen(true)} 
         />
 
         <div className="flex-1 p-xl max-w-[1440px] w-full mx-auto space-y-xl relative z-10">
-          <Outlet />
+          <Outlet context={{ selectedMonthRange } satisfies LayoutContext} />
         </div>
       </main>
 

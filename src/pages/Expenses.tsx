@@ -1,10 +1,13 @@
 import { ArrowDownRight, Calendar, Search, Inbox } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { useTransactions } from '../hooks/useTransactions';
 import { deleteFinancialTransaction } from '../lib/financialActions';
+import type { LayoutContext } from '../components/layout/Layout';
 
 export function Expenses() {
-  const { transactions, isLoading, totals, topCategory, refetch } = useTransactions('gasto');
+  const { selectedMonthRange } = useOutletContext<LayoutContext>();
+  const { transactions, isLoading, totals, topCategory, refetch } = useTransactions('gasto', selectedMonthRange);
 
   if (isLoading) {
     return (
