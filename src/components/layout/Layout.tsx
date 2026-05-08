@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { NewTransactionModal } from '../dashboard/NewTransactionModal';
+import { PjTaxesModal } from '../dashboard/PjTaxesModal';
 import { getCurrentMonthKey, buildMonthRange, moveMonth, formatMonthLabel } from '../../lib/monthSelection';
 import type { MonthRange } from '../../lib/monthSelection';
 
@@ -13,6 +14,7 @@ export interface LayoutContext {
 
 export function Layout() {
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState(false);
+  const [isPjTaxesModalOpen, setIsPjTaxesModalOpen] = useState(false);
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const location = useLocation();
 
@@ -51,7 +53,8 @@ export function Layout() {
           monthLabel={monthLabel}
           onPreviousMonth={handlePreviousMonth}
           onNextMonth={handleNextMonth}
-          onOpenNewTransaction={() => setIsNewTransactionModalOpen(true)} 
+          onOpenNewTransaction={() => setIsNewTransactionModalOpen(true)}
+          onOpenPjTaxes={() => setIsPjTaxesModalOpen(true)}
         />
 
         <div className="flex-1 p-xl max-w-[1440px] w-full mx-auto space-y-xl relative z-10">
@@ -63,6 +66,13 @@ export function Layout() {
         isOpen={isNewTransactionModalOpen} 
         onClose={() => setIsNewTransactionModalOpen(false)} 
       />
+
+      {isPjTaxesModalOpen && (
+        <PjTaxesModal 
+          monthRange={selectedMonthRange} 
+          onClose={() => setIsPjTaxesModalOpen(false)} 
+        />
+      )}
     </div>
   );
 }

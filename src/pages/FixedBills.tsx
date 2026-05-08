@@ -1,12 +1,14 @@
 import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Check } from 'lucide-react';
 import { useState } from 'react';
 import { FixedBillModal } from '../components/finance/FinanceModals';
-import { useFixedBills } from '../hooks/useFixedBills';
+import { useFixedBills, type DynamicFixedBill } from '../hooks/useFixedBills';
 import { payFixedBill } from '../lib/financialActions';
-import type { FixedBill } from '../types/financial';
+import { useOutletContext } from 'react-router-dom';
+import type { LayoutContext } from '../components/layout/Layout';
 
 export function FixedBills() {
-  const { bills, isLoading, totals, categoryBreakdown } = useFixedBills();
+  const { selectedMonthRange } = useOutletContext<LayoutContext>();
+  const { bills, isLoading, totals, categoryBreakdown } = useFixedBills(selectedMonthRange);
   const [isFixedBillModalOpen, setIsFixedBillModalOpen] = useState(false);
   const [isPaying, setIsPaying] = useState<string | null>(null);
 
@@ -16,7 +18,7 @@ export function FixedBills() {
   const paidPct = totals.count > 0 ? Math.round((totals.paidCount / totals.count) * 100) : 0;
   const colors = ['bg-primary', 'bg-secondary', 'bg-tertiary-container', 'bg-outline'];
 
-  async function handlePay(bill: FixedBill) {
+  async function handlePay(bill: DynamicFixedBill) {
     if (isPaying) return;
     setIsPaying(bill.id);
     try {
@@ -72,28 +74,33 @@ export function FixedBills() {
                 {bills.length === 0 ? (
                   <tr><td colSpan={6} className="py-xl text-center text-on-surface-variant"><div className="flex flex-col items-center gap-md"><Inbox size={48} className="text-outline-variant" /><p>Nenhuma conta fixa cadastrada.</p></div></td></tr>
                 ) : bills.map(b => (
-                  <tr key={b.id} className={`border-b border-outline-variant/50 hover:bg-surface-variant/30 transition-colors ${b.status === 'atrasado' ? 'bg-error-container/5' : ''}`}>
+                  <tr key={b.id} className={`border-b border-outline-variant/50 hover:bg-surface-variant/30 transition-colors ${b.dynamicStatus === 'atrasado' ? 'bg-error-container/5' : ''}`}>
                     <td className="py-md px-lg text-on-surface">{b.description}</td>
                     <td className="py-md px-lg text-on-surface-variant">{b.category?.name || '—'}</td>
-                    <td className={`py-md px-lg ${b.status === 'atrasado' ? 'text-error font-medium' : ''}`}>Dia {b.due_day}</td>
+                    <td className={`py-md px-lg ${b.dynamicStatus === 'atrasado' ? 'text-error font-medium' : ''}`}>Dia {b.due_day}</td>
                     <td className="py-md px-lg font-numeral-lg text-[16px] text-right">R$ {fmt(b.amount)}</td>
                     <td className="py-md px-lg text-center">
-                      <span className={`inline-flex items-center justify-center font-label-md text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase tracking-wider w-24 ${
-                        b.status === 'pago' ? 'bg-primary-container/20 text-primary border border-primary/30' :
-                        b.status === 'atrasado' ? 'bg-error-container text-on-error-container border border-error/50' :
-                        'bg-surface-variant text-on-surface border border-outline-variant'
-                      }`}>{b.status === 'pago' ? 'Pago' : b.status === 'atrasado' ? 'Atrasado' : 'Pendente'}</span>
+                      <div className="flex flex-col items-center justify-center">
+                        <span className={`inline-flex items-center justify-center font-label-md text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase tracking-wider w-24 ${
+                          b.dynamicStatus === 'pago' ? 'bg-primary-container/20 text-primary border border-primary/30' :
+                          b.dynamicStatus === 'atrasado' ? 'bg-error-container text-on-error-container border border-error/50' :
+                          'bg-surface-variant text-on-surface border border-outline-variant'
+                        }`}>{b.dynamicStatus === 'pago' ? 'Pago' : b.dynamicStatus === 'atrasado' ? 'Atrasado' : 'Pendente'}</span>
+                        {b.dynamicStatus === 'atrasado' && b.daysOverdue > 0 && (
+                          <span className="text-[10px] text-error mt-1">{b.daysOverdue} dias de atraso</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-md px-lg text-center">
                       <button
                         onClick={() => handlePay(b)}
-                        disabled={b.status === 'pago' || isPaying === b.id}
+                        disabled={b.dynamicStatus === 'pago' || isPaying === b.id}
                         className={`p-2 rounded-lg transition-all ${
-                          b.status === 'pago' 
+                          b.dynamicStatus === 'pago' 
                             ? 'text-primary bg-primary/5 cursor-not-allowed' 
                             : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
                         }`}
-                        title={b.status === 'pago' ? 'Conta já paga' : 'Pagar conta'}
+                        title={b.dynamicStatus === 'pago' ? 'Conta já paga neste mês' : 'Pagar conta neste mês'}
                       >
                         {isPaying === b.id ? (
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>

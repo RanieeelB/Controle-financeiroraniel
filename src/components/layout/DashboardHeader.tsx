@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, Building2 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface DashboardHeaderProps {
@@ -7,6 +7,7 @@ interface DashboardHeaderProps {
   onPreviousMonth: () => void;
   onNextMonth: () => void;
   onOpenNewTransaction: () => void;
+  onOpenPjTaxes: () => void;
 }
 
 export function DashboardHeader({ 
@@ -14,7 +15,8 @@ export function DashboardHeader({
   monthLabel,
   onPreviousMonth,
   onNextMonth,
-  onOpenNewTransaction 
+  onOpenNewTransaction,
+  onOpenPjTaxes
 }: DashboardHeaderProps) {
   const { signOut } = useAuth();
 
@@ -35,6 +37,12 @@ export function DashboardHeader({
       </div>
 
       <div className="flex items-center gap-md">
+        <button 
+          onClick={onOpenPjTaxes}
+          className="px-md py-sm rounded border border-tertiary-container text-tertiary-container font-label-md text-[14px] font-semibold hover:bg-tertiary-container/10 transition-all flex items-center gap-2"
+        >
+          <Building2 size={16} /> Impostos PJ
+        </button>
         <button className="px-md py-sm rounded border border-[#243041] text-on-surface-variant font-label-md text-[14px] font-semibold hover:bg-surface-container-high transition-all">
           Exportar PDF
         </button>
@@ -46,6 +54,7 @@ export function DashboardHeader({
         </button>
         <button 
           onClick={() => signOut()}
+
           className="p-sm rounded-full text-on-surface-variant hover:bg-error-container/20 hover:text-error transition-all"
           title="Sair"
         >

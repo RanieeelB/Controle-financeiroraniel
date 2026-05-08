@@ -190,23 +190,18 @@ export async function payFixedBill(bill: FixedBill) {
     amount: bill.amount,
     date: new Date().toISOString().split('T')[0],
     paymentMethod: 'pix', // Default for fixed bills
-    categoryId: bill.category_id,
-    status: 'pago'
+    categoryId: bill.category_id
   });
 
   const { error: txError } = await supabase
     .from('transactions')
-    .insert({ ...transactionPayload, user_id: userId });
+    .insert({ 
+      ...transactionPayload, 
+      user_id: userId,
+      notes: `fixed_bill:${bill.id}` // Link transaction to this bill
+    });
 
   if (txError) throw txError;
-
-  // 2. Update bill status
-  const { error: billError } = await supabase
-    .from('fixed_bills')
-    .update({ status: 'pago' })
-    .eq('id', bill.id);
-
-  if (billError) throw billError;
 
   emitFinancialDataChanged();
 }
