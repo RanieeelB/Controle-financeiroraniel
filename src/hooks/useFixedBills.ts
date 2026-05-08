@@ -46,13 +46,15 @@ export function useFixedBills(monthRange?: MonthRange) {
       );
 
       const today = new Date();
-      const currentMonth = today.getMonth();
+      const currentMonth = today.getMonth() + 1; // 1-12
       const currentYear = today.getFullYear();
-      const isViewingCurrentMonth = !monthRange || (
-        new Date(monthRange.startDate).getUTCMonth() === currentMonth &&
-        new Date(monthRange.startDate).getUTCFullYear() === currentYear
-      );
-      const isViewingPastMonth = monthRange && new Date(monthRange.startDate) < new Date(currentYear, currentMonth, 1);
+      
+      const [viewYear, viewMonth] = monthRange 
+        ? monthRange.monthKey.split('-').map(Number) 
+        : [currentYear, currentMonth];
+
+      const isViewingCurrentMonth = viewYear === currentYear && viewMonth === currentMonth;
+      const isViewingPastMonth = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
 
       if (billsData) {
         const dynamicBills = billsData.map((b: any) => {
