@@ -5,7 +5,6 @@ import { MonthlyAnalysisCard } from '../components/dashboard/MonthlyAnalysisCard
 import { UpcomingBills } from '../components/dashboard/UpcomingBills';
 import { CreditCardInvoices } from '../components/dashboard/CreditCardInvoices';
 import { FinancialGoalCard } from '../components/dashboard/FinancialGoalCard';
-import { PjTaxesCard } from '../components/dashboard/PjTaxesCard';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useOutletContext } from 'react-router-dom';
 import type { LayoutContext } from '../components/layout/Layout';

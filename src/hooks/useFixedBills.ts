@@ -32,7 +32,7 @@ export function useFixedBills(monthRange?: MonthRange) {
         .like('notes', 'fixed_bill:%');
         
       if (monthRange) {
-        txQuery = txQuery.gte('date', monthRange.start).lt('date', monthRange.end);
+        txQuery = txQuery.gte('date', monthRange.startDate).lt('date', monthRange.endDate);
       }
       
       const { data: txData, error: txError } = await txQuery;
@@ -49,10 +49,10 @@ export function useFixedBills(monthRange?: MonthRange) {
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
       const isViewingCurrentMonth = !monthRange || (
-        new Date(monthRange.start).getMonth() === currentMonth &&
-        new Date(monthRange.start).getFullYear() === currentYear
+        new Date(monthRange.startDate).getUTCMonth() === currentMonth &&
+        new Date(monthRange.startDate).getUTCFullYear() === currentYear
       );
-      const isViewingPastMonth = monthRange && new Date(monthRange.start) < new Date(currentYear, currentMonth, 1);
+      const isViewingPastMonth = monthRange && new Date(monthRange.startDate) < new Date(currentYear, currentMonth, 1);
 
       if (billsData) {
         const dynamicBills = billsData.map((b: any) => {
@@ -64,10 +64,8 @@ export function useFixedBills(monthRange?: MonthRange) {
             dynamicStatus = 'pago';
           } else {
             if (isViewingPastMonth) {
-              // If viewing a past month and it wasn't paid, it's definitely overdue
               dynamicStatus = 'atrasado';
             } else if (isViewingCurrentMonth) {
-              // Current month logic
               const dueDay = b.due_day;
               const currentDay = today.getDate();
               if (currentDay > dueDay) {
@@ -75,7 +73,6 @@ export function useFixedBills(monthRange?: MonthRange) {
                 daysOverdue = currentDay - dueDay;
               }
             } else {
-              // Viewing future month, everything is pending
               dynamicStatus = 'pendente';
             }
           }

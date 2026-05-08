@@ -15,27 +15,23 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
   const [success, setSuccess] = useState(false);
   const [simplesRateStr, setSimplesRateStr] = useState('6.00');
   const [totalIncome, setTotalIncome] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const { categories } = useCategories('gasto');
 
   useEffect(() => {
     async function fetchIncome() {
-      setIsLoading(true);
       try {
         const { data } = await supabase
           .from('transactions')
           .select('amount')
           .eq('type', 'entrada')
           .eq('status', 'recebido')
-          .gte('date', monthRange.start)
-          .lt('date', monthRange.end);
+          .gte('date', monthRange.startDate)
+          .lt('date', monthRange.endDate);
         
         const sum = data?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
         setTotalIncome(sum);
       } catch (e) {
         console.error('Failed to fetch total income', e);
-      } finally {
-        setIsLoading(false);
       }
     }
     void fetchIncome();
