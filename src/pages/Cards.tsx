@@ -35,7 +35,7 @@ export function Cards() {
         <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
           <div className="bg-surface-variant p-lg rounded-full"><CreditCardIcon size={48} className="text-primary" /></div>
           <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhum cartão cadastrado</h2>
-          <p className="font-body-md text-[16px] max-w-md text-center">Adicione seu primeiro cartão para começar a gerenciar suas faturas.</p>
+          <p className="font-body-md text-[16px] max-w-[28rem] text-center">Adicione seu primeiro cartão para começar a gerenciar suas faturas.</p>
           <button
             onClick={openCreateModal}
             className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"

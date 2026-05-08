@@ -15,7 +15,7 @@ export function Goals() {
         <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
           <div className="bg-surface-variant p-lg rounded-full"><Target size={48} className="text-primary" /></div>
           <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhuma meta cadastrada</h2>
-          <p className="font-body-md text-[16px] max-w-md text-center">Crie sua primeira meta financeira para começar a acompanhar seus objetivos.</p>
+          <p className="font-body-md text-[16px] max-w-[28rem] text-center">Crie sua primeira meta financeira para começar a acompanhar seus objetivos.</p>
           <button
             onClick={() => setIsGoalModalOpen(true)}
             className="mt-md font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all shadow-[0_0_15px_rgba(117,255,158,0.2)] flex items-center gap-sm"

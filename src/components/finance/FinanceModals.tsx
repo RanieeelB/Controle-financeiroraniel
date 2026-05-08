@@ -30,7 +30,7 @@ interface ModalShellProps {
 function ModalShell({ title, subtitle, onClose, children }: ModalShellProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-md">
-      <div className="w-full max-w-xl bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden relative">
+      <div className="w-full max-w-[36rem] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden relative">
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary" />
         <div className="flex items-center justify-between px-lg py-md border-b border-outline-variant">
           <div>
