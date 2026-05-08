@@ -21,4 +21,5 @@ export const defaultCategories: DefaultCategoryDefinition[] = [
   { name: 'Rendimentos', icon: 'trending-up', type: 'entrada', color: '#00e676' },
   { name: 'Reembolso', icon: 'receipt', type: 'entrada', color: '#ffba79' },
   { name: 'Outros recebimentos', icon: 'plus-circle', type: 'entrada', color: '#859585' },
+  { name: 'Impostos PJ', icon: 'building-2', type: 'gasto', color: '#ff6b6b' },
 ];
