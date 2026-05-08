@@ -1,6 +1,5 @@
 import { Wifi, Zap, Landmark, Home, GraduationCap, MonitorPlay, ReceiptText, Check } from 'lucide-react';
 import { useState } from 'react';
-import type { FixedBill } from '../../types/financial';
 import { payFixedBill } from '../../lib/financialActions';
 
 interface UpcomingBillsProps {
