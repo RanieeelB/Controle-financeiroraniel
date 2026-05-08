@@ -1,11 +1,23 @@
-import { ArrowDownRight, Calendar, Search, MoreVertical } from 'lucide-react';
+import { ArrowDownRight, Calendar, Search, MoreVertical, Inbox } from 'lucide-react';
+import { useTransactions } from '../hooks/useTransactions';
 
 export function Expenses() {
+  const { transactions, isLoading, totals, topCategory } = useTransactions('gasto');
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
   return (
     <div className="flex flex-col gap-xl">
       {/* Summary Bento Grid */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-        {/* Total Gasto */}
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-lg relative overflow-hidden group shadow-[0_0_15px_rgba(255,180,171,0.05)]">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-error"></div>
           <div className="flex justify-between items-start mb-md">
@@ -16,15 +28,10 @@ export function Expenses() {
           </div>
           <div className="flex items-baseline gap-sm">
             <span className="font-h2 text-body-md text-on-surface-variant">R$</span>
-            <span className="font-display-lg text-[48px] font-bold text-on-surface tracking-tight">12.450,00</span>
-          </div>
-          <div className="mt-md flex items-center gap-xs text-error font-body-md text-sm">
-            <ArrowDownRight size={16} />
-            <span>-5.2% em relação a Abril</span>
+            <span className="font-display-lg text-[48px] font-bold text-on-surface tracking-tight">{fmt(totals.paid)}</span>
           </div>
         </div>
 
-        {/* Total Pendente */}
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-lg relative group">
           <div className="flex justify-between items-start mb-md">
             <h3 className="font-label-md text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Pendente (A Pagar)</h3>
@@ -34,14 +41,13 @@ export function Expenses() {
           </div>
           <div className="flex items-baseline gap-sm">
             <span className="font-h2 text-body-md text-on-surface-variant">R$</span>
-            <span className="font-h1 text-[32px] font-semibold text-on-surface tracking-tight">3.120,00</span>
+            <span className="font-h1 text-[32px] font-semibold text-on-surface tracking-tight">{fmt(totals.pending)}</span>
           </div>
           <div className="mt-md flex items-center gap-xs text-on-surface-variant font-body-md text-sm">
-            <span>5 contas aguardando</span>
+            <span>{totals.pendingCount} contas aguardando</span>
           </div>
         </div>
 
-        {/* Maior Gasto */}
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-lg relative group">
           <div className="flex justify-between items-start mb-md">
             <h3 className="font-label-md text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Maior Despesa</h3>
@@ -50,58 +56,11 @@ export function Expenses() {
             </div>
           </div>
           <div className="flex flex-col gap-sm">
-            <span className="font-h2 text-[24px] font-semibold text-on-surface">Aluguel</span>
-            <span className="font-numeral-lg text-[24px] text-on-surface-variant tracking-tight">R$ 4.500,00</span>
+            <span className="font-h2 text-[24px] font-semibold text-on-surface">{topCategory.name}</span>
+            <span className="font-numeral-lg text-[24px] text-on-surface-variant tracking-tight">R$ {fmt(topCategory.amount)}</span>
           </div>
           <div className="mt-md flex items-center gap-xs text-on-surface-variant font-body-md text-sm">
-            <span>36% do total gasto</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Chart and Filters Area */}
-      <section className="flex gap-lg flex-col xl:flex-row h-[400px]">
-        {/* Placeholder for Chart */}
-        <div className="flex-[2] bg-surface-container-low border border-outline-variant rounded-xl p-lg flex flex-col relative">
-          <div className="flex justify-between items-center mb-lg">
-            <h3 className="font-h2 text-[24px] font-semibold text-on-surface">Evolução Mensal</h3>
-            <button className="text-on-surface-variant hover:text-on-surface transition-colors">
-              <MoreVertical size={20} />
-            </button>
-          </div>
-          <div className="flex-1 w-full flex items-center justify-center text-on-surface-variant">
-            {/* Will be replaced by Recharts component */}
-            Gráfico de Barras (Recharts)
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex-1 bg-surface-container-low border border-outline-variant rounded-xl p-lg flex flex-col">
-          <h3 className="font-h2 text-[24px] font-semibold text-on-surface mb-lg">Filtros</h3>
-          <div className="flex flex-col gap-md flex-1">
-            <div>
-              <label className="font-label-md text-[14px] text-on-surface-variant mb-sm block uppercase font-semibold">Categoria</label>
-              <div className="flex flex-wrap gap-sm">
-                <button className="px-md py-xs rounded-full border border-primary bg-primary/10 text-primary font-body-md text-sm transition-colors">Todos</button>
-                <button className="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-body-md text-sm transition-colors">Moradia</button>
-                <button className="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-body-md text-sm transition-colors">Alimentação</button>
-                <button className="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-body-md text-sm transition-colors">Transporte</button>
-              </div>
-            </div>
-            <div className="mt-md">
-              <label className="font-label-md text-[14px] text-on-surface-variant mb-sm block uppercase font-semibold">Status</label>
-              <div className="flex flex-wrap gap-sm">
-                <button className="px-md py-xs rounded-full border border-primary bg-primary/10 text-primary font-body-md text-sm transition-colors">Ambos</button>
-                <button className="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-body-md text-sm transition-colors flex items-center gap-xs">
-                  <span className="w-2 h-2 rounded-full bg-primary"></span>
-                  Pago
-                </button>
-                <button className="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-body-md text-sm transition-colors flex items-center gap-xs">
-                  <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  Pendente
-                </button>
-              </div>
-            </div>
+            <span>{topCategory.percentage}% do total gasto</span>
           </div>
         </div>
       </section>
@@ -132,25 +91,38 @@ export function Expenses() {
               </tr>
             </thead>
             <tbody className="font-body-md text-body-md">
-              <tr className="border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors group">
-                <td className="py-md px-lg text-on-surface">10 Mai, 2026</td>
-                <td className="py-md px-lg text-on-surface font-medium">Supermercado</td>
-                <td className="py-md px-lg">
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surface-bright text-on-surface border border-outline-variant/50">Alimentação</span>
-                </td>
-                <td className="py-md px-lg">
-                  <span className="inline-flex items-center gap-1.5 text-primary text-sm">
-                    <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_15px_rgba(0,230,118,0.5)]"></span>
-                    Pago
-                  </span>
-                </td>
-                <td className="py-md px-lg text-right font-numeral-lg text-[24px] font-medium text-on-surface">R$ 850,00</td>
-                <td className="py-md px-lg text-right">
-                  <button className="text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-primary transition-all">
-                    <MoreVertical size={20} />
-                  </button>
-                </td>
-              </tr>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-xl text-center text-on-surface-variant">
+                    <div className="flex flex-col items-center gap-md">
+                      <Inbox size={48} className="text-outline-variant" />
+                      <p>Nenhum gasto registrado ainda.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : transactions.map(t => (
+                <tr key={t.id} className="border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors group">
+                  <td className="py-md px-lg text-on-surface">{new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                  <td className="py-md px-lg text-on-surface font-medium">{t.description}</td>
+                  <td className="py-md px-lg">
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surface-bright text-on-surface border border-outline-variant/50">
+                      {t.category?.name || 'Sem categoria'}
+                    </span>
+                  </td>
+                  <td className="py-md px-lg">
+                    <span className={`inline-flex items-center gap-1.5 text-sm ${t.status === 'pago' ? 'text-primary' : 'text-secondary'}`}>
+                      <span className={`w-2 h-2 rounded-full ${t.status === 'pago' ? 'bg-primary shadow-[0_0_15px_rgba(0,230,118,0.5)]' : 'bg-secondary'}`}></span>
+                      {t.status === 'pago' ? 'Pago' : 'Pendente'}
+                    </span>
+                  </td>
+                  <td className="py-md px-lg text-right font-numeral-lg text-[24px] font-medium text-on-surface">R$ {fmt(t.amount)}</td>
+                  <td className="py-md px-lg text-right">
+                    <button className="text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-primary transition-all">
+                      <MoreVertical size={20} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
