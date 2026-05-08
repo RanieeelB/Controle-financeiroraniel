@@ -10,6 +10,8 @@ import {
   Wallet,
 } from 'lucide-react';
 import type { ElementType } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import type { FinancialLayoutContext } from '../components/layout/Layout';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 import { useFixedBills } from '../hooks/useFixedBills';
@@ -17,8 +19,9 @@ import { useInvestments } from '../hooks/useInvestments';
 import { useTransactions } from '../hooks/useTransactions';
 
 export function Reports() {
-  const { transactions: allTx, isLoading: transactionsLoading } = useTransactions();
-  const { invoiceItems, cards, isLoading: cardsLoading } = useCreditCards();
+  const { selectedMonthRange } = useOutletContext<FinancialLayoutContext>();
+  const { transactions: allTx, isLoading: transactionsLoading } = useTransactions(undefined, selectedMonthRange);
+  const { invoiceItems, cards, isLoading: cardsLoading } = useCreditCards(selectedMonthRange);
   const { bills, isLoading: billsLoading, totals: billTotals } = useFixedBills();
   const { investments, isLoading: investmentsLoading, totalCurrentValue } = useInvestments();
   const { goals, isLoading: goalsLoading, totalTarget, totalSaved, overallProgress } = useFinancialGoals();

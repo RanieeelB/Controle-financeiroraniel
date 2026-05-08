@@ -1,13 +1,16 @@
 import { Nfc, CreditCard as CreditCardIcon, Pencil, Plus, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { CreditCardModal } from '../components/finance/FinanceModals';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
+import type { FinancialLayoutContext } from '../components/layout/Layout';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { deleteInvoicePurchase } from '../lib/financialActions';
 import type { CreditCard } from '../types/financial';
 
 export function Cards() {
-  const { cards, isLoading, getCardItems, getCardTotal, refetch } = useCreditCards();
+  const { selectedMonthRange } = useOutletContext<FinancialLayoutContext>();
+  const { cards, isLoading, getCardItems, getCardTotal, refetch } = useCreditCards(selectedMonthRange);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CreditCard | null>(null);
 
