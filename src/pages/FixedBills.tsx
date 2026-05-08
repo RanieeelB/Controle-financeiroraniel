@@ -1,4 +1,4 @@
-import { Landmark, CheckCircle2, Clock, Filter, MoreVertical, Inbox, Plus, PieChart } from 'lucide-react';
+import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart } from 'lucide-react';
 import { useState } from 'react';
 import { FixedBillModal } from '../components/finance/FinanceModals';
 import { useFixedBills } from '../hooks/useFixedBills';
@@ -44,7 +44,7 @@ export function FixedBills() {
         <div className="lg:col-span-2 bg-surface-container border border-outline-variant rounded-lg overflow-hidden">
           <div className="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-high/50">
             <h3 className="font-h2 text-[18px] font-semibold text-on-surface">Detalhamento</h3>
-            <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button><button className="p-xs text-on-surface-variant hover:text-on-surface"><MoreVertical size={20} /></button></div>
+            <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button></div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">

@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 import { useState, type ElementType } from 'react';
 import { InvestmentDepositModal, InvestmentModal } from '../components/finance/FinanceModals';
+import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { useInvestments } from '../hooks/useInvestments';
+import { deleteInvestmentDeposit } from '../lib/financialActions';
 import type { Investment, InvestmentCategory } from '../types/financial';
 
 const catIcons: Record<InvestmentCategory, ElementType> = {
@@ -45,6 +47,7 @@ export function Investments() {
     totalReturn,
     getInvestmentDeposits,
     getLastDeposit,
+    refetch,
   } = useInvestments();
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [depositInvestment, setDepositInvestment] = useState<Investment | null>(null);
@@ -149,7 +152,17 @@ export function Investments() {
                             {new Date(`${deposit.date}T00:00:00`).toLocaleDateString('pt-BR')}
                           </p>
                         </div>
-                        <span className="text-primary font-label-md text-[13px] font-semibold">Guardado</span>
+                        <div className="flex items-center gap-sm">
+                          <span className="text-primary font-label-md text-[13px] font-semibold">Guardado</span>
+                          <RecordActionsMenu
+                            label={`aporte de ${investment.name}`}
+                            deleteLabel="Excluir aporte"
+                            onDelete={async () => {
+                              await deleteInvestmentDeposit({ deposit, investment });
+                              await refetch();
+                            }}
+                          />
+                        </div>
                       </li>
                     ))}
                   </ul>

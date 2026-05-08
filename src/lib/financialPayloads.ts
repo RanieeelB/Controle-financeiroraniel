@@ -56,6 +56,14 @@ export interface InvestmentTotalsInput {
   depositAmount: number;
 }
 
+export type LinkedRecordKind = 'invoice_item' | 'investment_deposit';
+
+export interface LinkedRecordNote {
+  kind: LinkedRecordKind;
+  id: string | null;
+  parentId: string | null;
+}
+
 export interface InvestmentDepositTransactionPayloadInput {
   investmentName: string;
   amount: number;
@@ -194,6 +202,20 @@ export function getInvestmentTotalsAfterDeposit(input: InvestmentTotalsInput) {
   };
 }
 
+export function getInvestmentTotalsAfterDepositRemoval(input: InvestmentTotalsInput) {
+  const amountInvested = Math.max(0, roundCurrency(input.amountInvested - input.depositAmount));
+  const currentValue = Math.max(0, roundCurrency(input.currentValue - input.depositAmount));
+  const returnPercentage = amountInvested > 0
+    ? roundCurrency(((currentValue - amountInvested) / amountInvested) * 100)
+    : 0;
+
+  return {
+    amount_invested: amountInvested,
+    current_value: currentValue,
+    return_percentage: returnPercentage,
+  };
+}
+
 export function buildInvestmentDepositTransactionPayload(input: InvestmentDepositTransactionPayloadInput) {
   return buildTransactionPayload({
     type: 'gasto',
@@ -204,6 +226,34 @@ export function buildInvestmentDepositTransactionPayload(input: InvestmentDeposi
     categoryId: null,
     notes: normalizeOptionalText(input.notes) ?? 'Debitado do saldo livre para guardar na caixinha.',
   });
+}
+
+export function buildLinkedRecordNote(kind: LinkedRecordKind, id: string, parentId?: string | null) {
+  const normalizedId = normalizeRequiredText(id);
+  const normalizedParentId = normalizeOptionalId(parentId);
+
+  return normalizedParentId ? `${kind}:${normalizedParentId}:${normalizedId}` : `${kind}:${normalizedId}`;
+}
+
+export function parseLinkedRecordNote(note?: string | null): LinkedRecordNote | null {
+  const [kind, firstId, secondId] = note?.split(':') ?? [];
+
+  if (kind !== 'invoice_item' && kind !== 'investment_deposit') return null;
+  if (!firstId) return null;
+
+  if (kind === 'investment_deposit') {
+    return {
+      kind,
+      parentId: firstId,
+      id: secondId || null,
+    };
+  }
+
+  return {
+    kind,
+    id: firstId,
+    parentId: null,
+  };
 }
 
 export function buildFinancialGoalPayload(input: FinancialGoalPayloadInput) {

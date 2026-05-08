@@ -1,10 +1,12 @@
-import { CreditCard, Plus, ShoppingBag, Filter, MoreVertical, Inbox } from 'lucide-react';
+import { CreditCard, Plus, ShoppingBag, Filter, Inbox } from 'lucide-react';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useState } from 'react';
 import { InvoicePurchaseModal } from '../components/finance/FinanceModals';
+import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
+import { deleteInvoicePurchase } from '../lib/financialActions';
 
 export function Invoices() {
-  const { cards, invoiceItems, isLoading } = useCreditCards();
+  const { cards, invoiceItems, isLoading, refetch } = useCreditCards();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
@@ -66,7 +68,7 @@ export function Invoices() {
       <section className="bg-surface-container border border-outline-variant rounded-xl overflow-hidden">
         <div className="p-lg border-b border-outline-variant flex justify-between items-center">
           <h3 className="font-h2 text-[20px] font-semibold text-on-surface">Lançamentos</h3>
-          <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button><button className="p-xs text-on-surface-variant hover:text-on-surface"><MoreVertical size={20} /></button></div>
+          <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button></div>
         </div>
         <div className="p-lg">
           {filteredItems.length === 0 ? (
@@ -79,7 +81,7 @@ export function Invoices() {
                   <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-surface border border-outline-variant flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-primary"></div></div>
                   <h4 className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-md uppercase tracking-wider">{dateLabel}</h4>
                   {items.map(item => (
-                    <div key={item.id} className="bg-surface border border-outline-variant/50 rounded-lg p-md hover:bg-surface-variant/30 transition-colors cursor-pointer mb-sm">
+                    <div key={item.id} className="bg-surface border border-outline-variant/50 rounded-lg p-md hover:bg-surface-variant/30 transition-colors mb-sm">
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-md">
                           <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant"><ShoppingBag size={18} className="text-on-surface-variant" /></div>
@@ -91,9 +93,18 @@ export function Invoices() {
                             <p className="text-[13px] text-on-surface-variant mt-0.5">{item.category?.name || 'Sem categoria'}{item.total_installments > 1 && ` • ${item.current_installment}/${item.total_installments}`}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-numeral-lg text-[16px] text-on-surface">R$ {fmt(item.amount)}</p>
-                          {item.total_installments > 1 && <p className="text-[12px] text-on-surface-variant mt-0.5">de R$ {fmt(item.amount * item.total_installments)}</p>}
+                        <div className="flex items-center gap-md">
+                          <div className="text-right">
+                            <p className="font-numeral-lg text-[16px] text-on-surface">R$ {fmt(item.amount)}</p>
+                            {item.total_installments > 1 && <p className="text-[12px] text-on-surface-variant mt-0.5">de R$ {fmt(item.amount * item.total_installments)}</p>}
+                          </div>
+                          <RecordActionsMenu
+                            label={item.description}
+                            onDelete={async () => {
+                              await deleteInvoicePurchase(item);
+                              await refetch();
+                            }}
+                          />
                         </div>
                       </div>
                     </div>

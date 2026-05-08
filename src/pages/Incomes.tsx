@@ -1,8 +1,10 @@
-import { ArrowUpRight, Calendar, Search, MoreVertical, Inbox } from 'lucide-react';
+import { ArrowUpRight, Calendar, Search, Inbox } from 'lucide-react';
+import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { useTransactions } from '../hooks/useTransactions';
+import { deleteFinancialTransaction } from '../lib/financialActions';
 
 export function Incomes() {
-  const { transactions, isLoading, totals, topCategory } = useTransactions('entrada');
+  const { transactions, isLoading, totals, topCategory, refetch } = useTransactions('entrada');
 
   if (isLoading) {
     return (
@@ -117,9 +119,13 @@ export function Incomes() {
                   </td>
                   <td className="py-md px-lg text-right font-numeral-lg text-[24px] font-medium text-on-surface">R$ {fmt(t.amount)}</td>
                   <td className="py-md px-lg text-right">
-                    <button className="text-on-surface-variant opacity-0 group-hover:opacity-100 hover:text-primary transition-all">
-                      <MoreVertical size={20} />
-                    </button>
+                    <RecordActionsMenu
+                      label={t.description}
+                      onDelete={async () => {
+                        await deleteFinancialTransaction(t);
+                        await refetch();
+                      }}
+                    />
                   </td>
                 </tr>
               ))}

@@ -7,7 +7,10 @@ import {
   buildInvestmentDepositTransactionPayload,
   buildInvestmentPayload,
   buildInvoicePurchasePayload,
+  buildLinkedRecordNote,
+  getInvestmentTotalsAfterDepositRemoval,
   getInvestmentTotalsAfterDeposit,
+  parseLinkedRecordNote,
   buildTransactionPayload,
   parseCurrencyValue,
 } from './financialPayloads';
@@ -175,6 +178,55 @@ describe('investment deposits', () => {
       payment_method: 'transferencia',
       category_id: null,
       notes: 'Debitado do saldo livre para guardar na caixinha.',
+    });
+  });
+
+  it('reverts investment totals when a deposit is removed', () => {
+    expect(getInvestmentTotalsAfterDepositRemoval({
+      amountInvested: 1000,
+      currentValue: 1200,
+      depositAmount: 300,
+    })).toEqual({
+      amount_invested: 700,
+      current_value: 900,
+      return_percentage: 28.57,
+    });
+
+    expect(getInvestmentTotalsAfterDepositRemoval({
+      amountInvested: 100,
+      currentValue: 80,
+      depositAmount: 150,
+    })).toEqual({
+      amount_invested: 0,
+      current_value: 0,
+      return_percentage: 0,
+    });
+  });
+});
+
+describe('linked record notes', () => {
+  it('builds and parses invoice item markers', () => {
+    const note = buildLinkedRecordNote('invoice_item', 'invoice-1');
+
+    expect(note).toBe('invoice_item:invoice-1');
+    expect(parseLinkedRecordNote(note)).toEqual({
+      kind: 'invoice_item',
+      id: 'invoice-1',
+      parentId: null,
+    });
+  });
+
+  it('parses investment deposit markers with legacy investment-only support', () => {
+    expect(buildLinkedRecordNote('investment_deposit', 'deposit-1', 'investment-1')).toBe('investment_deposit:investment-1:deposit-1');
+    expect(parseLinkedRecordNote('investment_deposit:investment-1:deposit-1')).toEqual({
+      kind: 'investment_deposit',
+      id: 'deposit-1',
+      parentId: 'investment-1',
+    });
+    expect(parseLinkedRecordNote('investment_deposit:investment-1')).toEqual({
+      kind: 'investment_deposit',
+      id: null,
+      parentId: 'investment-1',
     });
   });
 });
