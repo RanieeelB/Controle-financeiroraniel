@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { buildCategoryExpenseData } from '../lib/categoryExpense';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import type { MonthRange } from '../lib/monthSelection';
 import { supabase } from '../lib/supabase';
@@ -27,8 +28,6 @@ const defaultAnalysis: MonthlyAnalysis = {
   description: 'Adicione suas primeiras transações para ver a análise mensal.',
   actionText: 'Começar agora',
 };
-
-const fallbackExpenseColors = ['#75ff9e', '#7bd0ff', '#ffba79', '#859585', '#ffb4ab'];
 
 export function useDashboardData(monthRange: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -116,7 +115,7 @@ export function useDashboardData(monthRange: MonthRange) {
         fixedBillsTotal,
       });
       setBalanceEvolution(buildBalanceEvolution(mappedTransactions));
-      setCategoryExpense(buildCategoryExpense(mappedTransactions));
+      setCategoryExpense(buildCategoryExpenseData(mappedTransactions));
       setMonthlyAnalysis(buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length));
     } catch (error) {
       console.error('Error fetching Supabase data:', error);
@@ -170,27 +169,6 @@ function buildBalanceEvolution(transactions: Transaction[]) {
         balance,
       };
     });
-}
-
-function buildCategoryExpense(transactions: Transaction[]) {
-  const byCategory = new Map<string, { value: number; color: string }>();
-
-  transactions
-    .filter(transaction => transaction.type === 'gasto')
-    .forEach(transaction => {
-      const name = transaction.category?.name ?? 'Sem categoria';
-      const color = transaction.category?.color ?? fallbackExpenseColors[byCategory.size % fallbackExpenseColors.length];
-      const current = byCategory.get(name);
-      byCategory.set(name, {
-        value: (current?.value ?? 0) + transaction.amount,
-        color: current?.color ?? color,
-      });
-    });
-
-  return [...byCategory.entries()]
-    .sort(([, left], [, right]) => right.value - left.value)
-    .slice(0, 5)
-    .map(([name, data]) => ({ name, value: data.value, color: data.color }));
 }
 
 function buildMonthlyAnalysis(totalIncome: number, totalExpense: number, transactionCount: number): MonthlyAnalysis {
