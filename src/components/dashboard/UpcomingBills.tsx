@@ -1,9 +1,10 @@
 import { Wifi, Zap, Landmark, Home, GraduationCap, MonitorPlay, ReceiptText, Check } from 'lucide-react';
 import { useState } from 'react';
 import { payFixedBill } from '../../lib/financialActions';
+import type { DynamicFixedBill } from '../../types/financial';
 
 interface UpcomingBillsProps {
-  data: any[];
+  data: DynamicFixedBill[];
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -30,7 +31,7 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
     );
   }
 
-  async function handlePay(bill: any) {
+  async function handlePay(bill: DynamicFixedBill) {
     if (isPaying) return;
     setIsPaying(bill.id);
     try {

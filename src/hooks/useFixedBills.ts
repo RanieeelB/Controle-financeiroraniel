@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
-import type { FixedBill } from '../types/financial';
+import type { FixedBill, DynamicFixedBill } from '../types/financial';
 import type { MonthRange } from '../lib/monthSelection';
-
-export type DynamicFixedBill = FixedBill & {
-  dynamicStatus: 'pago' | 'pendente' | 'atrasado';
-  daysOverdue: number;
-};
 
 export function useFixedBills(monthRange?: MonthRange) {
   const [bills, setBills] = useState<DynamicFixedBill[]>([]);
@@ -57,7 +52,7 @@ export function useFixedBills(monthRange?: MonthRange) {
       const isViewingPastMonth = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
 
       if (billsData) {
-        const dynamicBills = billsData.map((b: any) => {
+        const dynamicBills = billsData.map((b: FixedBill) => {
           const isPaidThisMonth = paidBillIds.has(b.id);
           let dynamicStatus: 'pago' | 'pendente' | 'atrasado' = 'pendente';
           let daysOverdue = 0;

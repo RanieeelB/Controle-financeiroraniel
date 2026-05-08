@@ -7,6 +7,7 @@ import type {
   CreditCard,
   FinancialGoal,
   FixedBill,
+  DynamicFixedBill,
   MonthlyAnalysis,
   SummaryCards,
   Transaction,
@@ -121,7 +122,7 @@ export function useDashboardData(monthRange?: MonthRange) {
           dynamicStatus,
           daysOverdue
         };
-      }) as any[];
+      }) as DynamicFixedBill[];
 
       const mappedCards = (cardsResult.data ?? []).map((card: Record<string, unknown>) => ({
         ...card,
@@ -165,7 +166,7 @@ export function useDashboardData(monthRange?: MonthRange) {
     } finally {
       setIsLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, monthRange]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {

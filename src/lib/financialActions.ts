@@ -109,8 +109,6 @@ export type CreateFinancialTransactionInput = TransactionPayloadInput & {
 };
 
 export async function createFinancialTransaction(input: CreateFinancialTransactionInput) {
-  let invoiceItemId: string | null = null;
-
   if (input.paymentMethod === 'credito') {
     if (!input.cardId) {
       throw new Error('Selecione um cartão para lançar no crédito.');
@@ -135,7 +133,7 @@ export async function createFinancialTransaction(input: CreateFinancialTransacti
     .insert({
       ...transactionPayload,
       user_id: userId,
-      notes: invoiceItemId ? buildLinkedRecordNote('invoice_item', invoiceItemId) : transactionPayload.notes,
+      notes: transactionPayload.notes,
     });
 
   if (error) throw error;
@@ -377,19 +375,7 @@ export async function createFinancialGoal(input: FinancialGoalPayloadInput) {
   emitFinancialDataChanged();
 }
 
-async function insertInvoicePurchase(input: InvoicePurchasePayloadInput) {
-  const userId = await getUserId();
-  const { data, error } = await supabase
-    .from('invoice_items')
-    .insert({ ...buildInvoicePurchasePayload(input), user_id: userId })
-    .select('id')
-    .single();
 
-  if (error) throw error;
-  if (!data?.id) throw new Error('Não foi possível identificar o lançamento da fatura.');
-
-  return { id: data.id as string };
-}
 
 function isMissingInvestmentDepositsTable(error: { code?: string; message?: string }) {
   return error.code === '42P01'
