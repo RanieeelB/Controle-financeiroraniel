@@ -27,7 +27,63 @@ import {
   type InvoicePurchasePayloadInput,
   type TransactionPayloadInput,
 } from './financialPayloads';
-import type { Investment, InvestmentDeposit, InvoiceItem, Transaction } from '../types/financial';
+import type { Category, Investment, InvestmentDeposit, InvoiceItem, Transaction } from '../types/financial';
+import { defaultCategories } from './defaultCategories';
+
+export interface CreateCategoryInput {
+  name: string;
+  type: Category['type'];
+  color: string;
+  icon?: string;
+}
+
+export async function createCategory(input: CreateCategoryInput) {
+  const userId = await getUserId();
+  const payload = {
+    user_id: userId,
+    name: input.name.trim(),
+    type: input.type,
+    color: input.color,
+    icon: input.icon?.trim() || 'tag',
+  };
+
+  if (!payload.name) throw new Error('Informe o nome da categoria.');
+
+  const { data, error } = await supabase
+    .from('categories')
+    .insert(payload)
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+  return data as Category;
+}
+
+export async function ensureDefaultCategories() {
+  const userId = await getUserId();
+  
+  // Get existing categories for this user
+  const { data: existing, error } = await supabase
+    .from('categories')
+    .select('name, type')
+    .eq('user_id', userId);
+    
+  if (error) throw error;
+
+  const missing = defaultCategories.filter(def => 
+    !existing?.some(ex => ex.name === def.name && ex.type === def.type)
+  );
+
+  if (missing.length === 0) return;
+
+  const { error: insertError } = await supabase
+    .from('categories')
+    .insert(missing.map(m => ({ ...m, user_id: userId })));
+
+  if (insertError) throw insertError;
+  emitFinancialDataChanged();
+}
 
 export type CreateFinancialTransactionInput = TransactionPayloadInput & {
   cardId?: string | null;
