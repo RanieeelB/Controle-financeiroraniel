@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import type { MonthRange } from '../lib/monthSelection';
 import { supabase } from '../lib/supabase';
 import type {
   BalanceEvolutionData,
@@ -29,7 +30,7 @@ const defaultAnalysis: MonthlyAnalysis = {
 
 const fallbackExpenseColors = ['#75ff9e', '#7bd0ff', '#ffba79', '#859585', '#ffb4ab'];
 
-export function useDashboardData() {
+export function useDashboardData(monthRange: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fixedBills, setFixedBills] = useState<FixedBill[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
@@ -44,11 +45,23 @@ export function useDashboardData() {
     setIsLoading(true);
 
     try {
+      const transactionsQuery = supabase
+        .from('transactions')
+        .select('*, category:categories(*)')
+        .gte('date', monthRange.startDate)
+        .lt('date', monthRange.endDate)
+        .order('date', { ascending: false });
+      const invoiceQuery = supabase
+        .from('invoice_items')
+        .select('amount')
+        .gte('date', monthRange.startDate)
+        .lt('date', monthRange.endDate);
+
       const [txResult, billsResult, cardsResult, invoiceResult, goalsResult] = await Promise.all([
-        supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false }),
+        transactionsQuery,
         supabase.from('fixed_bills').select('*, category:categories(*)').order('due_day', { ascending: true }),
         supabase.from('credit_cards').select('*').order('created_at', { ascending: true }),
-        supabase.from('invoice_items').select('amount'),
+        invoiceQuery,
         supabase.from('financial_goals').select('*').order('created_at', { ascending: true }),
       ]);
 
@@ -110,7 +123,7 @@ export function useDashboardData() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [monthRange.startDate, monthRange.endDate]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {

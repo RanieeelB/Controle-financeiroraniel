@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import type { MonthRange } from '../lib/monthSelection';
 import { supabase } from '../lib/supabase';
 import type { Transaction } from '../types/financial';
 
-export function useTransactions(type?: 'entrada' | 'gasto') {
+export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const startDate = monthRange?.startDate;
+  const endDate = monthRange?.endDate;
 
   const fetchTransactions = useCallback(async () => {
     setIsLoading(true);
@@ -17,6 +20,12 @@ export function useTransactions(type?: 'entrada' | 'gasto') {
       
       if (type) {
         query = query.eq('type', type);
+      }
+
+      if (startDate && endDate) {
+        query = query
+          .gte('date', startDate)
+          .lt('date', endDate);
       }
 
       const { data, error } = await query;
@@ -32,7 +41,7 @@ export function useTransactions(type?: 'entrada' | 'gasto') {
     } finally {
       setIsLoading(false);
     }
-  }, [type]);
+  }, [type, startDate, endDate]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {

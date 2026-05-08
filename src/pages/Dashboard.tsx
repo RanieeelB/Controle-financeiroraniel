@@ -6,8 +6,11 @@ import { UpcomingBills } from '../components/dashboard/UpcomingBills';
 import { CreditCardInvoices } from '../components/dashboard/CreditCardInvoices';
 import { FinancialGoalCard } from '../components/dashboard/FinancialGoalCard';
 import { useDashboardData } from '../hooks/useDashboardData';
+import { useOutletContext } from 'react-router-dom';
+import type { FinancialLayoutContext } from '../components/layout/Layout';
 
 export function Dashboard() {
+  const { selectedMonthRange } = useOutletContext<FinancialLayoutContext>();
   const { 
     fixedBills, 
     creditCards, 
@@ -17,7 +20,7 @@ export function Dashboard() {
     categoryExpense, 
     monthlyAnalysis, 
     isLoading 
-  } = useDashboardData();
+  } = useDashboardData(selectedMonthRange);
 
   if (isLoading) {
     return (
