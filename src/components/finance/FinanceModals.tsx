@@ -6,12 +6,13 @@ import {
   createFinancialGoal,
   createFixedBill,
   createInvestment,
+  createInvestmentDeposit,
   updateCreditCard,
 } from '../../lib/financialActions';
 import { getInstallmentAmount, parseCurrencyValue } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
-import type { CreditCard, InvestmentCategory } from '../../types/financial';
+import type { CreditCard, Investment, InvestmentCategory } from '../../types/financial';
 
 const inputClass = 'w-full bg-background border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none placeholder:text-outline';
 const selectClass = `${inputClass} appearance-none pr-xl`;
@@ -459,6 +460,73 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
         <div className="flex justify-end gap-md pt-md border-t border-outline-variant">
           <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
           <SubmitButton isSaving={isSaving}>Salvar investimento</SubmitButton>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+export function InvestmentDepositModal({ investment, onClose }: { investment: Investment; onClose: () => void }) {
+  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(today());
+  const [notes, setNotes] = useState('');
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+
+    const value = parseCurrencyValue(amount);
+    if (!value) {
+      setError('Informe um valor maior que zero.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await createInvestmentDeposit({
+        investment,
+        investmentId: investment.id,
+        amount: value,
+        date,
+        notes,
+      });
+      onClose();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar o aporte.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <ModalShell title={`Adicionar valor`} subtitle={`Aporte em ${investment.name}. Esse valor será debitado do saldo livre.`} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="p-lg space-y-md">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+          <label>
+            <span className={labelClass}>Valor</span>
+            <input value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+          </label>
+          <label>
+            <span className={labelClass}>Data</span>
+            <input value={date} onChange={event => setDate(event.target.value)} className={inputClass} type="date" />
+          </label>
+        </div>
+        <label>
+          <span className={labelClass}>Observação</span>
+          <textarea value={notes} onChange={event => setNotes(event.target.value)} className={`${inputClass} min-h-20 resize-y`} placeholder="Opcional" />
+        </label>
+
+        <div className="rounded-lg border border-primary/30 bg-primary/10 px-md py-sm text-[14px] text-on-surface">
+          Ao salvar, o saldo guardado de {investment.name} aumenta e o mesmo valor entra como gasto para abater do salário/saldo disponível.
+        </div>
+
+        <ErrorMessage error={error} />
+
+        <div className="flex justify-end gap-md pt-md border-t border-outline-variant">
+          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
+          <SubmitButton isSaving={isSaving}>Salvar aporte</SubmitButton>
         </div>
       </form>
     </ModalShell>

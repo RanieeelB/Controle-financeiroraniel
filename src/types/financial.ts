@@ -104,6 +104,19 @@ export interface Investment {
   created_at: string;
 }
 
+// === APORTES EM INVESTIMENTOS / CAIXINHAS ===
+export interface InvestmentDeposit {
+  id: string;
+  user_id: string | null;
+  investment_id: string;
+  amount: number;
+  date: string;
+  notes: string | null;
+  created_at: string;
+  // Joined
+  investment?: Investment;
+}
+
 // === TIPOS DE APRESENTAÇÃO (UI) ===
 export interface SummaryCards {
   freeBalance: number;

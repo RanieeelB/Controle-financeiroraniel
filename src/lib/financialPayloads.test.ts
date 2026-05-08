@@ -3,8 +3,11 @@ import {
   buildCreditCardPayload,
   buildFinancialGoalPayload,
   buildFixedBillPayload,
+  buildInvestmentDepositPayload,
+  buildInvestmentDepositTransactionPayload,
   buildInvestmentPayload,
   buildInvoicePurchasePayload,
+  getInvestmentTotalsAfterDeposit,
   buildTransactionPayload,
   parseCurrencyValue,
 } from './financialPayloads';
@@ -129,5 +132,49 @@ describe('entity payload builders', () => {
       currentAmount: 1500,
       deadline: '',
     })).toMatchObject({ title: 'Viagem', deadline: null });
+  });
+});
+
+describe('investment deposits', () => {
+  it('creates a dated deposit payload and updates the saved balance', () => {
+    expect(buildInvestmentDepositPayload({
+      investmentId: 'inv-1',
+      amount: 350,
+      date: '2026-05-08',
+      notes: 'Aporte mensal',
+    })).toEqual({
+      investment_id: 'inv-1',
+      amount: 350,
+      date: '2026-05-08',
+      notes: 'Aporte mensal',
+    });
+
+    expect(getInvestmentTotalsAfterDeposit({
+      amountInvested: 1000,
+      currentValue: 1200,
+      depositAmount: 350,
+    })).toEqual({
+      amount_invested: 1350,
+      current_value: 1550,
+      return_percentage: 14.81,
+    });
+  });
+
+  it('creates a paid expense transaction to debit the free salary balance', () => {
+    expect(buildInvestmentDepositTransactionPayload({
+      investmentName: 'Caixinha Ferias',
+      amount: 500,
+      date: '2026-05-08',
+      notes: '',
+    })).toEqual({
+      type: 'gasto',
+      description: 'Aporte em Caixinha Ferias',
+      amount: 500,
+      date: '2026-05-08',
+      status: 'pago',
+      payment_method: 'transferencia',
+      category_id: null,
+      notes: 'Debitado do saldo livre para guardar na caixinha.',
+    });
   });
 });

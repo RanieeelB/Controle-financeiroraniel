@@ -96,6 +96,17 @@ CREATE TABLE public.investments (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+-- 8. APORTES EM INVESTIMENTOS / CAIXINHAS
+CREATE TABLE public.investment_deposits (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    investment_id UUID REFERENCES public.investments(id) ON DELETE CASCADE NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 -- =============================================================
 -- ROW LEVEL SECURITY (RLS)
 -- =============================================================
@@ -106,6 +117,7 @@ ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fixed_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.investment_deposits ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================
 -- POLÍTICAS: Enquanto não temos auth, permitir acesso total
@@ -118,3 +130,4 @@ CREATE POLICY "Allow all for invoice_items" ON public.invoice_items FOR ALL USIN
 CREATE POLICY "Allow all for fixed_bills" ON public.fixed_bills FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for financial_goals" ON public.financial_goals FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for investments" ON public.investments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for investment_deposits" ON public.investment_deposits FOR ALL USING (true) WITH CHECK (true);

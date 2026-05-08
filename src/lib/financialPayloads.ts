@@ -43,6 +43,26 @@ export interface InvestmentPayloadInput {
   currentValue: number;
 }
 
+export interface InvestmentDepositPayloadInput {
+  investmentId: string;
+  amount: number;
+  date: string;
+  notes?: string | null;
+}
+
+export interface InvestmentTotalsInput {
+  amountInvested: number;
+  currentValue: number;
+  depositAmount: number;
+}
+
+export interface InvestmentDepositTransactionPayloadInput {
+  investmentName: string;
+  amount: number;
+  date: string;
+  notes?: string | null;
+}
+
 export interface FinancialGoalPayloadInput {
   title: string;
   targetAmount: number;
@@ -149,6 +169,41 @@ export function buildInvestmentPayload(input: InvestmentPayloadInput) {
     current_value: currentValue,
     return_percentage: returnPercentage,
   };
+}
+
+export function buildInvestmentDepositPayload(input: InvestmentDepositPayloadInput) {
+  return {
+    investment_id: normalizeRequiredText(input.investmentId),
+    amount: roundCurrency(input.amount),
+    date: input.date,
+    notes: normalizeOptionalText(input.notes),
+  };
+}
+
+export function getInvestmentTotalsAfterDeposit(input: InvestmentTotalsInput) {
+  const amountInvested = roundCurrency(input.amountInvested + input.depositAmount);
+  const currentValue = roundCurrency(input.currentValue + input.depositAmount);
+  const returnPercentage = amountInvested > 0
+    ? roundCurrency(((currentValue - amountInvested) / amountInvested) * 100)
+    : 0;
+
+  return {
+    amount_invested: amountInvested,
+    current_value: currentValue,
+    return_percentage: returnPercentage,
+  };
+}
+
+export function buildInvestmentDepositTransactionPayload(input: InvestmentDepositTransactionPayloadInput) {
+  return buildTransactionPayload({
+    type: 'gasto',
+    description: `Aporte em ${normalizeRequiredText(input.investmentName)}`,
+    amount: input.amount,
+    date: input.date,
+    paymentMethod: 'transferencia',
+    categoryId: null,
+    notes: normalizeOptionalText(input.notes) ?? 'Debitado do saldo livre para guardar na caixinha.',
+  });
 }
 
 export function buildFinancialGoalPayload(input: FinancialGoalPayloadInput) {

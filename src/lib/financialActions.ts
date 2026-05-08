@@ -5,15 +5,20 @@ import {
   buildFinancialGoalPayload,
   buildFixedBillPayload,
   buildInvestmentPayload,
+  buildInvestmentDepositPayload,
+  buildInvestmentDepositTransactionPayload,
   buildInvoicePurchasePayload,
   buildTransactionPayload,
+  getInvestmentTotalsAfterDeposit,
   type CreditCardPayloadInput,
   type FinancialGoalPayloadInput,
   type FixedBillPayloadInput,
+  type InvestmentDepositPayloadInput,
   type InvestmentPayloadInput,
   type InvoicePurchasePayloadInput,
   type TransactionPayloadInput,
 } from './financialPayloads';
+import type { Investment } from '../types/financial';
 
 export type CreateFinancialTransactionInput = TransactionPayloadInput & {
   cardId?: string | null;
@@ -101,6 +106,46 @@ export async function createInvestment(input: InvestmentPayloadInput) {
   emitFinancialDataChanged();
 }
 
+export async function createInvestmentDeposit(input: InvestmentDepositPayloadInput & { investment: Investment }) {
+  const depositPayload = buildInvestmentDepositPayload(input);
+
+  const { error: depositError } = await supabase
+    .from('investment_deposits')
+    .insert(depositPayload);
+
+  if (depositError && !isMissingInvestmentDepositsTable(depositError)) {
+    throw depositError;
+  }
+
+  const updatedTotals = getInvestmentTotalsAfterDeposit({
+    amountInvested: input.investment.amount_invested,
+    currentValue: input.investment.current_value,
+    depositAmount: input.amount,
+  });
+
+  const { error: investmentError } = await supabase
+    .from('investments')
+    .update(updatedTotals)
+    .eq('id', input.investment.id);
+
+  if (investmentError) throw investmentError;
+
+  const { error: transactionError } = await supabase
+    .from('transactions')
+    .insert({
+      ...buildInvestmentDepositTransactionPayload({
+        investmentName: input.investment.name,
+        amount: input.amount,
+        date: input.date,
+        notes: input.notes,
+      }),
+      notes: `investment_deposit:${input.investment.id}`,
+    });
+
+  if (transactionError) throw transactionError;
+  emitFinancialDataChanged();
+}
+
 export async function createFinancialGoal(input: FinancialGoalPayloadInput) {
   const { error } = await supabase
     .from('financial_goals')
@@ -116,4 +161,10 @@ async function insertInvoicePurchase(input: InvoicePurchasePayloadInput) {
     .insert(buildInvoicePurchasePayload(input));
 
   if (error) throw error;
+}
+
+function isMissingInvestmentDepositsTable(error: { code?: string; message?: string }) {
+  return error.code === '42P01'
+    || error.message?.includes('investment_deposits') === true
+    || error.message?.includes('Could not find the table') === true;
 }

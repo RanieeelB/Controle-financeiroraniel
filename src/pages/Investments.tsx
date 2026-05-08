@@ -1,16 +1,57 @@
-import { Wallet, TrendingUp, CircleDollarSign, Landmark, LineChart, Building2, Bitcoin, Plus } from 'lucide-react';
-import { useState } from 'react';
-import { InvestmentModal } from '../components/finance/FinanceModals';
+import {
+  ArrowDownToLine,
+  Bitcoin,
+  Building2,
+  CircleDollarSign,
+  Landmark,
+  LineChart,
+  Plus,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react';
+import { useState, type ElementType } from 'react';
+import { InvestmentDepositModal, InvestmentModal } from '../components/finance/FinanceModals';
 import { useInvestments } from '../hooks/useInvestments';
+import type { Investment, InvestmentCategory } from '../types/financial';
+
+const catIcons: Record<InvestmentCategory, ElementType> = {
+  renda_fixa: Landmark,
+  acoes: TrendingUp,
+  fiis: Building2,
+  cripto: Bitcoin,
+};
+
+const catLabels: Record<InvestmentCategory, string> = {
+  renda_fixa: 'Caixinha / Renda fixa',
+  acoes: 'Ações',
+  fiis: 'FIIs',
+  cripto: 'Cripto',
+};
+
+const catColors: Record<InvestmentCategory, string> = {
+  renda_fixa: '#75ff9e',
+  acoes: '#00a6e0',
+  fiis: '#ffba79',
+  cripto: '#859585',
+};
 
 export function Investments() {
-  const { investments, isLoading, totalCurrentValue, totalReturn, categoryTotals } = useInvestments();
+  const {
+    investments,
+    deposits,
+    isLoading,
+    totalInvested,
+    totalCurrentValue,
+    totalReturn,
+    getInvestmentDeposits,
+    getLastDeposit,
+  } = useInvestments();
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
-  if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
-  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  const [depositInvestment, setDepositInvestment] = useState<Investment | null>(null);
 
-  const catIcons: Record<string, React.ElementType> = { renda_fixa: Landmark, acoes: TrendingUp, fiis: Building2, cripto: Bitcoin };
-  const catColors: Record<string, string> = { renda_fixa: '#75ff9e', acoes: '#00a6e0', fiis: '#ffba79', cripto: '#859585' };
+  if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+
+  const fmt = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
   if (investments.length === 0) {
     return (
@@ -31,19 +72,13 @@ export function Investments() {
     );
   }
 
-  // Build conic gradient from category percentages
-  const conicParts: string[] = [];
-  let acc = 0;
-  categoryTotals.forEach(ct => {
-    const start = acc;
-    acc += ct.percentage;
-    conicParts.push(`${catColors[ct.category] || '#555'} ${start}% ${acc}%`);
-  });
-  const conicGradient = conicParts.length > 0 ? `conic-gradient(from 0deg, ${conicParts.join(', ')})` : '#19221a';
-
   return (
     <div className="space-y-xl">
-      <div className="flex justify-end">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-md">
+        <div>
+          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Investimentos e caixinhas</h2>
+          <p className="text-on-surface-variant mt-xs">Acompanhe o saldo guardado e registre seus aportes mensais.</p>
+        </div>
         <button
           onClick={() => setIsInvestmentModalOpen(true)}
           className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
@@ -52,68 +87,116 @@ export function Investments() {
         </button>
       </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-        <div className="bg-surface-container rounded-xl border border-outline-variant p-lg border-t-2 border-t-primary shadow-[0_0_30px_rgba(117,255,158,0.03)] relative overflow-hidden group hover:border-primary/50 transition-colors">
-          <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Patrimônio Total</span><Wallet className="text-primary" size={24} /></div>
-          <div className="font-numeral-lg text-[48px] font-bold text-on-surface mb-xs">R$ {fmt(totalCurrentValue)}</div>
-          <div className="flex items-center gap-xs text-primary font-label-md text-[14px] font-semibold"><TrendingUp size={16} /><span>{totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(1)}% retorno</span></div>
-        </div>
-        <div className="bg-surface-container rounded-xl border border-outline-variant p-lg"><div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Rentabilidade</span><LineChart className="text-secondary" size={24} /></div><div className="font-numeral-lg text-[48px] font-bold text-primary mb-xs">{totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%</div></div>
-        <div className="bg-surface-container rounded-xl border border-outline-variant p-lg"><div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Categorias</span><CircleDollarSign className="text-tertiary-container" size={24} /></div><div className="font-numeral-lg text-[48px] font-bold text-on-surface mb-xs">{categoryTotals.length}</div></div>
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-lg">
+        <SummaryCard title="Saldo guardado" value={`R$ ${fmt(totalCurrentValue)}`} icon={Wallet} tone="primary" />
+        <SummaryCard title="Total aportado" value={`R$ ${fmt(totalInvested)}`} icon={ArrowDownToLine} tone="secondary" />
+        <SummaryCard title="Retorno" value={`${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`} icon={LineChart} tone={totalReturn >= 0 ? 'primary' : 'error'} />
+        <SummaryCard title="Aportes" value={String(deposits.length)} icon={CircleDollarSign} tone="tertiary" />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
-        <div className="lg:col-span-2 bg-surface-container rounded-xl border border-outline-variant p-lg">
-          <h3 className="font-h2 text-[24px] font-semibold text-on-surface mb-lg">Distribuição</h3>
-          <div className="flex flex-col gap-md">
-            {categoryTotals.map(ct => (
-              <div key={ct.category} className="flex justify-between items-center py-sm">
-                <div className="flex items-center gap-sm"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: catColors[ct.category] }}></div><span className="text-on-surface">{ct.label}</span></div>
-                <div className="flex items-center gap-lg"><span className="text-on-surface-variant">R$ {fmt(ct.total)}</span><span className="font-label-md text-[14px] font-semibold" style={{ color: catColors[ct.category] }}>{ct.percentage}%</span></div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-surface-container rounded-xl border border-outline-variant p-lg flex flex-col items-center justify-center">
-          <div className="w-48 h-48 rounded-full relative flex items-center justify-center" style={{ background: conicGradient }}>
-            <div className="w-36 h-36 bg-surface-container rounded-full absolute z-10 flex flex-col items-center justify-center border border-outline-variant"><span className="text-on-surface-variant text-sm">Total</span><span className="font-numeral-lg text-[24px] font-semibold text-on-surface mt-xs">100%</span></div>
-          </div>
-        </div>
-      </section>
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-lg">
+        {investments.map(investment => {
+          const investmentDeposits = getInvestmentDeposits(investment.id);
+          const lastDeposit = getLastDeposit(investment.id);
+          const Icon = catIcons[investment.category];
+          const color = catColors[investment.category];
 
-      <section>
-        <div className="flex justify-between items-end mb-lg"><h3 className="font-h1 text-[32px] font-semibold text-on-surface">Carteira Detalhada</h3></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-lg">
-          {categoryTotals.map(ct => {
-            const Icon = catIcons[ct.category] || Landmark;
-            return (
-              <div key={ct.category} className="bg-surface-container/50 backdrop-blur-sm rounded-xl border border-outline-variant p-md">
-                <div className="flex items-center gap-sm mb-md pb-sm border-b border-outline-variant/50">
-                  <div className="w-8 h-8 rounded flex items-center justify-center" style={{ backgroundColor: `${catColors[ct.category]}20` }}><Icon size={18} style={{ color: catColors[ct.category] }} /></div>
-                  <h4 className="font-h2 text-[24px] font-semibold text-on-surface">{ct.label}</h4>
-                  <span className="ml-auto font-numeral-lg text-[18px] text-on-surface">R$ {fmt(ct.total)}</span>
+          return (
+            <article key={investment.id} className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden">
+              <div className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: color }}></div>
+              <div className="flex justify-between gap-md items-start mb-lg">
+                <div className="flex items-start gap-md">
+                  <div className="w-12 h-12 rounded-lg border border-outline-variant flex items-center justify-center" style={{ backgroundColor: `${color}20`, color }}>
+                    <Icon size={22} />
+                  </div>
+                  <div>
+                    <h3 className="font-h2 text-[24px] font-semibold text-on-surface">{investment.name}</h3>
+                    <p className="text-[14px] text-on-surface-variant">{catLabels[investment.category]}</p>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-xs">
-                  {ct.items.map(inv => (
-                    <div key={inv.id} className="flex justify-between items-center py-sm hover:bg-surface-variant/50 px-sm rounded transition-colors">
-                      <div className="flex items-center gap-md">
-                        {inv.ticker && <span className="font-label-md text-[14px] font-semibold text-on-surface bg-surface-dim px-xs py-1 rounded border border-outline-variant">{inv.ticker}</span>}
-                        <span className="text-on-surface-variant">{inv.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-numeral-lg text-[16px] text-on-surface">R$ {fmt(inv.current_value)}</div>
-                        <div className={`font-numeral-lg text-[14px] font-semibold ${inv.return_percentage >= 0 ? 'text-primary' : 'text-error'}`}>{inv.return_percentage >= 0 ? '+' : ''}{inv.return_percentage}%</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <button
+                  onClick={() => setDepositInvestment(investment)}
+                  className="shrink-0 font-label-md text-[13px] font-semibold bg-primary text-on-primary px-md py-sm rounded-lg hover:bg-primary-fixed transition-all flex items-center gap-xs"
+                >
+                  <Plus size={16} />Adicionar valor
+                </button>
               </div>
-            );
-          })}
-        </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-md mb-lg">
+                <Metric label="Saldo guardado" value={`R$ ${fmt(investment.current_value)}`} />
+                <Metric label="Total aportado" value={`R$ ${fmt(investment.amount_invested)}`} />
+                <Metric label="Retorno" value={`${investment.return_percentage >= 0 ? '+' : ''}${investment.return_percentage.toFixed(2)}%`} highlight={investment.return_percentage >= 0} />
+              </div>
+
+              <div className="bg-background/50 border border-outline-variant rounded-lg p-md">
+                <div className="flex justify-between items-center mb-md">
+                  <h4 className="font-label-md text-[13px] font-semibold text-on-surface-variant uppercase tracking-wider">Histórico de aportes</h4>
+                  {lastDeposit && (
+                    <span className="text-[12px] text-on-surface-variant">
+                      Último: {new Date(`${lastDeposit.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                    </span>
+                  )}
+                </div>
+                {investmentDeposits.length === 0 ? (
+                  <p className="text-[14px] text-on-surface-variant py-sm">Nenhum aporte registrado ainda.</p>
+                ) : (
+                  <ul className="space-y-sm">
+                    {investmentDeposits.slice(0, 4).map(deposit => (
+                      <li key={deposit.id} className="flex justify-between items-center border-b border-outline-variant/40 pb-sm last:border-0 last:pb-0">
+                        <div>
+                          <p className="text-on-surface">R$ {fmt(deposit.amount)}</p>
+                          <p className="text-[12px] text-on-surface-variant">
+                            {new Date(`${deposit.date}T00:00:00`).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <span className="text-primary font-label-md text-[13px] font-semibold">Guardado</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </article>
+          );
+        })}
       </section>
 
       {isInvestmentModalOpen && <InvestmentModal onClose={() => setIsInvestmentModalOpen(false)} />}
+      {depositInvestment && (
+        <InvestmentDepositModal
+          investment={depositInvestment}
+          onClose={() => setDepositInvestment(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+type SummaryTone = 'primary' | 'secondary' | 'tertiary' | 'error';
+
+function SummaryCard({ title, value, icon: Icon, tone }: { title: string; value: string; icon: ElementType; tone: SummaryTone }) {
+  const tones: Record<SummaryTone, string> = {
+    primary: 'text-primary bg-primary/10 border-primary/30',
+    secondary: 'text-secondary bg-secondary/10 border-secondary/30',
+    tertiary: 'text-tertiary-container bg-tertiary-container/10 border-tertiary-container/30',
+    error: 'text-error bg-error/10 border-error/30',
+  };
+
+  return (
+    <div className="bg-surface-container border border-outline-variant rounded-xl p-lg">
+      <div className="flex justify-between items-start mb-md">
+        <span className="text-on-surface-variant">{title}</span>
+        <div className={`p-sm rounded-md border ${tones[tone]}`}><Icon size={20} /></div>
+      </div>
+      <p className="font-numeral-lg text-[28px] font-semibold text-on-surface">{value}</p>
+    </div>
+  );
+}
+
+function Metric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="bg-background/50 border border-outline-variant rounded-lg p-md">
+      <p className="text-[12px] text-on-surface-variant mb-xs uppercase tracking-wider">{label}</p>
+      <p className={`font-numeral-lg text-[18px] font-semibold ${highlight ? 'text-primary' : 'text-on-surface'}`}>{value}</p>
     </div>
   );
 }
