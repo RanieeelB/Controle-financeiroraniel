@@ -1,6 +1,24 @@
 import { supabase } from './supabase';
 import { emitFinancialDataChanged } from './financialEvents';
 
+// Helper function to add months to a YYYY-MM-DD date string
+function addMonthsToDate(dateStr: string, months: number): string {
+  if (months === 0) return dateStr;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1 + months, day);
+  
+  // Handle cases where the target month has fewer days than the source day
+  // (e.g. Jan 31 + 1 month should be Feb 28/29, not March 3)
+  const expectedMonth = (month - 1 + months) % 12;
+  const normalizedExpectedMonth = expectedMonth < 0 ? expectedMonth + 12 : expectedMonth;
+  
+  if (date.getMonth() !== normalizedExpectedMonth) {
+    date.setDate(0); // Set to the last day of the previous month
+  }
+  
+  return date.toISOString().split('T')[0];
+}
+
 async function getUserId(): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user?.id) throw new Error('Usuário não autenticado.');
@@ -98,7 +116,7 @@ export async function createFinancialTransaction(input: CreateFinancialTransacti
       throw new Error('Selecione um cartão para lançar no crédito.');
     }
 
-    const invoiceItem = await insertInvoicePurchase({
+    await createCreditPurchase({
       cardId: input.cardId,
       categoryId: input.categoryId,
       description: input.description,
@@ -107,8 +125,7 @@ export async function createFinancialTransaction(input: CreateFinancialTransacti
       totalInstallments: input.totalInstallments,
       currentInstallment: input.currentInstallment,
     });
-
-    invoiceItemId = invoiceItem.id;
+    return;
   }
 
   const transactionPayload = buildTransactionPayload(input);
@@ -126,27 +143,49 @@ export async function createFinancialTransaction(input: CreateFinancialTransacti
 }
 
 export async function createCreditPurchase(input: InvoicePurchasePayloadInput) {
-  const invoiceItem = await insertInvoicePurchase(input);
-
-  const transactionPayload = buildTransactionPayload({
-    type: 'gasto',
-    description: input.description,
-    amount: input.amount,
-    date: input.date,
-    paymentMethod: 'credito',
-    categoryId: input.categoryId,
-    totalInstallments: input.totalInstallments,
-  });
   const userId = await getUserId();
-  const { error } = await supabase
-    .from('transactions')
-    .insert({
-      ...transactionPayload,
-      user_id: userId,
-      notes: buildLinkedRecordNote('invoice_item', invoiceItem.id),
+  const totalInstallments = input.totalInstallments || 1;
+  const currentInstallment = input.currentInstallment || 1;
+  const remainingCount = totalInstallments - currentInstallment + 1;
+
+  for (let i = 0; i < remainingCount; i++) {
+    const installmentNum = currentInstallment + i;
+    const date = addMonthsToDate(input.date, i);
+    
+    // 1. Insert into invoice_items
+    const { data: itemData, error: itemError } = await supabase
+      .from('invoice_items')
+      .insert({ 
+        ...buildInvoicePurchasePayload({ ...input, date, currentInstallment: installmentNum }), 
+        user_id: userId 
+      })
+      .select('id')
+      .single();
+
+    if (itemError) throw itemError;
+
+    // 2. Create the linked transaction
+    const transactionPayload = buildTransactionPayload({
+      type: 'gasto',
+      description: input.description,
+      amount: input.amount,
+      date,
+      paymentMethod: 'credito',
+      categoryId: input.categoryId,
+      totalInstallments: totalInstallments,
     });
 
-  if (error) throw error;
+    const { error: txError } = await supabase
+      .from('transactions')
+      .insert({
+        ...transactionPayload,
+        user_id: userId,
+        notes: buildLinkedRecordNote('invoice_item', itemData.id),
+      });
+
+    if (txError) throw txError;
+  }
+
   emitFinancialDataChanged();
 }
 
@@ -217,7 +256,11 @@ export async function createInvestment(input: InvestmentPayloadInput) {
 }
 
 export async function createInvestmentDeposit(input: InvestmentDepositPayloadInput & { investment: Investment }) {
-  const depositPayload = buildInvestmentDepositPayload(input);
+  const userId = await getUserId();
+  const depositPayload = {
+    ...buildInvestmentDepositPayload(input),
+    user_id: userId,
+  };
 
   const { data: depositData, error: depositError } = await supabase
     .from('investment_deposits')
@@ -252,6 +295,7 @@ export async function createInvestmentDeposit(input: InvestmentDepositPayloadInp
         date: input.date,
         notes: input.notes,
       }),
+      user_id: userId,
       notes: depositId
         ? buildLinkedRecordNote('investment_deposit', depositId, input.investment.id)
         : buildLinkedRecordNote('investment_deposit', input.investment.id),
