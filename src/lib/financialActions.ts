@@ -21,12 +21,53 @@ import {
   type InvoicePurchasePayloadInput,
   type TransactionPayloadInput,
 } from './financialPayloads';
-import type { Investment, InvestmentDeposit, InvoiceItem, Transaction } from '../types/financial';
+import { buildCategoryPayload, getMissingDefaultCategories } from './defaultCategories';
+import type { Category, Investment, InvestmentDeposit, InvoiceItem, Transaction } from '../types/financial';
 
 export type CreateFinancialTransactionInput = TransactionPayloadInput & {
   cardId?: string | null;
   currentInstallment?: number;
 };
+
+export interface CreateCategoryInput {
+  name: string;
+  type: Category['type'];
+  color: string;
+  icon?: string | null;
+}
+
+let defaultCategoriesEnsured = false;
+let defaultCategoriesPromise: Promise<void> | null = null;
+
+export async function ensureDefaultCategories() {
+  if (defaultCategoriesEnsured) return;
+  if (defaultCategoriesPromise) return defaultCategoriesPromise;
+
+  defaultCategoriesPromise = ensureDefaultCategoriesOnce().finally(() => {
+    defaultCategoriesPromise = null;
+  });
+
+  return defaultCategoriesPromise;
+}
+
+export async function createCategory(input: CreateCategoryInput) {
+  const payload = buildCategoryPayload(input);
+
+  if (!payload.name) {
+    throw new Error('Informe o nome da categoria.');
+  }
+
+  const { data, error } = await supabase
+    .from('categories')
+    .insert(payload)
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+
+  return data as Category;
+}
 
 export async function createFinancialTransaction(input: CreateFinancialTransactionInput) {
   let invoiceItemId: string | null = null;
@@ -59,6 +100,29 @@ export async function createFinancialTransaction(input: CreateFinancialTransacti
 
   if (error) throw error;
   emitFinancialDataChanged();
+}
+
+async function ensureDefaultCategoriesOnce() {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('name,type');
+
+  if (error) throw error;
+
+  const missingCategories = getMissingDefaultCategories(
+    (data ?? []) as Array<{ name: string; type: Category['type'] }>,
+  );
+
+  if (missingCategories.length > 0) {
+    const { error: insertError } = await supabase
+      .from('categories')
+      .insert(missingCategories.map(category => buildCategoryPayload(category)));
+
+    if (insertError) throw insertError;
+    emitFinancialDataChanged();
+  }
+
+  defaultCategoriesEnsured = true;
 }
 
 export async function createCreditPurchase(input: InvoicePurchasePayloadInput) {

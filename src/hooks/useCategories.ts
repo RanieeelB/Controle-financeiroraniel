@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ensureDefaultCategories } from '../lib/financialActions';
 import { supabase } from '../lib/supabase';
 import type { Category } from '../types/financial';
 
@@ -9,6 +10,8 @@ export function useCategories(type?: 'entrada' | 'gasto') {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     try {
+      await ensureDefaultCategories();
+
       let query = supabase
         .from('categories')
         .select('*')
