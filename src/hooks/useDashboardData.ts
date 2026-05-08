@@ -1,33 +1,40 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { 
-  UpcomingBill, 
-  CreditCardInvoice, 
+  FixedBill, 
+  CreditCard, 
   FinancialGoal, 
   SummaryCards,
   BalanceEvolutionData,
   CategoryExpenseData,
-  MonthlyAnalysis
+  MonthlyAnalysis,
+  Transaction
 } from '../types/financial';
-import { 
-  summaryCardsMock, 
-  balanceEvolutionMock, 
-  categoryExpenseMock, 
-  monthlyAnalysisMock 
-} from '../data/financial-dashboard-mock';
+
+const emptySummary: SummaryCards = {
+  freeBalance: 0,
+  totalIncome: 0,
+  totalExpense: 0,
+  savedAmount: 0,
+  openInvoices: 0,
+  fixedBillsTotal: 0,
+};
+
+const defaultAnalysis: MonthlyAnalysis = {
+  title: 'Sem dados',
+  description: 'Adicione suas primeiras transações para ver a análise mensal.',
+  actionText: 'Começar agora',
+};
 
 export function useDashboardData() {
-  const [upcomingBills, setUpcomingBills] = useState<UpcomingBill[]>([]);
-  const [creditCardInvoices, setCreditCardInvoices] = useState<CreditCardInvoice[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [fixedBills, setFixedBills] = useState<FixedBill[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [financialGoals, setFinancialGoals] = useState<FinancialGoal[]>([]);
-  
-  // Complex aggregations would normally happen via a Supabase RPC or backend edge function.
-  // For now, we fallback to mock data for the charts while we focus on the basic tables.
-  const [summaryCards] = useState<SummaryCards>(summaryCardsMock);
-  const [balanceEvolution] = useState<BalanceEvolutionData[]>(balanceEvolutionMock);
-  const [categoryExpense] = useState<CategoryExpenseData[]>(categoryExpenseMock);
-  const [monthlyAnalysis] = useState<MonthlyAnalysis>(monthlyAnalysisMock);
-
+  const [summaryCards, setSummaryCards] = useState<SummaryCards>(emptySummary);
+  const [balanceEvolution] = useState<BalanceEvolutionData[]>([]);
+  const [categoryExpense] = useState<CategoryExpenseData[]>([]);
+  const [monthlyAnalysis, setMonthlyAnalysis] = useState<MonthlyAnalysis>(defaultAnalysis);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -35,64 +42,102 @@ export function useDashboardData() {
       setIsLoading(true);
       
       try {
-        // Fetch Upcoming Bills
-        const { data: billsData, error: billsError } = await supabase
-          .from('upcoming_bills')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // Fetch Transactions
+        const { data: txData } = await supabase
+          .from('transactions')
+          .select('*, category:categories(*)')
+          .order('date', { ascending: false });
+        
+        if (txData) {
+          const mapped = txData.map((t: Record<string, unknown>) => ({
+            ...t,
+            amount: Number(t.amount),
+          })) as Transaction[];
+          setTransactions(mapped);
+
+          // Compute summary
+          const income = mapped.filter(t => t.type === 'entrada').reduce((s, t) => s + t.amount, 0);
+          const expense = mapped.filter(t => t.type === 'gasto').reduce((s, t) => s + t.amount, 0);
           
-        if (billsError) throw billsError;
-        if (billsData) {
-          setUpcomingBills(billsData.map(b => ({
-            id: b.id,
-            description: b.description,
-            value: Number(b.value),
-            dueDate: b.due_date,
-            status: b.status,
-            icon: b.icon
-          })));
+          setSummaryCards(prev => ({
+            ...prev,
+            totalIncome: income,
+            totalExpense: expense,
+            freeBalance: income - expense,
+          }));
         }
 
-        // Fetch Credit Card Invoices
-        const { data: cardsData, error: cardsError } = await supabase
-          .from('credit_card_invoices')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // Fetch Fixed Bills
+        const { data: billsData } = await supabase
+          .from('fixed_bills')
+          .select('*, category:categories(*)')
+          .order('due_day', { ascending: true });
           
-        if (cardsError) throw cardsError;
+        if (billsData) {
+          const mapped = billsData.map((b: Record<string, unknown>) => ({
+            ...b,
+            amount: Number(b.amount),
+          })) as FixedBill[];
+          setFixedBills(mapped);
+
+          const billsTotal = mapped.reduce((s, b) => s + b.amount, 0);
+          setSummaryCards(prev => ({ ...prev, fixedBillsTotal: billsTotal }));
+        }
+
+        // Fetch Credit Cards
+        const { data: cardsData } = await supabase
+          .from('credit_cards')
+          .select('*')
+          .order('created_at', { ascending: true });
+          
         if (cardsData) {
-          setCreditCardInvoices(cardsData.map(c => ({
-            id: c.id,
-            name: c.name,
-            value: Number(c.value),
-            dueDate: c.due_date,
-            color: c.color,
-            initial: c.initial
-          })));
+          const mapped = cardsData.map((c: Record<string, unknown>) => ({
+            ...c,
+            credit_limit: Number(c.credit_limit),
+          })) as CreditCard[];
+          setCreditCards(mapped);
+        }
+
+        // Fetch Invoice Items total for open invoices
+        const { data: invoiceData } = await supabase
+          .from('invoice_items')
+          .select('amount');
+        
+        if (invoiceData) {
+          const total = invoiceData.reduce((s: number, i: Record<string, unknown>) => s + Number(i.amount), 0);
+          setSummaryCards(prev => ({ ...prev, openInvoices: total }));
         }
 
         // Fetch Financial Goals
-        const { data: goalsData, error: goalsError } = await supabase
+        const { data: goalsData } = await supabase
           .from('financial_goals')
           .select('*')
           .order('created_at', { ascending: true });
           
-        if (goalsError) throw goalsError;
         if (goalsData) {
-          setFinancialGoals(goalsData.map(g => {
-            const target = Number(g.target_amount);
-            const current = Number(g.current_amount);
-            return {
-              id: g.id,
-              title: g.title,
-              targetAmount: target,
-              currentAmount: current,
-              progressPercentage: target > 0 ? Math.round((current / target) * 100) : 0
-            };
-          }));
+          const mapped = goalsData.map((g: Record<string, unknown>) => ({
+            ...g,
+            target_amount: Number(g.target_amount),
+            current_amount: Number(g.current_amount),
+          })) as FinancialGoal[];
+          setFinancialGoals(mapped);
+
+          const savedTotal = mapped.reduce((s, g) => s + g.current_amount, 0);
+          setSummaryCards(prev => ({ ...prev, savedAmount: savedTotal }));
         }
 
-        // To do: Fetch transactions and compute summaryCards, balanceEvolution, categoryExpense...
+        // Build monthly analysis
+        if (txData && txData.length > 0) {
+          const income = txData.filter((t: Record<string, unknown>) => t.type === 'entrada').reduce((s: number, t: Record<string, unknown>) => s + Number(t.amount), 0);
+          const expense = txData.filter((t: Record<string, unknown>) => t.type === 'gasto').reduce((s: number, t: Record<string, unknown>) => s + Number(t.amount), 0);
+          const ratio = income > 0 ? Math.round((expense / income) * 100) : 0;
+          
+          setMonthlyAnalysis({
+            title: 'Análise do mês',
+            description: `Você gastou ${ratio}% da sua renda este mês. ${ratio > 70 ? 'Cuidado com gastos excessivos!' : 'Continue assim!'}`,
+            actionText: 'Ver detalhes',
+          });
+        }
       } catch (error) {
         console.error("Error fetching Supabase data:", error);
       } finally {
@@ -104,8 +149,9 @@ export function useDashboardData() {
   }, []);
 
   return {
-    upcomingBills,
-    creditCardInvoices,
+    transactions,
+    fixedBills,
+    creditCards,
     financialGoals,
     summaryCards,
     balanceEvolution,

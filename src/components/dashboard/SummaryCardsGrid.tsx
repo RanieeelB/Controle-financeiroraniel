@@ -1,4 +1,4 @@
-import { Wallet, ArrowDownToLine, AlertTriangle, PiggyBank, CreditCard, ReceiptText, TrendingUp } from 'lucide-react';
+import { Wallet, ArrowDownToLine, ArrowUpRight, PiggyBank, CreditCard, ReceiptText } from 'lucide-react';
 import type { SummaryCards } from '../../types/financial';
 
 interface SummaryCardsGridProps {
@@ -6,6 +6,8 @@ interface SummaryCardsGridProps {
 }
 
 export function SummaryCardsGrid({ data }: SummaryCardsGridProps) {
+  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
       {/* Saldo Livre */}
@@ -16,12 +18,8 @@ export function SummaryCardsGrid({ data }: SummaryCardsGridProps) {
         </div>
         <div className="flex items-baseline gap-sm">
           <span className="font-numeral-lg text-[48px] font-bold text-on-background leading-none">
-            R$ {data.freeBalance.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {fmt(data.freeBalance)}
           </span>
-        </div>
-        <div className="flex items-center gap-xs mt-auto pt-sm">
-          <TrendingUp className="text-primary" size={16} />
-          <span className="text-primary font-label-md text-[12px]">+{data.freeBalance.trend}% vs último mês</span>
         </div>
       </div>
 
@@ -29,27 +27,26 @@ export function SummaryCardsGrid({ data }: SummaryCardsGridProps) {
       <div className="glass-card rounded-xl p-lg flex flex-col gap-sm">
         <div className="flex justify-between items-start">
           <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Recebido no mês</span>
-          <ArrowDownToLine className="text-on-surface-variant" size={24} />
+          <ArrowDownToLine className="text-primary" size={24} />
         </div>
         <div>
           <span className="font-numeral-lg text-[32px] font-semibold text-on-background leading-none">
-            R$ {data.receivedMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {fmt(data.totalIncome)}
           </span>
         </div>
       </div>
 
-      {/* Comprometido */}
+      {/* Total Gastos */}
       <div className="glass-card rounded-xl p-lg flex flex-col gap-sm border-l-2 border-l-tertiary-container">
         <div className="flex justify-between items-start">
-          <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Comprometido</span>
-          <AlertTriangle className="text-tertiary-container" size={24} />
+          <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Gastos do mês</span>
+          <ArrowUpRight className="text-tertiary-container" size={24} />
         </div>
         <div>
           <span className="font-numeral-lg text-[32px] font-semibold text-tertiary-container leading-none">
-            {data.committedIncome}%
+            R$ {fmt(data.totalExpense)}
           </span>
         </div>
-        <p className="text-[12px] text-on-surface-variant mt-auto">Alerta moderado</p>
       </div>
 
       {/* Guardado */}
@@ -60,11 +57,8 @@ export function SummaryCardsGrid({ data }: SummaryCardsGridProps) {
         </div>
         <div>
           <span className="font-numeral-lg text-[32px] font-semibold text-on-background leading-none">
-            R$ {data.saved.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {fmt(data.savedAmount)}
           </span>
-        </div>
-        <div className="w-full bg-surface-container-high rounded-full h-1.5 mt-auto">
-          <div className="bg-secondary h-1.5 rounded-full" style={{ width: `${data.saved.percentage}%` }}></div>
         </div>
       </div>
 
@@ -76,7 +70,7 @@ export function SummaryCardsGrid({ data }: SummaryCardsGridProps) {
         </div>
         <div>
           <span className="font-numeral-lg text-[32px] font-semibold text-on-background leading-none">
-            R$ {data.openInvoices.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {fmt(data.openInvoices)}
           </span>
         </div>
       </div>
@@ -89,7 +83,7 @@ export function SummaryCardsGrid({ data }: SummaryCardsGridProps) {
         </div>
         <div>
           <span className="font-numeral-lg text-[32px] font-semibold text-on-background leading-none">
-            R$ {data.fixedBills.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {fmt(data.fixedBillsTotal)}
           </span>
         </div>
       </div>

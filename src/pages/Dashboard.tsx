@@ -9,8 +9,8 @@ import { useDashboardData } from '../hooks/useDashboardData';
 
 export function Dashboard() {
   const { 
-    upcomingBills, 
-    creditCardInvoices, 
+    fixedBills, 
+    creditCards, 
     financialGoals, 
     summaryCards, 
     balanceEvolution, 
@@ -39,18 +39,18 @@ export function Dashboard() {
           <CategoryExpenseChart data={categoryExpense} />
           <MonthlyAnalysisCard 
             data={monthlyAnalysis} 
-            committedPercentage={summaryCards.committedIncome} 
+            committedPercentage={summaryCards.totalIncome > 0 ? Math.round((summaryCards.totalExpense / summaryCards.totalIncome) * 100) : 0} 
           />
         </div>
       </section>
 
       {/* Bottom Data Rows */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-xl">
-        <UpcomingBills data={upcomingBills} />
+        <UpcomingBills data={fixedBills} />
         
-        {/* Right Column: Faturas & Metas */}
+        {/* Right Column: Cards & Goals */}
         <div className="flex flex-col gap-md">
-          <CreditCardInvoices data={creditCardInvoices} />
+          <CreditCardInvoices data={creditCards} />
           <FinancialGoalCard data={financialGoals} />
         </div>
       </section>
