@@ -27,7 +27,7 @@ import {
   type InvoicePurchasePayloadInput,
   type TransactionPayloadInput,
 } from './financialPayloads';
-import type { Category, Investment, InvestmentDeposit, InvoiceItem, Transaction } from '../types/financial';
+import type { Category, FixedBill, Investment, InvestmentDeposit, InvoiceItem, Transaction } from '../types/financial';
 import { defaultCategories } from './defaultCategories';
 
 export interface CreateCategoryInput {
@@ -177,6 +177,37 @@ export async function createFixedBill(input: FixedBillPayloadInput) {
     .insert({ ...buildFixedBillPayload(input), user_id: userId });
 
   if (error) throw error;
+  emitFinancialDataChanged();
+}
+
+export async function payFixedBill(bill: FixedBill) {
+  const userId = await getUserId();
+  
+  // 1. Create the transaction (gasto)
+  const transactionPayload = buildTransactionPayload({
+    type: 'gasto',
+    description: `Pagamento: ${bill.description}`,
+    amount: bill.amount,
+    date: new Date().toISOString().split('T')[0],
+    paymentMethod: 'pix', // Default for fixed bills
+    categoryId: bill.category_id,
+    status: 'pago'
+  });
+
+  const { error: txError } = await supabase
+    .from('transactions')
+    .insert({ ...transactionPayload, user_id: userId });
+
+  if (txError) throw txError;
+
+  // 2. Update bill status
+  const { error: billError } = await supabase
+    .from('fixed_bills')
+    .update({ status: 'pago' })
+    .eq('id', bill.id);
+
+  if (billError) throw billError;
+
   emitFinancialDataChanged();
 }
 

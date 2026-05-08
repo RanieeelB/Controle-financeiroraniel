@@ -1,5 +1,7 @@
-import { Wifi, Zap, Landmark, Home, GraduationCap, MonitorPlay, ReceiptText } from 'lucide-react';
+import { Wifi, Zap, Landmark, Home, GraduationCap, MonitorPlay, ReceiptText, Check } from 'lucide-react';
+import { useState } from 'react';
 import type { FixedBill } from '../../types/financial';
+import { payFixedBill } from '../../lib/financialActions';
 
 interface UpcomingBillsProps {
   data: FixedBill[];
@@ -16,6 +18,8 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export function UpcomingBills({ data }: UpcomingBillsProps) {
+  const [isPaying, setIsPaying] = useState<string | null>(null);
+
   if (data.length === 0) {
     return (
       <div className="lg:col-span-2">
@@ -25,6 +29,18 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
         </div>
       </div>
     );
+  }
+
+  async function handlePay(bill: FixedBill) {
+    if (isPaying) return;
+    setIsPaying(bill.id);
+    try {
+      await payFixedBill(bill);
+    } catch (error) {
+      console.error('Error paying bill:', error);
+    } finally {
+      setIsPaying(null);
+    }
   }
 
   return (
@@ -38,6 +54,7 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
               <th className="p-md font-normal">Valor</th>
               <th className="p-md font-normal">Vencimento</th>
               <th className="p-md font-normal">Status</th>
+              <th className="p-md font-normal text-center">Ação</th>
             </tr>
           </thead>
           <tbody className="text-[14px]">
@@ -64,6 +81,24 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
                     }`}>
                       {bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}
                     </span>
+                  </td>
+                  <td className="p-md text-center">
+                    <button
+                      onClick={() => handlePay(bill)}
+                      disabled={bill.status === 'pago' || isPaying === bill.id}
+                      className={`p-1 rounded transition-all ${
+                        bill.status === 'pago' 
+                          ? 'text-primary bg-primary/5 cursor-not-allowed' 
+                          : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
+                      }`}
+                      title={bill.status === 'pago' ? 'Conta já paga' : 'Pagar conta'}
+                    >
+                      {isPaying === bill.id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      ) : (
+                        <Check size={18} />
+                      )}
+                    </button>
                   </td>
                 </tr>
               );

@@ -1,15 +1,32 @@
-import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart } from 'lucide-react';
+import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Check } from 'lucide-react';
 import { useState } from 'react';
 import { FixedBillModal } from '../components/finance/FinanceModals';
 import { useFixedBills } from '../hooks/useFixedBills';
+import { payFixedBill } from '../lib/financialActions';
+import type { FixedBill } from '../types/financial';
 
 export function FixedBills() {
   const { bills, isLoading, totals, categoryBreakdown } = useFixedBills();
   const [isFixedBillModalOpen, setIsFixedBillModalOpen] = useState(false);
+  const [isPaying, setIsPaying] = useState<string | null>(null);
+
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
   const paidPct = totals.count > 0 ? Math.round((totals.paidCount / totals.count) * 100) : 0;
   const colors = ['bg-primary', 'bg-secondary', 'bg-tertiary-container', 'bg-outline'];
+
+  async function handlePay(bill: FixedBill) {
+    if (isPaying) return;
+    setIsPaying(bill.id);
+    try {
+      await payFixedBill(bill);
+    } catch (error) {
+      console.error('Error paying bill:', error);
+    } finally {
+      setIsPaying(null);
+    }
+  }
 
   return (
     <div className="space-y-xl">
@@ -49,11 +66,11 @@ export function FixedBills() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead><tr className="border-b border-outline-variant text-on-surface-variant font-label-md text-[14px] font-semibold uppercase tracking-wider">
-                <th className="py-md px-lg">Descrição</th><th className="py-md px-lg">Categoria</th><th className="py-md px-lg">Vencimento</th><th className="py-md px-lg text-right">Valor</th><th className="py-md px-lg text-center">Status</th>
+                <th className="py-md px-lg">Descrição</th><th className="py-md px-lg">Categoria</th><th className="py-md px-lg">Vencimento</th><th className="py-md px-lg text-right">Valor</th><th className="py-md px-lg text-center">Status</th><th className="py-md px-lg text-center">Ação</th>
               </tr></thead>
               <tbody>
                 {bills.length === 0 ? (
-                  <tr><td colSpan={5} className="py-xl text-center text-on-surface-variant"><div className="flex flex-col items-center gap-md"><Inbox size={48} className="text-outline-variant" /><p>Nenhuma conta fixa cadastrada.</p></div></td></tr>
+                  <tr><td colSpan={6} className="py-xl text-center text-on-surface-variant"><div className="flex flex-col items-center gap-md"><Inbox size={48} className="text-outline-variant" /><p>Nenhuma conta fixa cadastrada.</p></div></td></tr>
                 ) : bills.map(b => (
                   <tr key={b.id} className={`border-b border-outline-variant/50 hover:bg-surface-variant/30 transition-colors ${b.status === 'atrasado' ? 'bg-error-container/5' : ''}`}>
                     <td className="py-md px-lg text-on-surface">{b.description}</td>
@@ -66,6 +83,24 @@ export function FixedBills() {
                         b.status === 'atrasado' ? 'bg-error-container text-on-error-container border border-error/50' :
                         'bg-surface-variant text-on-surface border border-outline-variant'
                       }`}>{b.status === 'pago' ? 'Pago' : b.status === 'atrasado' ? 'Atrasado' : 'Pendente'}</span>
+                    </td>
+                    <td className="py-md px-lg text-center">
+                      <button
+                        onClick={() => handlePay(b)}
+                        disabled={b.status === 'pago' || isPaying === b.id}
+                        className={`p-2 rounded-lg transition-all ${
+                          b.status === 'pago' 
+                            ? 'text-primary bg-primary/5 cursor-not-allowed' 
+                            : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
+                        }`}
+                        title={b.status === 'pago' ? 'Conta já paga' : 'Pagar conta'}
+                      >
+                        {isPaying === b.id ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                        ) : (
+                          <Check size={20} />
+                        )}
+                      </button>
                     </td>
                   </tr>
                 ))}

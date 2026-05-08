@@ -1,7 +1,17 @@
 -- =============================================================
--- SALDO REAL — Schema Definitivo
--- Rode este SQL no Supabase SQL Editor para criar as tabelas.
+-- SALDO REAL — Schema Definitivo (Reset & Recreate)
+-- Rode este SQL no Supabase SQL Editor para limpar e recriar.
 -- =============================================================
+
+-- 0. LIMPEZA (Apaga tudo para recriar do zero)
+DROP TABLE IF EXISTS public.investment_deposits CASCADE;
+DROP TABLE IF EXISTS public.investments CASCADE;
+DROP TABLE IF EXISTS public.financial_goals CASCADE;
+DROP TABLE IF EXISTS public.fixed_bills CASCADE;
+DROP TABLE IF EXISTS public.invoice_items CASCADE;
+DROP TABLE IF EXISTS public.credit_cards CASCADE;
+DROP TABLE IF EXISTS public.transactions CASCADE;
+DROP TABLE IF EXISTS public.categories CASCADE;
 
 -- 1. CATEGORIAS
 CREATE TABLE public.categories (
@@ -96,6 +106,17 @@ CREATE TABLE public.investments (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+-- 8. APORTES DE INVESTIMENTO (Depende de investments)
+CREATE TABLE public.investment_deposits (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    investment_id UUID REFERENCES public.investments(id) ON DELETE CASCADE NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 -- =============================================================
 -- ROW LEVEL SECURITY (RLS)
 -- =============================================================
@@ -106,6 +127,7 @@ ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fixed_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.investment_deposits ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================
 -- POLÍTICAS: Apenas o próprio usuário pode acessar seus dados
@@ -144,3 +166,8 @@ CREATE POLICY "Users can view own investments" ON public.investments FOR SELECT 
 CREATE POLICY "Users can insert own investments" ON public.investments FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own investments" ON public.investments FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own investments" ON public.investments FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own investment_deposits" ON public.investment_deposits FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own investment_deposits" ON public.investment_deposits FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own investment_deposits" ON public.investment_deposits FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own investment_deposits" ON public.investment_deposits FOR DELETE USING (auth.uid() = user_id);
