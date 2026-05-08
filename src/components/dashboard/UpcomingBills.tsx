@@ -4,7 +4,7 @@ import type { FixedBill } from '../../types/financial';
 import { payFixedBill } from '../../lib/financialActions';
 
 interface UpcomingBillsProps {
-  data: FixedBill[];
+  data: any[];
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -17,7 +17,7 @@ const iconMap: Record<string, React.ElementType> = {
   receipt: ReceiptText,
 };
 
-export function UpcomingBills({ data }: { data: any[] }) {
+export function UpcomingBills({ data }: UpcomingBillsProps) {
   const [isPaying, setIsPaying] = useState<string | null>(null);
 
   if (data.length === 0) {
