@@ -53,7 +53,6 @@ export function Dashboard() {
         
         {/* Right Column: Cards & Goals */}
         <div className="flex flex-col gap-md">
-          <PjTaxesCard totalIncome={summaryCards.totalIncome} />
           <CreditCardInvoices data={creditCards} />
           <FinancialGoalCard data={financialGoals} />
         </div>
