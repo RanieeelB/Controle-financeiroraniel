@@ -1,201 +1,377 @@
-import { X, Banknote, ShoppingCart, CreditCard, CalendarDays, TrendingUp, Calendar, ChevronDown, Layers, CheckCircle } from 'lucide-react';
+import { useMemo, useState, type FormEvent } from 'react';
+import {
+  Banknote,
+  Calendar,
+  CheckCircle,
+  ChevronDown,
+  Layers,
+  ShoppingCart,
+  X,
+} from 'lucide-react';
+import { createFinancialTransaction } from '../../lib/financialActions';
+import { getInstallmentAmount, parseCurrencyValue } from '../../lib/financialPayloads';
+import { useCategories } from '../../hooks/useCategories';
+import { useCreditCards } from '../../hooks/useCreditCards';
+import type { Transaction } from '../../types/financial';
 
 interface NewTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type TransactionType = Transaction['type'];
+type PaymentMethod = 'pix' | 'credito' | 'dinheiro' | 'transferencia';
+
+const today = () => new Date().toISOString().slice(0, 10);
+const fmt = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
 export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProps) {
+  const [type, setType] = useState<TransactionType>('entrada');
+  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(today());
+  const [categoryId, setCategoryId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
+  const [cardId, setCardId] = useState('');
+  const [totalInstallments, setTotalInstallments] = useState(1);
+  const [currentInstallment, setCurrentInstallment] = useState(1);
+  const [notes, setNotes] = useState('');
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { categories } = useCategories(type);
+  const { cards } = useCreditCards();
+
+  const parsedAmount = useMemo(() => parseCurrencyValue(amount), [amount]);
+  const isCardPayment = type === 'gasto' && paymentMethod === 'credito';
+  const installmentAmount = parsedAmount ? getInstallmentAmount(parsedAmount, totalInstallments) : 0;
+
   if (!isOpen) return null;
+
+  function resetForm() {
+    setType('entrada');
+    setDescription('');
+    setAmount('');
+    setDate(today());
+    setCategoryId('');
+    setPaymentMethod('pix');
+    setCardId('');
+    setTotalInstallments(1);
+    setCurrentInstallment(1);
+    setNotes('');
+    setError('');
+  }
+
+  function handleTypeChange(nextType: TransactionType) {
+    setType(nextType);
+    setCategoryId('');
+    setPaymentMethod(nextType === 'entrada' ? 'pix' : 'dinheiro');
+    setCardId('');
+    setTotalInstallments(1);
+    setCurrentInstallment(1);
+  }
+
+  function handleInstallmentsChange(value: number) {
+    const normalized = Math.max(1, Math.min(48, value));
+    setTotalInstallments(normalized);
+    setCurrentInstallment(current => Math.min(current, normalized));
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+
+    const value = parseCurrencyValue(amount);
+    if (!description.trim()) {
+      setError('Informe uma descrição para o lançamento.');
+      return;
+    }
+    if (!value) {
+      setError('Informe um valor maior que zero.');
+      return;
+    }
+    if (isCardPayment && !cardId) {
+      setError('Selecione o cartão usado nesse lançamento.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await createFinancialTransaction({
+        type,
+        description,
+        amount: value,
+        date,
+        paymentMethod,
+        categoryId,
+        notes,
+        cardId,
+        totalInstallments,
+        currentInstallment,
+      });
+      resetForm();
+      onClose();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar o lançamento.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-md">
-      <div 
-        className="w-full max-w-2xl bg-[#111827] border border-[#243041] rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
+      <div
+        className="w-full max-w-2xl bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
         style={{ boxShadow: '0 0 40px rgba(117, 255, 158, 0.05)' }}
       >
-        {/* Top Accent Line */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary"></div>
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary" />
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-lg py-md border-b border-[#243041]">
+        <div className="flex items-center justify-between px-lg py-md border-b border-outline-variant">
           <div>
-            <h2 className="font-h2 text-[24px] font-semibold text-on-surface">Novo Lançamento</h2>
-            <p className="font-body-md text-[16px] text-on-surface-variant">Adicione uma nova transação financeira.</p>
+            <h2 className="font-h2 text-[24px] font-semibold text-on-surface">Novo lançamento</h2>
+            <p className="font-body-md text-[16px] text-on-surface-variant">
+              Registre uma entrada, gasto no Pix, dinheiro ou compra no cartão.
+            </p>
           </div>
-          <button 
+          <button
+            type="button"
             onClick={onClose}
             className="text-on-surface-variant hover:text-primary transition-colors focus:outline-none"
+            aria-label="Fechar modal"
           >
             <X size={24} />
           </button>
         </div>
 
-        {/* Body (Form) */}
-        <div className="p-lg overflow-y-auto max-h-[70vh]">
-          <form className="space-y-lg">
-            {/* Type Selector */}
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
+          <div className="p-lg overflow-y-auto max-h-[70vh] space-y-lg">
             <div>
-              <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">Tipo de Lançamento</label>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-sm">
-                <label className="cursor-pointer">
-                  <input type="radio" name="type" value="entrada" className="peer sr-only" defaultChecked />
-                  <div className="flex flex-col items-center justify-center p-md bg-[#080B12] border border-[#243041] rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 transition-all text-on-surface-variant peer-checked:text-primary">
-                    <Banknote className="mb-xs" size={24} />
-                    <span className="font-label-md text-[12px]">Entrada</span>
-                  </div>
-                </label>
-                <label className="cursor-pointer">
-                  <input type="radio" name="type" value="gasto" className="peer sr-only" />
-                  <div className="flex flex-col items-center justify-center p-md bg-[#080B12] border border-[#243041] rounded-lg peer-checked:border-error peer-checked:bg-error/10 transition-all text-on-surface-variant peer-checked:text-error">
-                    <ShoppingCart className="mb-xs" size={24} />
-                    <span className="font-label-md text-[12px]">Gasto</span>
-                  </div>
-                </label>
-                <label className="cursor-pointer">
-                  <input type="radio" name="type" value="cartao" className="peer sr-only" />
-                  <div className="flex flex-col items-center justify-center p-md bg-[#080B12] border border-[#243041] rounded-lg peer-checked:border-secondary peer-checked:bg-secondary/10 transition-all text-on-surface-variant peer-checked:text-secondary">
-                    <CreditCard className="mb-xs" size={24} />
-                    <span className="font-label-md text-[12px]">Cartão</span>
-                  </div>
-                </label>
-                <label className="cursor-pointer">
-                  <input type="radio" name="type" value="fixa" className="peer sr-only" />
-                  <div className="flex flex-col items-center justify-center p-md bg-[#080B12] border border-[#243041] rounded-lg peer-checked:border-tertiary peer-checked:bg-tertiary/10 transition-all text-on-surface-variant peer-checked:text-tertiary">
-                    <CalendarDays className="mb-xs" size={24} />
-                    <span className="font-label-md text-[12px]">Fixa</span>
-                  </div>
-                </label>
-                <label className="cursor-pointer">
-                  <input type="radio" name="type" value="investimento" className="peer sr-only" />
-                  <div className="flex flex-col items-center justify-center p-md bg-[#080B12] border border-[#243041] rounded-lg peer-checked:border-primary peer-checked:bg-primary/10 transition-all text-on-surface-variant peer-checked:text-primary">
-                    <TrendingUp className="mb-xs" size={24} />
-                    <span className="font-label-md text-[12px]">Investimento</span>
-                  </div>
-                </label>
+              <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
+                Tipo de lançamento
+              </label>
+              <div className="grid grid-cols-2 gap-sm">
+                <button
+                  type="button"
+                  onClick={() => handleTypeChange('entrada')}
+                  className={`flex flex-col items-center justify-center p-md border rounded-lg transition-all ${
+                    type === 'entrada'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-outline-variant bg-surface text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  <Banknote className="mb-xs" size={24} />
+                  <span className="font-label-md text-[12px]">Entrada</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTypeChange('gasto')}
+                  className={`flex flex-col items-center justify-center p-md border rounded-lg transition-all ${
+                    type === 'gasto'
+                      ? 'border-error bg-error/10 text-error'
+                      : 'border-outline-variant bg-surface text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  <ShoppingCart className="mb-xs" size={24} />
+                  <span className="font-label-md text-[12px]">Gasto</span>
+                </button>
               </div>
             </div>
 
-            {/* Description & Value Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-              <div>
-                <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">Descrição</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-[#080B12] border border-[#243041] rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-[#94A3B8] outline-none" 
-                  placeholder="Ex: Conta de Luz" 
+              <label>
+                <span className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
+                  Descrição
+                </span>
+                <input
+                  value={description}
+                  onChange={event => setDescription(event.target.value)}
+                  type="text"
+                  className="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline outline-none"
+                  placeholder={type === 'entrada' ? 'Ex: Salário' : 'Ex: Mercado'}
                 />
-              </div>
-              <div>
-                <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">Valor</label>
+              </label>
+              <label>
+                <span className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
+                  {isCardPayment ? 'Valor total da compra' : 'Valor'}
+                </span>
                 <div className="relative">
-                  <span className="absolute left-md top-1/2 -translate-y-1/2 font-numeral-lg text-[24px] text-on-surface-variant">R$</span>
-                  <input 
-                    type="text" 
-                    className="w-full bg-[#080B12] border border-[#243041] rounded-lg pl-xl pr-md py-sm text-on-surface font-numeral-lg text-[24px] focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-right placeholder:text-[#94A3B8] outline-none" 
-                    placeholder="0,00" 
+                  <span className="absolute left-md top-1/2 -translate-y-1/2 font-numeral-lg text-[20px] text-on-surface-variant">
+                    R$
+                  </span>
+                  <input
+                    value={amount}
+                    onChange={event => setAmount(event.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    className="w-full bg-surface border border-outline-variant rounded-lg pl-xl pr-md py-sm text-on-surface font-numeral-lg text-[24px] focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-right placeholder:text-outline outline-none"
+                    placeholder="0,00"
                   />
                 </div>
-              </div>
+              </label>
             </div>
 
-            {/* Date & Category Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-              <div>
-                <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">Data</label>
+              <label>
+                <span className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">Data</span>
                 <div className="relative">
-                  <input 
-                    type="date" 
-                    className="w-full bg-[#080B12] border border-[#243041] rounded-lg pl-xl pr-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors [color-scheme:dark] outline-none" 
+                  <input
+                    value={date}
+                    onChange={event => setDate(event.target.value)}
+                    type="date"
+                    className="w-full bg-surface border border-outline-variant rounded-lg pl-xl pr-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors [color-scheme:dark] outline-none"
                   />
                   <Calendar className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none ml-xs" size={20} />
                 </div>
-              </div>
-              <div>
-                <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">Categoria</label>
+              </label>
+              <label>
+                <span className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
+                  Categoria
+                </span>
                 <div className="relative">
-                  <select className="w-full bg-[#080B12] border border-[#243041] rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none">
-                    <option value="" disabled selected className="text-[#94A3B8]">Selecione uma categoria</option>
-                    <option value="moradia">Moradia</option>
-                    <option value="alimentacao">Alimentação</option>
-                    <option value="transporte">Transporte</option>
-                    <option value="saude">Saúde</option>
+                  <select
+                    value={categoryId}
+                    onChange={event => setCategoryId(event.target.value)}
+                    className="w-full bg-surface border border-outline-variant rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none"
+                  >
+                    <option value="">Sem categoria</option>
+                    {categories.map(category => (
+                      <option key={category.id} value={category.id}>{category.name}</option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
                 </div>
-              </div>
+              </label>
             </div>
 
-            {/* Payment Method & Card Select */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-md p-md bg-[#080B12] border border-[#243041] rounded-lg">
-              <div>
-                <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">Forma de Pagamento</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-md p-md bg-surface border border-outline-variant rounded-lg">
+              <label>
+                <span className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
+                  Forma de pagamento
+                </span>
                 <div className="relative">
-                  <select className="w-full bg-surface border border-[#243041] rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none">
+                  <select
+                    value={paymentMethod}
+                    onChange={event => setPaymentMethod(event.target.value as PaymentMethod)}
+                    className="w-full bg-background border border-outline-variant rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none"
+                  >
                     <option value="pix">Pix</option>
-                    <option value="credito" selected>Cartão de Crédito</option>
-                    <option value="debito">Cartão de Débito</option>
+                    {type === 'gasto' && <option value="credito">Cartão</option>}
                     <option value="dinheiro">Dinheiro</option>
+                    {type === 'entrada' && <option value="transferencia">Transferência</option>}
                   </select>
                   <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
                 </div>
-              </div>
-              <div>
-                <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">Cartão</label>
-                <div className="relative">
-                  <select className="w-full bg-surface border border-[#243041] rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none">
-                    <option value="black">Mastercard Black (Final 4321)</option>
-                    <option value="platinum">Visa Platinum (Final 9876)</option>
-                  </select>
-                  <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
+              </label>
+
+              {isCardPayment ? (
+                <label>
+                  <span className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
+                    Cartão
+                  </span>
+                  <div className="relative">
+                    <select
+                      value={cardId}
+                      onChange={event => setCardId(event.target.value)}
+                      className="w-full bg-background border border-outline-variant rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none"
+                    >
+                      <option value="">Selecione</option>
+                      {cards.map(card => (
+                        <option key={card.id} value={card.id}>
+                          {card.name} • {card.brand} final {card.last_digits}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
+                  </div>
+                </label>
+              ) : (
+                <div className="flex items-end">
+                  <p className="text-[14px] text-on-surface-variant">
+                    {type === 'entrada'
+                      ? 'Entradas são registradas como recebidas.'
+                      : 'Gastos fora do cartão entram como pagos.'}
+                  </p>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Installments Toggle */}
-            <div className="flex items-center justify-between p-md border border-[#243041] rounded-lg bg-surface-container/30">
-              <div className="flex items-center space-x-sm">
-                <Layers className="text-primary" size={24} />
-                <div>
-                  <h3 className="font-label-md text-[14px] text-on-surface uppercase">Parcelado?</h3>
-                  <p className="font-body-md text-[12px] text-on-surface-variant mt-xs">Dividir em múltiplas faturas</p>
+            {isCardPayment && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-md p-md border border-outline-variant rounded-lg bg-surface-container/30">
+                <div className="md:col-span-1 flex items-center gap-sm">
+                  <Layers className="text-primary" size={24} />
+                  <div>
+                    <h3 className="font-label-md text-[14px] text-on-surface uppercase">Parcelamento</h3>
+                    <p className="font-body-md text-[12px] text-on-surface-variant mt-xs">
+                      Fatura recebe R$ {fmt(installmentAmount)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center space-x-md">
-                <input 
-                  type="number" 
-                  min="2" 
-                  max="24" 
-                  defaultValue="3" 
-                  className="w-20 bg-[#080B12] border border-[#243041] rounded-lg px-xs py-sm text-center text-on-surface font-numeral-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none" 
-                />
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" value="" className="sr-only peer" defaultChecked />
-                  <div className="w-11 h-6 bg-[#243041] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <label>
+                  <span className="block font-label-md text-[12px] text-on-surface-variant mb-xs uppercase">
+                    Parcelas
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="48"
+                    value={totalInstallments}
+                    onChange={event => handleInstallmentsChange(Number(event.target.value))}
+                    className="w-full bg-background border border-outline-variant rounded-lg px-xs py-sm text-center text-on-surface font-numeral-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none"
+                  />
+                </label>
+                <label>
+                  <span className="block font-label-md text-[12px] text-on-surface-variant mb-xs uppercase">
+                    Parcela atual
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    max={totalInstallments}
+                    value={currentInstallment}
+                    onChange={event => setCurrentInstallment(Math.max(1, Math.min(totalInstallments, Number(event.target.value))))}
+                    className="w-full bg-background border border-outline-variant rounded-lg px-xs py-sm text-center text-on-surface font-numeral-lg focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none"
+                  />
                 </label>
               </div>
-            </div>
-          </form>
-        </div>
+            )}
 
-        {/* Footer Actions */}
-        <div className="px-lg py-md border-t border-[#243041] bg-surface/50 flex justify-end space-x-md">
-          <button 
-            type="button" 
-            onClick={onClose}
-            className="px-lg py-sm font-label-md text-[14px] text-on-surface-variant border border-[#243041] rounded-lg hover:bg-[#243041]/50 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button 
-            type="submit" 
-            className="px-lg py-sm font-label-md text-[14px] text-background bg-primary rounded-lg hover:bg-primary-fixed hover:shadow-[0_0_15px_rgba(117,255,158,0.4)] transition-all flex items-center space-x-xs"
-          >
-            <CheckCircle size={18} />
-            <span>Salvar lançamento</span>
-          </button>
-        </div>
+            <label>
+              <span className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
+                Observações
+              </span>
+              <textarea
+                value={notes}
+                onChange={event => setNotes(event.target.value)}
+                className="w-full min-h-20 bg-surface border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-outline outline-none resize-y"
+                placeholder="Opcional"
+              />
+            </label>
 
+            {error && (
+              <div className="rounded-lg border border-error/40 bg-error-container/20 px-md py-sm text-on-error-container text-[14px]">
+                {error}
+              </div>
+            )}
+          </div>
+
+          <div className="px-lg py-md border-t border-outline-variant bg-surface/50 flex justify-end gap-md">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-lg py-sm font-label-md text-[14px] text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-lg py-sm font-label-md text-[14px] text-background bg-primary rounded-lg hover:bg-primary-fixed hover:shadow-[0_0_15px_rgba(117,255,158,0.4)] transition-all flex items-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <CheckCircle size={18} />
+              <span>{isSaving ? 'Salvando...' : 'Salvar lançamento'}</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
 import type { FixedBill } from '../types/financial';
 
@@ -6,7 +7,7 @@ export function useFixedBills() {
   const [bills, setBills] = useState<FixedBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchBills() {
+  const fetchBills = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -25,11 +26,19 @@ export function useFixedBills() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchBills();
-  }, []);
+    const timeout = window.setTimeout(() => {
+      void fetchBills();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [fetchBills]);
+
+  useEffect(() => subscribeFinancialDataChanged(() => {
+    void fetchBills();
+  }), [fetchBills]);
 
   const totals = {
     total: bills.reduce((s, b) => s + b.amount, 0),

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
 import type { FinancialGoal } from '../types/financial';
 
@@ -6,7 +7,7 @@ export function useFinancialGoals() {
   const [goals, setGoals] = useState<FinancialGoal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchGoals() {
+  const fetchGoals = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -26,11 +27,19 @@ export function useFinancialGoals() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchGoals();
-  }, []);
+    const timeout = window.setTimeout(() => {
+      void fetchGoals();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [fetchGoals]);
+
+  useEffect(() => subscribeFinancialDataChanged(() => {
+    void fetchGoals();
+  }), [fetchGoals]);
 
   const totalTarget = goals.reduce((s, g) => s + g.target_amount, 0);
   const totalSaved = goals.reduce((s, g) => s + g.current_amount, 0);

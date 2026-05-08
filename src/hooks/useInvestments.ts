@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
 import type { Investment, InvestmentCategory } from '../types/financial';
 
@@ -6,7 +7,7 @@ export function useInvestments() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchInvestments() {
+  const fetchInvestments = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -27,11 +28,19 @@ export function useInvestments() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchInvestments();
-  }, []);
+    const timeout = window.setTimeout(() => {
+      void fetchInvestments();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [fetchInvestments]);
+
+  useEffect(() => subscribeFinancialDataChanged(() => {
+    void fetchInvestments();
+  }), [fetchInvestments]);
 
   const totalInvested = investments.reduce((s, i) => s + i.amount_invested, 0);
   const totalCurrentValue = investments.reduce((s, i) => s + i.current_value, 0);
