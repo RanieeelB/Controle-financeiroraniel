@@ -34,7 +34,7 @@ const fallbackExpenseColors = ['#75ff9e', '#7bd0ff', '#ffba79', '#859585', '#ffb
 
 export function useDashboardData(monthRange?: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [fixedBills, setFixedBills] = useState<FixedBill[]>([]);
+  const [fixedBills, setFixedBills] = useState<DynamicFixedBill[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [financialGoals, setFinancialGoals] = useState<FinancialGoal[]>([]);
   const [summaryCards, setSummaryCards] = useState<SummaryCards>(emptySummary);

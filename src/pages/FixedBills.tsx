@@ -1,7 +1,8 @@
 import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Check } from 'lucide-react';
 import { useState } from 'react';
 import { FixedBillModal } from '../components/finance/FinanceModals';
-import { useFixedBills, type DynamicFixedBill } from '../hooks/useFixedBills';
+import { useFixedBills } from '../hooks/useFixedBills';
+import type { DynamicFixedBill } from '../types/financial';
 import { payFixedBill } from '../lib/financialActions';
 import { useOutletContext } from 'react-router-dom';
 import type { LayoutContext } from '../components/layout/Layout';
