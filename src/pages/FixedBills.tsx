@@ -1,8 +1,11 @@
 import { Landmark, CheckCircle2, Clock, Filter, MoreVertical, Inbox, Plus, PieChart } from 'lucide-react';
+import { useState } from 'react';
+import { FixedBillModal } from '../components/finance/FinanceModals';
 import { useFixedBills } from '../hooks/useFixedBills';
 
 export function FixedBills() {
   const { bills, isLoading, totals, categoryBreakdown } = useFixedBills();
+  const [isFixedBillModalOpen, setIsFixedBillModalOpen] = useState(false);
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
   const paidPct = totals.count > 0 ? Math.round((totals.paidCount / totals.count) * 100) : 0;
@@ -10,6 +13,15 @@ export function FixedBills() {
 
   return (
     <div className="space-y-xl">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsFixedBillModalOpen(true)}
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+        >
+          <Plus size={18} />Nova Conta Fixa
+        </button>
+      </div>
+
       <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <div className="bg-surface-container border border-outline-variant rounded-lg p-lg relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-primary"></div>
@@ -76,10 +88,19 @@ export function FixedBills() {
             ))}
           </div>
           <div className="mt-xl pt-lg border-t border-outline-variant">
-            <button className="w-full border border-outline-variant text-on-surface font-label-md text-[14px] font-semibold py-sm rounded-lg hover:bg-surface-variant transition-colors flex items-center justify-center gap-sm"><Plus size={18} />Nova Conta Fixa</button>
+            <button
+              onClick={() => setIsFixedBillModalOpen(true)}
+              className="w-full border border-outline-variant text-on-surface font-label-md text-[14px] font-semibold py-sm rounded-lg hover:bg-surface-variant transition-colors flex items-center justify-center gap-sm"
+            >
+              <Plus size={18} />Nova Conta Fixa
+            </button>
           </div>
         </div>
       </section>
+
+      {isFixedBillModalOpen && (
+        <FixedBillModal onClose={() => setIsFixedBillModalOpen(false)} />
+      )}
     </div>
   );
 }

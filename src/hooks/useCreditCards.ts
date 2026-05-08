@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
 import type { CreditCard, InvoiceItem } from '../types/financial';
 
@@ -7,7 +8,7 @@ export function useCreditCards() {
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data: cardsData, error: cardsErr } = await supabase
@@ -38,11 +39,19 @@ export function useCreditCards() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const timeout = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [fetchData]);
+
+  useEffect(() => subscribeFinancialDataChanged(() => {
+    void fetchData();
+  }), [fetchData]);
 
   function getCardItems(cardId: string) {
     return invoiceItems.filter(i => i.card_id === cardId);

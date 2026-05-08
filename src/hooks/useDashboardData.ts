@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
-import type { 
-  FixedBill, 
-  CreditCard, 
-  FinancialGoal, 
-  SummaryCards,
+import type {
   BalanceEvolutionData,
   CategoryExpenseData,
+  CreditCard,
+  FinancialGoal,
+  FixedBill,
   MonthlyAnalysis,
-  Transaction
+  SummaryCards,
+  Transaction,
 } from '../types/financial';
 
 const emptySummary: SummaryCards = {
@@ -26,127 +27,102 @@ const defaultAnalysis: MonthlyAnalysis = {
   actionText: 'Começar agora',
 };
 
+const fallbackExpenseColors = ['#75ff9e', '#7bd0ff', '#ffba79', '#859585', '#ffb4ab'];
+
 export function useDashboardData() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [fixedBills, setFixedBills] = useState<FixedBill[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [financialGoals, setFinancialGoals] = useState<FinancialGoal[]>([]);
   const [summaryCards, setSummaryCards] = useState<SummaryCards>(emptySummary);
-  const [balanceEvolution] = useState<BalanceEvolutionData[]>([]);
-  const [categoryExpense] = useState<CategoryExpenseData[]>([]);
+  const [balanceEvolution, setBalanceEvolution] = useState<BalanceEvolutionData[]>([]);
+  const [categoryExpense, setCategoryExpense] = useState<CategoryExpenseData[]>([]);
   const [monthlyAnalysis, setMonthlyAnalysis] = useState<MonthlyAnalysis>(defaultAnalysis);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true);
-      
-      try {
-        // Fetch Transactions
-        const { data: txData } = await supabase
-          .from('transactions')
-          .select('*, category:categories(*)')
-          .order('date', { ascending: false });
-        
-        if (txData) {
-          const mapped = txData.map((t: Record<string, unknown>) => ({
-            ...t,
-            amount: Number(t.amount),
-          })) as Transaction[];
-          setTransactions(mapped);
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
 
-          // Compute summary
-          const income = mapped.filter(t => t.type === 'entrada').reduce((s, t) => s + t.amount, 0);
-          const expense = mapped.filter(t => t.type === 'gasto').reduce((s, t) => s + t.amount, 0);
-          
-          setSummaryCards(prev => ({
-            ...prev,
-            totalIncome: income,
-            totalExpense: expense,
-            freeBalance: income - expense,
-          }));
-        }
+    try {
+      const [txResult, billsResult, cardsResult, invoiceResult, goalsResult] = await Promise.all([
+        supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false }),
+        supabase.from('fixed_bills').select('*, category:categories(*)').order('due_day', { ascending: true }),
+        supabase.from('credit_cards').select('*').order('created_at', { ascending: true }),
+        supabase.from('invoice_items').select('amount'),
+        supabase.from('financial_goals').select('*').order('created_at', { ascending: true }),
+      ]);
 
-        // Fetch Fixed Bills
-        const { data: billsData } = await supabase
-          .from('fixed_bills')
-          .select('*, category:categories(*)')
-          .order('due_day', { ascending: true });
-          
-        if (billsData) {
-          const mapped = billsData.map((b: Record<string, unknown>) => ({
-            ...b,
-            amount: Number(b.amount),
-          })) as FixedBill[];
-          setFixedBills(mapped);
+      if (txResult.error) throw txResult.error;
+      if (billsResult.error) throw billsResult.error;
+      if (cardsResult.error) throw cardsResult.error;
+      if (invoiceResult.error) throw invoiceResult.error;
+      if (goalsResult.error) throw goalsResult.error;
 
-          const billsTotal = mapped.reduce((s, b) => s + b.amount, 0);
-          setSummaryCards(prev => ({ ...prev, fixedBillsTotal: billsTotal }));
-        }
+      const mappedTransactions = (txResult.data ?? []).map((transaction: Record<string, unknown>) => ({
+        ...transaction,
+        amount: Number(transaction.amount),
+      })) as Transaction[];
 
-        // Fetch Credit Cards
-        const { data: cardsData } = await supabase
-          .from('credit_cards')
-          .select('*')
-          .order('created_at', { ascending: true });
-          
-        if (cardsData) {
-          const mapped = cardsData.map((c: Record<string, unknown>) => ({
-            ...c,
-            credit_limit: Number(c.credit_limit),
-          })) as CreditCard[];
-          setCreditCards(mapped);
-        }
+      const mappedBills = (billsResult.data ?? []).map((bill: Record<string, unknown>) => ({
+        ...bill,
+        amount: Number(bill.amount),
+      })) as FixedBill[];
 
-        // Fetch Invoice Items total for open invoices
-        const { data: invoiceData } = await supabase
-          .from('invoice_items')
-          .select('amount');
-        
-        if (invoiceData) {
-          const total = invoiceData.reduce((s: number, i: Record<string, unknown>) => s + Number(i.amount), 0);
-          setSummaryCards(prev => ({ ...prev, openInvoices: total }));
-        }
+      const mappedCards = (cardsResult.data ?? []).map((card: Record<string, unknown>) => ({
+        ...card,
+        credit_limit: Number(card.credit_limit),
+      })) as CreditCard[];
 
-        // Fetch Financial Goals
-        const { data: goalsData } = await supabase
-          .from('financial_goals')
-          .select('*')
-          .order('created_at', { ascending: true });
-          
-        if (goalsData) {
-          const mapped = goalsData.map((g: Record<string, unknown>) => ({
-            ...g,
-            target_amount: Number(g.target_amount),
-            current_amount: Number(g.current_amount),
-          })) as FinancialGoal[];
-          setFinancialGoals(mapped);
+      const mappedGoals = (goalsResult.data ?? []).map((goal: Record<string, unknown>) => ({
+        ...goal,
+        target_amount: Number(goal.target_amount),
+        current_amount: Number(goal.current_amount),
+      })) as FinancialGoal[];
 
-          const savedTotal = mapped.reduce((s, g) => s + g.current_amount, 0);
-          setSummaryCards(prev => ({ ...prev, savedAmount: savedTotal }));
-        }
+      const totalIncome = mappedTransactions
+        .filter(transaction => transaction.type === 'entrada')
+        .reduce((sum, transaction) => sum + transaction.amount, 0);
+      const totalExpense = mappedTransactions
+        .filter(transaction => transaction.type === 'gasto')
+        .reduce((sum, transaction) => sum + transaction.amount, 0);
+      const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + bill.amount, 0);
+      const openInvoices = (invoiceResult.data ?? [])
+        .reduce((sum: number, item: Record<string, unknown>) => sum + Number(item.amount), 0);
+      const savedAmount = mappedGoals.reduce((sum, goal) => sum + goal.current_amount, 0);
 
-        // Build monthly analysis
-        if (txData && txData.length > 0) {
-          const income = txData.filter((t: Record<string, unknown>) => t.type === 'entrada').reduce((s: number, t: Record<string, unknown>) => s + Number(t.amount), 0);
-          const expense = txData.filter((t: Record<string, unknown>) => t.type === 'gasto').reduce((s: number, t: Record<string, unknown>) => s + Number(t.amount), 0);
-          const ratio = income > 0 ? Math.round((expense / income) * 100) : 0;
-          
-          setMonthlyAnalysis({
-            title: 'Análise do mês',
-            description: `Você gastou ${ratio}% da sua renda este mês. ${ratio > 70 ? 'Cuidado com gastos excessivos!' : 'Continue assim!'}`,
-            actionText: 'Ver detalhes',
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching Supabase data:", error);
-      } finally {
-        setIsLoading(false);
-      }
+      setTransactions(mappedTransactions);
+      setFixedBills(mappedBills);
+      setCreditCards(mappedCards);
+      setFinancialGoals(mappedGoals);
+      setSummaryCards({
+        freeBalance: totalIncome - totalExpense,
+        totalIncome,
+        totalExpense,
+        savedAmount,
+        openInvoices,
+        fixedBillsTotal,
+      });
+      setBalanceEvolution(buildBalanceEvolution(mappedTransactions));
+      setCategoryExpense(buildCategoryExpense(mappedTransactions));
+      setMonthlyAnalysis(buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length));
+    } catch (error) {
+      console.error('Error fetching Supabase data:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [fetchData]);
+
+  useEffect(() => subscribeFinancialDataChanged(() => {
+    void fetchData();
+  }), [fetchData]);
 
   return {
     transactions,
@@ -157,6 +133,60 @@ export function useDashboardData() {
     balanceEvolution,
     categoryExpense,
     monthlyAnalysis,
-    isLoading
+    isLoading,
+  };
+}
+
+function buildBalanceEvolution(transactions: Transaction[]) {
+  const byMonth = new Map<string, number>();
+
+  transactions.forEach(transaction => {
+    const date = new Date(`${transaction.date}T00:00:00`);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const signedAmount = transaction.type === 'entrada' ? transaction.amount : -transaction.amount;
+    byMonth.set(key, (byMonth.get(key) ?? 0) + signedAmount);
+  });
+
+  return [...byMonth.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .slice(-6)
+    .map(([key, balance]) => {
+      const [year, month] = key.split('-').map(Number);
+      return {
+        month: new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'short' }),
+        balance,
+      };
+    });
+}
+
+function buildCategoryExpense(transactions: Transaction[]) {
+  const byCategory = new Map<string, { value: number; color: string }>();
+
+  transactions
+    .filter(transaction => transaction.type === 'gasto')
+    .forEach(transaction => {
+      const name = transaction.category?.name ?? 'Sem categoria';
+      const color = transaction.category?.color ?? fallbackExpenseColors[byCategory.size % fallbackExpenseColors.length];
+      const current = byCategory.get(name);
+      byCategory.set(name, {
+        value: (current?.value ?? 0) + transaction.amount,
+        color: current?.color ?? color,
+      });
+    });
+
+  return [...byCategory.entries()]
+    .sort(([, left], [, right]) => right.value - left.value)
+    .slice(0, 5)
+    .map(([name, data]) => ({ name, value: data.value, color: data.color }));
+}
+
+function buildMonthlyAnalysis(totalIncome: number, totalExpense: number, transactionCount: number): MonthlyAnalysis {
+  if (transactionCount === 0) return defaultAnalysis;
+
+  const ratio = totalIncome > 0 ? Math.round((totalExpense / totalIncome) * 100) : 0;
+  return {
+    title: 'Análise do mês',
+    description: `Você gastou ${ratio}% da sua renda este mês. ${ratio > 70 ? 'Cuidado com gastos excessivos!' : 'Continue assim!'}`,
+    actionText: 'Ver detalhes',
   };
 }

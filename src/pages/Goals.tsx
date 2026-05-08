@@ -1,24 +1,44 @@
 import { Target, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { FinancialGoalModal } from '../components/finance/FinanceModals';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 
 export function Goals() {
   const { goals, isLoading, totalTarget, totalSaved, overallProgress } = useFinancialGoals();
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
   if (goals.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
-        <div className="bg-surface-variant p-lg rounded-full"><Target size={48} className="text-primary" /></div>
-        <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhuma meta cadastrada</h2>
-        <p className="font-body-md text-[16px] max-w-md text-center">Crie sua primeira meta financeira para começar a acompanhar seus objetivos.</p>
-        <button className="mt-md font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all shadow-[0_0_15px_rgba(117,255,158,0.2)] flex items-center gap-sm"><Plus size={18} />Nova Meta</button>
-      </div>
+      <>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
+          <div className="bg-surface-variant p-lg rounded-full"><Target size={48} className="text-primary" /></div>
+          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhuma meta cadastrada</h2>
+          <p className="font-body-md text-[16px] max-w-md text-center">Crie sua primeira meta financeira para começar a acompanhar seus objetivos.</p>
+          <button
+            onClick={() => setIsGoalModalOpen(true)}
+            className="mt-md font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all shadow-[0_0_15px_rgba(117,255,158,0.2)] flex items-center gap-sm"
+          >
+            <Plus size={18} />Nova Meta
+          </button>
+        </div>
+        {isGoalModalOpen && <FinancialGoalModal onClose={() => setIsGoalModalOpen(false)} />}
+      </>
     );
   }
 
   return (
     <div className="space-y-xl">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsGoalModalOpen(true)}
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+        >
+          <Plus size={18} />Nova Meta
+        </button>
+      </div>
+
       {/* Summary */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <div className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden">
@@ -64,11 +84,16 @@ export function Goals() {
         })}
 
         {/* Add New Goal Card */}
-        <button className="bg-surface-container border border-dashed border-outline-variant rounded-xl p-lg flex flex-col items-center justify-center gap-md text-on-surface-variant hover:border-primary hover:text-primary transition-colors min-h-[200px]">
+        <button
+          onClick={() => setIsGoalModalOpen(true)}
+          className="bg-surface-container border border-dashed border-outline-variant rounded-xl p-lg flex flex-col items-center justify-center gap-md text-on-surface-variant hover:border-primary hover:text-primary transition-colors min-h-[200px]"
+        >
           <Plus size={32} />
           <span className="font-label-md text-[14px] font-semibold">Nova Meta</span>
         </button>
       </section>
+
+      {isGoalModalOpen && <FinancialGoalModal onClose={() => setIsGoalModalOpen(false)} />}
     </div>
   );
 }

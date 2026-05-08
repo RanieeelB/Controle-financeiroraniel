@@ -1,8 +1,11 @@
-import { Wallet, TrendingUp, CircleDollarSign, Landmark, LineChart, Building2, Bitcoin } from 'lucide-react';
+import { Wallet, TrendingUp, CircleDollarSign, Landmark, LineChart, Building2, Bitcoin, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { InvestmentModal } from '../components/finance/FinanceModals';
 import { useInvestments } from '../hooks/useInvestments';
 
 export function Investments() {
   const { investments, isLoading, totalCurrentValue, totalReturn, categoryTotals } = useInvestments();
+  const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
@@ -11,16 +14,25 @@ export function Investments() {
 
   if (investments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
-        <div className="bg-surface-variant p-lg rounded-full"><Wallet size={48} className="text-primary" /></div>
-        <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhum investimento cadastrado</h2>
-        <p className="font-body-md text-[16px] max-w-md text-center">Adicione seus investimentos para acompanhar a performance do portfólio.</p>
-      </div>
+      <>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
+          <div className="bg-surface-variant p-lg rounded-full"><Wallet size={48} className="text-primary" /></div>
+          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhum investimento cadastrado</h2>
+          <p className="font-body-md text-[16px] max-w-md text-center">Adicione investimentos e caixinhas para acompanhar seu patrimônio.</p>
+          <button
+            onClick={() => setIsInvestmentModalOpen(true)}
+            className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+          >
+            <Plus size={18} />Novo investimento
+          </button>
+        </div>
+        {isInvestmentModalOpen && <InvestmentModal onClose={() => setIsInvestmentModalOpen(false)} />}
+      </>
     );
   }
 
   // Build conic gradient from category percentages
-  let conicParts: string[] = [];
+  const conicParts: string[] = [];
   let acc = 0;
   categoryTotals.forEach(ct => {
     const start = acc;
@@ -31,6 +43,15 @@ export function Investments() {
 
   return (
     <div className="space-y-xl">
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsInvestmentModalOpen(true)}
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+        >
+          <Plus size={18} />Novo investimento
+        </button>
+      </div>
+
       <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <div className="bg-surface-container rounded-xl border border-outline-variant p-lg border-t-2 border-t-primary shadow-[0_0_30px_rgba(117,255,158,0.03)] relative overflow-hidden group hover:border-primary/50 transition-colors">
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Patrimônio Total</span><Wallet className="text-primary" size={24} /></div>
@@ -91,6 +112,8 @@ export function Investments() {
           })}
         </div>
       </section>
+
+      {isInvestmentModalOpen && <InvestmentModal onClose={() => setIsInvestmentModalOpen(false)} />}
     </div>
   );
 }

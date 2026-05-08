@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
 import type { Transaction } from '../types/financial';
 
@@ -6,7 +7,7 @@ export function useTransactions(type?: 'entrada' | 'gasto') {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchTransactions() {
+  const fetchTransactions = useCallback(async () => {
     setIsLoading(true);
     try {
       let query = supabase
@@ -31,11 +32,19 @@ export function useTransactions(type?: 'entrada' | 'gasto') {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [type]);
 
   useEffect(() => {
-    fetchTransactions();
-  }, [type]);
+    const timeout = window.setTimeout(() => {
+      void fetchTransactions();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [fetchTransactions]);
+
+  useEffect(() => subscribeFinancialDataChanged(() => {
+    void fetchTransactions();
+  }), [fetchTransactions]);
 
   const totals = {
     total: transactions.reduce((s, t) => s + t.amount, 0),

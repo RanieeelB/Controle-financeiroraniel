@@ -1,10 +1,12 @@
 import { CreditCard, Plus, ShoppingBag, Filter, MoreVertical, Inbox } from 'lucide-react';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useState } from 'react';
+import { InvoicePurchaseModal } from '../components/finance/FinanceModals';
 
 export function Invoices() {
   const { cards, invoiceItems, isLoading } = useCreditCards();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
 
@@ -34,7 +36,12 @@ export function Invoices() {
           ))}
           {cards.length === 0 && <span className="px-lg py-sm text-on-surface-variant text-sm">Nenhum cartão</span>}
         </div>
-        <button className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all shadow-[0_0_15px_rgba(117,255,158,0.2)] flex items-center gap-sm"><Plus size={18} />Nova Compra</button>
+        <button
+          onClick={() => setIsPurchaseModalOpen(true)}
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all shadow-[0_0_15px_rgba(117,255,158,0.2)] flex items-center gap-sm"
+        >
+          <Plus size={18} />Nova Compra
+        </button>
       </div>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
@@ -97,6 +104,13 @@ export function Invoices() {
           )}
         </div>
       </section>
+
+      {isPurchaseModalOpen && (
+        <InvoicePurchaseModal
+          defaultCardId={activeCard?.id}
+          onClose={() => setIsPurchaseModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
