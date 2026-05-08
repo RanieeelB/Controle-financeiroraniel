@@ -121,7 +121,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-md">
       <div
-        className="w-full max-w-2xl bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
+        className="w-full max-w-[42rem] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
         style={{ boxShadow: '0 0 40px rgba(117, 255, 158, 0.05)' }}
       >
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary" />

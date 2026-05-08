@@ -47,7 +47,7 @@ export function Reports() {
       <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
         <div className="bg-surface-variant p-lg rounded-full"><Flame size={48} className="text-primary" /></div>
         <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Sem dados para relatório</h2>
-        <p className="font-body-md text-[16px] max-w-md text-center">Cadastre lançamentos, cartões, contas, investimentos ou metas para visualizar seu resumo financeiro.</p>
+        <p className="font-body-md text-[16px] max-w-[28rem] text-center">Cadastre lançamentos, cartões, contas, investimentos ou metas para visualizar seu resumo financeiro.</p>
       </div>
     );
   }
