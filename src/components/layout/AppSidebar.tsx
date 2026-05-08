@@ -43,7 +43,7 @@ export function AppSidebar() {
             <NavLink
               key={item.label}
               to={item.href}
-              className={({ isActive }) => cn(
+              className={({ isActive }: { isActive: boolean }) => cn(
                 "flex items-center gap-md px-md py-sm rounded-lg transition-all duration-200 active:scale-95",
                 isActive 
                   ? "text-primary dark:text-primary font-bold border-r-2 border-primary bg-primary-container/10" 
