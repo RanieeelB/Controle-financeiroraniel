@@ -77,8 +77,8 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-md bg-background/80 backdrop-blur-sm">
-      <div className="bg-surface-container border border-outline-variant rounded-2xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl animate-scale-up">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-md bg-black/60 backdrop-blur-sm">
+      <div className="bg-surface-container border border-outline-variant rounded-2xl w-full max-w-md min-w-[320px] overflow-hidden flex flex-col shadow-2xl transition-all">
         <div className="flex justify-between items-center p-lg border-b border-outline-variant">
           <div className="flex items-center gap-sm">
             <div className="p-sm bg-tertiary-container/20 rounded-lg">
