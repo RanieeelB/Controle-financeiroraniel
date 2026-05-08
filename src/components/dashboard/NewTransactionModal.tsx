@@ -268,7 +268,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                   <Calendar className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none ml-xs" size={20} />
                 </div>
               </label>
-              <label>
+              <div>
                 <span className="flex items-center justify-between font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
                   <span>Categoria</span>
                   <button
@@ -287,6 +287,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                   <select
                     value={categoryId}
                     onChange={event => setCategoryId(event.target.value)}
+                    aria-label="Categoria"
                     className="w-full bg-surface border border-outline-variant rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none"
                   >
                     <option value="">Sem categoria</option>
@@ -296,7 +297,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                   </select>
                   <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={20} />
                 </div>
-              </label>
+              </div>
             </div>
 
             {isCategoryFormOpen && (
