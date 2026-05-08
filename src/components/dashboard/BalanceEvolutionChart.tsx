@@ -19,7 +19,7 @@ export function BalanceEvolutionChart({ data }: BalanceEvolutionChartProps) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3b4a3d" opacity={0.5} />
-            <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} />
+            <XAxis dataKey="label" stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip 
               contentStyle={{ backgroundColor: '#111827', borderColor: '#243041', borderRadius: '8px' }}
               itemStyle={{ color: '#00e676', fontWeight: 'bold' }}

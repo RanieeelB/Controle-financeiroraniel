@@ -193,25 +193,29 @@ export function useDashboardData(monthRange?: MonthRange) {
 }
 
 function buildBalanceEvolution(transactions: Transaction[]) {
-  const byMonth = new Map<string, number>();
+  const byDay = new Map<string, number>();
 
+  // Group the net amount for each day
   transactions.forEach(transaction => {
-    const date = new Date(`${transaction.date}T00:00:00`);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const key = transaction.date; // YYYY-MM-DD
     const signedAmount = transaction.type === 'entrada' ? transaction.amount : -transaction.amount;
-    byMonth.set(key, (byMonth.get(key) ?? 0) + signedAmount);
+    byDay.set(key, (byDay.get(key) ?? 0) + signedAmount);
   });
 
-  return [...byMonth.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .slice(-6)
-    .map(([key, balance]) => {
-      const [year, month] = key.split('-').map(Number);
-      return {
-        month: new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'short' }),
-        balance,
-      };
-    });
+  // Sort days chronologically
+  const sortedDays = [...byDay.entries()]
+    .sort(([left], [right]) => left.localeCompare(right));
+
+  // Calculate cumulative balance
+  let runningBalance = 0;
+  return sortedDays.map(([date, dayNet]) => {
+    runningBalance += dayNet;
+    const day = date.split('-')[2]; // Get only the day part
+    return {
+      label: day,
+      balance: runningBalance,
+    };
+  });
 }
 
 function buildCategoryExpense(transactions: Transaction[]) {

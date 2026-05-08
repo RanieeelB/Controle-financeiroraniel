@@ -128,7 +128,7 @@ export interface SummaryCards {
 }
 
 export interface BalanceEvolutionData {
-  month: string;
+  label: string;
   balance: number;
 }
 
