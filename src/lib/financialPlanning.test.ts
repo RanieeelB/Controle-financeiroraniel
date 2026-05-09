@@ -45,9 +45,10 @@ describe('salary planning helpers', () => {
       savedAmount: 900,
       openInvoices: 1800,
       fixedBillsTotal: 700,
+      unpaidFixedBills: 300,
     })).toEqual({
       currentBalance: 3800,
-      projectedBalance: 7000,
+      projectedBalance: 6700,
       totalIncome: 10000,
       totalExpense: 3000,
       savedAmount: 900,
