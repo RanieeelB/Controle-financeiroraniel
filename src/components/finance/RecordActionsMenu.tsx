@@ -4,11 +4,20 @@ import { useEffect, useRef, useState } from 'react';
 interface RecordActionsMenuProps {
   label: string;
   deleteLabel?: string;
+  primaryActionLabel?: string;
+  onPrimaryAction?: () => Promise<void>;
   onDelete: () => Promise<void>;
 }
 
-export function RecordActionsMenu({ label, deleteLabel = 'Excluir', onDelete }: RecordActionsMenuProps) {
+export function RecordActionsMenu({
+  label,
+  deleteLabel = 'Excluir',
+  primaryActionLabel,
+  onPrimaryAction,
+  onDelete,
+}: RecordActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isActing, setIsActing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -32,13 +41,28 @@ export function RecordActionsMenu({ label, deleteLabel = 'Excluir', onDelete }: 
     if (!rect) return;
 
     const menuWidth = 176;
-    const menuHeight = 92;
+    const menuHeight = onPrimaryAction ? 128 : 92;
     const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth));
     const opensAbove = rect.bottom + menuHeight + 8 > window.innerHeight;
     const top = opensAbove ? Math.max(8, rect.top - menuHeight - 4) : rect.bottom + 4;
 
     setMenuPosition({ top, left });
     setIsOpen(true);
+  }
+
+  async function handlePrimaryAction() {
+    if (!onPrimaryAction) return;
+
+    setIsActing(true);
+    try {
+      await onPrimaryAction();
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Error running primary record action:', error);
+      window.alert('Não foi possível concluir esta ação. Tente novamente.');
+    } finally {
+      setIsActing(false);
+    }
   }
 
   async function handleDelete() {
@@ -64,7 +88,7 @@ export function RecordActionsMenu({ label, deleteLabel = 'Excluir', onDelete }: 
         aria-expanded={isOpen}
         aria-label={`Ações de ${label}`}
         className="text-on-surface-variant hover:text-primary transition-all p-xs rounded-md hover:bg-surface-variant"
-        disabled={isDeleting}
+        disabled={isDeleting || isActing}
         onClick={() => (isOpen ? setIsOpen(false) : openMenu())}
         type="button"
       >
@@ -77,14 +101,26 @@ export function RecordActionsMenu({ label, deleteLabel = 'Excluir', onDelete }: 
           className="fixed z-50 w-[11rem] overflow-hidden rounded-lg border border-outline-variant bg-surface-container-high shadow-xl"
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
-          <button
-            className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-on-surface-variant cursor-not-allowed"
-            disabled
-            type="button"
-          >
-            <Pencil size={16} />
-            Editar em breve
-          </button>
+          {onPrimaryAction ? (
+            <button
+              className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-primary hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60"
+              disabled={isActing}
+              onClick={handlePrimaryAction}
+              type="button"
+            >
+              <Pencil size={16} />
+              {isActing ? 'Atualizando...' : primaryActionLabel}
+            </button>
+          ) : (
+            <button
+              className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-on-surface-variant cursor-not-allowed"
+              disabled
+              type="button"
+            >
+              <Pencil size={16} />
+              Editar em breve
+            </button>
+          )}
           <button
             className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-error hover:bg-error/10 disabled:cursor-wait disabled:opacity-60"
             disabled={isDeleting}

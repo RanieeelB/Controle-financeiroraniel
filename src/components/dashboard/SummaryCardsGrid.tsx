@@ -10,23 +10,23 @@ export function SummaryCardsGrid({ data }: SummaryCardsGridProps) {
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
-      {/* Saldo Livre */}
+      {/* Saldo Atual */}
       <div className="glass-card-premium rounded-xl p-lg flex flex-col gap-sm">
         <div className="flex justify-between items-start">
-          <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Saldo livre</span>
+          <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Saldo atual</span>
           <Wallet className="text-primary" size={24} />
         </div>
         <div className="flex items-baseline gap-sm">
           <span className="font-numeral-lg text-[48px] font-bold text-on-background leading-none">
-            R$ {fmt(data.freeBalance)}
+            R$ {fmt(data.currentBalance)}
           </span>
         </div>
       </div>
 
-      {/* Recebido no mês */}
+      {/* Entradas do mês */}
       <div className="glass-card rounded-xl p-lg flex flex-col gap-sm">
         <div className="flex justify-between items-start">
-          <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Recebido no mês</span>
+          <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Entradas do mês</span>
           <ArrowDownToLine className="text-primary" size={24} />
         </div>
         <div>
@@ -49,15 +49,15 @@ export function SummaryCardsGrid({ data }: SummaryCardsGridProps) {
         </div>
       </div>
 
-      {/* Guardado */}
+      {/* Sobra Prevista */}
       <div className="glass-card rounded-xl p-lg flex flex-col gap-sm">
         <div className="flex justify-between items-start">
-          <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Guardado</span>
+          <span className="text-on-surface-variant font-label-md text-[14px] uppercase tracking-wider">Sobra prevista</span>
           <PiggyBank className="text-secondary" size={24} />
         </div>
         <div>
           <span className="font-numeral-lg text-[32px] font-semibold text-on-background leading-none">
-            R$ {fmt(data.savedAmount)}
+            R$ {fmt(data.projectedBalance)}
           </span>
         </div>
       </div>
