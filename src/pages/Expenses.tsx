@@ -2,7 +2,7 @@ import { ArrowDownRight, Calendar, Search, Inbox } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { useTransactions } from '../hooks/useTransactions';
-import { deleteFinancialTransaction } from '../lib/financialActions';
+import { deleteFinancialTransaction, markTransactionStatus } from '../lib/financialActions';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function Expenses() {
@@ -124,6 +124,11 @@ export function Expenses() {
                   <td className="py-md px-lg text-right">
                     <RecordActionsMenu
                       label={t.description}
+                      primaryActionLabel={t.status === 'pendente' ? 'Marcar como pago' : 'Marcar como pendente'}
+                      onPrimaryAction={async () => {
+                        await markTransactionStatus(t.id, t.status === 'pendente' ? 'pago' : 'pendente');
+                        await refetch();
+                      }}
                       onDelete={async () => {
                         await deleteFinancialTransaction(t);
                         await refetch();

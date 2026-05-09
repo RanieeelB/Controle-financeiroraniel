@@ -434,11 +434,19 @@ export async function markTransactionStatus(transactionId: string, status: Trans
 }
 
 export async function payCreditInvoiceTransactions(transactionIds: string[]) {
+  await updateCreditInvoiceTransactionsStatus(transactionIds, 'pago');
+}
+
+export async function reopenCreditInvoiceTransactions(transactionIds: string[]) {
+  await updateCreditInvoiceTransactionsStatus(transactionIds, 'pendente');
+}
+
+async function updateCreditInvoiceTransactionsStatus(transactionIds: string[], status: Transaction['status']) {
   if (transactionIds.length === 0) return;
 
   const { error } = await supabase
     .from('transactions')
-    .update({ status: 'pago' })
+    .update({ status })
     .in('id', transactionIds);
 
   if (error) throw error;

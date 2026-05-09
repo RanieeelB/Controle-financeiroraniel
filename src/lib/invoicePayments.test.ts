@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getInvoicePaymentStatus, getPayableInvoiceTransactionIds } from './invoicePayments';
+import { getInvoicePaymentStatus, getPayableInvoiceTransactionIds, getPaidInvoiceTransactionIds } from './invoicePayments';
 
 describe('invoicePayments', () => {
   it('returns pending credit transaction ids for the selected invoice items', () => {
@@ -38,5 +38,19 @@ describe('invoicePayments', () => {
         { id: 'tx-2', notes: 'invoice_item:invoice-2', status: 'pendente' },
       ],
     )).toBe('open');
+  });
+
+  it('returns paid credit transaction ids so the invoice can be reopened', () => {
+    expect(getPaidInvoiceTransactionIds(
+      [
+        { id: 'invoice-1' },
+        { id: 'invoice-2' },
+      ],
+      [
+        { id: 'tx-1', notes: 'invoice_item:invoice-1', status: 'pago' },
+        { id: 'tx-2', notes: 'invoice_item:invoice-2', status: 'pendente' },
+        { id: 'tx-3', notes: 'invoice_item:invoice-3', status: 'pago' },
+      ],
+    )).toEqual(['tx-1']);
   });
 });

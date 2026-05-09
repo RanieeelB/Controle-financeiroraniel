@@ -124,11 +124,11 @@ export function Incomes() {
                   <td className="py-md px-lg text-right">
                     <RecordActionsMenu
                       label={t.description}
-                      primaryActionLabel={t.status === 'pendente' ? 'Marcar como recebido' : undefined}
-                      onPrimaryAction={t.status === 'pendente' ? async () => {
-                        await markTransactionStatus(t.id, 'recebido');
+                      primaryActionLabel={t.status === 'pendente' ? 'Marcar como recebido' : 'Marcar como pendente'}
+                      onPrimaryAction={async () => {
+                        await markTransactionStatus(t.id, t.status === 'pendente' ? 'recebido' : 'pendente');
                         await refetch();
-                      } : undefined}
+                      }}
                       onDelete={async () => {
                         await deleteFinancialTransaction(t);
                         await refetch();
