@@ -107,6 +107,9 @@ export function useDashboardData(monthRange?: MonthRange) {
         .filter(transaction => transaction.type === 'gasto')
         .reduce((sum, transaction) => sum + transaction.amount, 0);
       const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + bill.amount, 0);
+      const unpaidFixedBills = mappedBills
+        .filter(bill => bill.dynamicStatus !== 'pago')
+        .reduce((sum, bill) => sum + bill.amount, 0);
       const openInvoices = (invoiceResult.data as Array<{ id: string; amount: number; description: string; date: string }> ?? [])
         .filter((item) => {
           const linkedTx = mappedTransactions.find(t => t.notes === `invoice_item:${item.id}`);
@@ -140,6 +143,7 @@ export function useDashboardData(monthRange?: MonthRange) {
         savedAmount,
         openInvoices,
         fixedBillsTotal,
+        unpaidFixedBills,
       }));
       setBalanceEvolution(buildBalanceEvolution(mappedTransactions));
       setCategoryExpense(buildCategoryExpense(mappedTransactions));
