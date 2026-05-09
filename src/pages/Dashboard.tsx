@@ -7,13 +7,11 @@ import { CreditCardInvoices } from '../components/dashboard/CreditCardInvoices';
 import { FinancialGoalCard } from '../components/dashboard/FinancialGoalCard';
 import { ProjectionsSection } from '../components/dashboard/ProjectionsSection';
 import { useDashboardData } from '../hooks/useDashboardData';
-import { useAutoInvestments } from '../hooks/useAutoInvestments';
 import { useOutletContext } from 'react-router-dom';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function Dashboard() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
-  useAutoInvestments(); // Run auto investments check
   const { 
     fixedBills, 
     creditCards, 

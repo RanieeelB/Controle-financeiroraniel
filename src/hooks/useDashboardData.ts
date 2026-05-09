@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { calculateSummaryCards } from '../lib/financialPlanning';
 import { supabase } from '../lib/supabase';
 import type {
   BalanceEvolutionData,
@@ -13,7 +14,8 @@ import type {
 } from '../types/financial';
 
 const emptySummary: SummaryCards = {
-  freeBalance: 0,
+  currentBalance: 0,
+  projectedBalance: 0,
   totalIncome: 0,
   totalExpense: 0,
   savedAmount: 0,
@@ -149,14 +151,12 @@ export function useDashboardData(monthRange?: MonthRange) {
       setFixedBills(mappedBills);
       setCreditCards(mappedCards);
       setFinancialGoals(mappedGoals);
-      setSummaryCards({
-        freeBalance: totalIncome - totalExpense,
-        totalIncome,
-        totalExpense,
+      setSummaryCards(calculateSummaryCards({
+        transactions: mappedTransactions,
         savedAmount,
         openInvoices,
         fixedBillsTotal,
-      });
+      }));
       setBalanceEvolution(buildBalanceEvolution(mappedTransactions));
       setCategoryExpense(buildCategoryExpense(mappedTransactions));
       setMonthlyAnalysis(buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length));

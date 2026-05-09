@@ -10,7 +10,8 @@ import type {
 } from '../types/financial';
 
 export const summaryCardsMock: SummaryCards = {
-  freeBalance: 0,
+  currentBalance: 0,
+  projectedBalance: 0,
   totalIncome: 0,
   totalExpense: 0,
   savedAmount: 0,

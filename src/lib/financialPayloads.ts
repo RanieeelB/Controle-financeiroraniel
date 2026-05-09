@@ -89,6 +89,11 @@ export interface FinancialGoalPayloadInput {
   deadline?: string | null;
 }
 
+export interface SalarySettingPayloadInput {
+  amount: number;
+  dayOfMonth: number;
+}
+
 const cardBrandColors: Record<string, string> = {
   mastercard: '#ffba79',
   visa: '#7bd0ff',
@@ -287,6 +292,35 @@ export function buildFinancialGoalPayload(input: FinancialGoalPayloadInput) {
     current_amount: roundCurrency(input.currentAmount),
     deadline: normalizeOptionalText(input.deadline),
     icon: 'target',
+  };
+}
+
+export function buildSalarySettingPayload(input: SalarySettingPayloadInput) {
+  return {
+    amount: roundCurrency(input.amount),
+    day_of_month: clampDay(input.dayOfMonth),
+  };
+}
+
+export function buildSalaryTransactionNote(monthKey: string) {
+  return `salary:auto:${monthKey}`;
+}
+
+export function buildSalaryTransactionPayload(input: SalarySettingPayloadInput & { monthKey: string }) {
+  const payload = buildSalarySettingPayload(input);
+  const [year, month] = input.monthKey.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  const resolvedDay = String(Math.min(lastDay, payload.day_of_month)).padStart(2, '0');
+
+  return {
+    type: 'entrada' as const,
+    description: 'Salário',
+    amount: payload.amount,
+    date: `${year}-${String(month).padStart(2, '0')}-${resolvedDay}`,
+    status: 'pendente' as const,
+    payment_method: 'transferencia' as const,
+    category_id: null,
+    notes: buildSalaryTransactionNote(input.monthKey),
   };
 }
 
