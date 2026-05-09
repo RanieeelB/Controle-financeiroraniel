@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, LogOut, Building2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, Building2, Menu } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface DashboardHeaderProps {
@@ -8,6 +8,7 @@ interface DashboardHeaderProps {
   onNextMonth: () => void;
   onOpenNewTransaction: () => void;
   onOpenPjTaxes: () => void;
+  onToggleMobileMenu?: () => void;
 }
 
 export function DashboardHeader({ 
@@ -16,14 +17,25 @@ export function DashboardHeader({
   onPreviousMonth,
   onNextMonth,
   onOpenNewTransaction,
-  onOpenPjTaxes
+  onOpenPjTaxes,
+  onToggleMobileMenu
 }: DashboardHeaderProps) {
   const { signOut } = useAuth();
 
   return (
-    <header className="bg-surface/80 dark:bg-surface/80 backdrop-blur-md text-primary dark:text-primary sticky top-0 z-40 border-b border-outline-variant dark:border-outline-variant flex justify-between items-center w-full h-24 px-xl">
+    <header className="bg-surface/80 dark:bg-surface/80 backdrop-blur-md text-primary dark:text-primary sticky top-0 z-40 border-b border-outline-variant dark:border-outline-variant flex justify-between items-center w-full h-24 px-4 md:px-xl">
       <div className="flex flex-col">
-        <h2 className="font-h1 text-[32px] font-semibold text-on-background leading-tight">{title}</h2>
+        <div className="flex items-center gap-3">
+          {onToggleMobileMenu && (
+            <button 
+              onClick={onToggleMobileMenu}
+              className="lg:hidden p-2 -ml-2 text-on-surface hover:bg-surface-variant rounded-lg transition-colors"
+            >
+              <Menu size={24} />
+            </button>
+          )}
+          <h2 className="font-h1 text-[24px] md:text-[32px] font-semibold text-on-background leading-tight">{title}</h2>
+        </div>
         {/* Month Navigation */}
         <div className="flex items-center gap-sm mt-xs">
           <button onClick={onPreviousMonth} className="p-0.5 text-on-surface-variant hover:text-primary transition-colors rounded hover:bg-primary/10">
@@ -39,11 +51,11 @@ export function DashboardHeader({
       <div className="flex items-center gap-md">
         <button 
           onClick={onOpenPjTaxes}
-          className="px-md py-sm rounded border border-tertiary-container text-tertiary-container font-label-md text-[14px] font-semibold hover:bg-tertiary-container/10 transition-all flex items-center gap-2"
+          className="hidden md:flex px-md py-sm rounded border border-tertiary-container text-tertiary-container font-label-md text-[14px] font-semibold hover:bg-tertiary-container/10 transition-all items-center gap-2"
         >
           <Building2 size={16} /> Impostos PJ
         </button>
-        <button className="px-md py-sm rounded border border-[#243041] text-on-surface-variant font-label-md text-[14px] font-semibold hover:bg-surface-container-high transition-all">
+        <button className="hidden md:block px-md py-sm rounded border border-[#243041] text-on-surface-variant font-label-md text-[14px] font-semibold hover:bg-surface-container-high transition-all">
           Exportar PDF
         </button>
         <button 
@@ -54,8 +66,7 @@ export function DashboardHeader({
         </button>
         <button 
           onClick={() => signOut()}
-
-          className="p-sm rounded-full text-on-surface-variant hover:bg-error-container/20 hover:text-error transition-all"
+          className="p-sm rounded-full text-on-surface-variant hover:bg-error-container/20 hover:text-error transition-all hidden md:flex"
           title="Sair"
         >
           <LogOut size={20} />

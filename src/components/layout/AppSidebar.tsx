@@ -27,7 +27,11 @@ const navItems = [
   { label: 'Configurações', icon: Settings, href: '/configuracoes' },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  onCloseMobile?: () => void;
+}
+
+export function AppSidebar({ onCloseMobile }: AppSidebarProps) {
   const { user } = useAuth();
   const email = user?.email ?? 'sem-email@conta.local';
   const displayName = typeof user?.user_metadata?.name === 'string' && user.user_metadata.name.trim()
@@ -49,7 +53,7 @@ export function AppSidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
-            <NavLink
+            <NavLink onClick={onCloseMobile}
               key={item.label}
               to={item.href}
               className={({ isActive }: { isActive: boolean }) => cn(
