@@ -36,6 +36,7 @@ import {
   buildInvestmentDepositTransactionPayload,
   buildInvoicePurchasePayload,
   buildLinkedRecordNote,
+  normalizeInvoicePurchaseBatch,
   buildTransactionPayload,
   getInvestmentTotalsAfterDeposit,
   getInvestmentTotalsAfterDepositRemoval,
@@ -45,6 +46,7 @@ import {
   type FixedBillPayloadInput,
   type InvestmentDepositPayloadInput,
   type InvestmentPayloadInput,
+  type InvoicePurchaseBatchItemInput,
   type InvoicePurchasePayloadInput,
   type SalarySettingPayloadInput,
   type TransactionPayloadInput,
@@ -145,6 +147,27 @@ export async function createFinancialTransaction(input: CreateFinancialTransacti
 }
 
 export async function createCreditPurchase(input: InvoicePurchasePayloadInput) {
+  await createCreditPurchaseInternal(input);
+  emitFinancialDataChanged();
+}
+
+export async function createCreditPurchasesBatch(input: {
+  cardId: string;
+  items: InvoicePurchaseBatchItemInput[];
+}) {
+  const normalizedItems = normalizeInvoicePurchaseBatch(input.items);
+
+  for (const item of normalizedItems) {
+    await createCreditPurchaseInternal({
+      cardId: input.cardId,
+      ...item,
+    });
+  }
+
+  emitFinancialDataChanged();
+}
+
+async function createCreditPurchaseInternal(input: InvoicePurchasePayloadInput) {
   const userId = await getUserId();
   const totalInstallments = input.totalInstallments || 1;
   const currentInstallment = input.currentInstallment || 1;
@@ -187,8 +210,6 @@ export async function createCreditPurchase(input: InvoicePurchasePayloadInput) {
 
     if (txError) throw txError;
   }
-
-  emitFinancialDataChanged();
 }
 
 export async function createCreditCard(input: CreditCardPayloadInput) {

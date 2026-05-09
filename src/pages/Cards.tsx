@@ -79,9 +79,12 @@ export function Cards() {
           return (
             <section key={card.id} className="flex flex-col gap-lg">
               <div className="flex items-center justify-between">
-                <h3 className="font-h2 text-[24px] font-semibold text-on-surface flex items-center gap-sm">
-                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: card.color }}></span> {card.name}
-                </h3>
+                <div>
+                  <h3 className="font-h2 text-[24px] font-semibold text-on-surface flex items-center gap-sm">
+                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: card.color }}></span> {card.name}
+                  </h3>
+                  <p className="text-[13px] text-on-surface-variant mt-1">Vence todo dia {card.due_day}</p>
+                </div>
                 <button
                   onClick={() => openEditModal(card)}
                   className="p-sm rounded-lg border border-outline-variant text-on-surface-variant hover:text-primary hover:border-primary/50 transition-colors"

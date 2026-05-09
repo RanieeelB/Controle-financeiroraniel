@@ -82,6 +82,7 @@ export function Invoices() {
             </span>
           </div>
           <span className="font-numeral-lg text-[36px] font-bold text-on-surface">R$ {fmt(cardTotal)}</span>
+          {activeCard && <p className="text-[13px] text-on-surface-variant mt-sm">Vence todo dia {activeCard.due_day}</p>}
           <button
             type="button"
             onClick={handlePayInvoice}
