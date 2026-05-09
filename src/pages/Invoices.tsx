@@ -5,7 +5,7 @@ import { useOutletContext } from 'react-router-dom';
 import { InvoicePurchaseModal } from '../components/finance/FinanceModals';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { deleteInvoicePurchase, payCreditInvoiceTransactions, reopenCreditInvoiceTransactions } from '../lib/financialActions';
-import { getInvoicePaymentStatus, getPaidInvoiceTransactionIds, getPayableInvoiceTransactionIds } from '../lib/invoicePayments';
+import { getInvoiceActionState, getInvoicePaymentStatus, getPaidInvoiceTransactionIds, getPayableInvoiceTransactionIds } from '../lib/invoicePayments';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function Invoices() {
@@ -25,6 +25,12 @@ export function Invoices() {
   const invoiceStatus = getInvoicePaymentStatus(filteredItems, creditTransactions);
   const payableTransactionIds = getPayableInvoiceTransactionIds(filteredItems, creditTransactions);
   const paidTransactionIds = getPaidInvoiceTransactionIds(filteredItems, creditTransactions);
+  const invoiceAction = getInvoiceActionState({
+    invoiceStatus,
+    payableTransactionIds,
+    paidTransactionIds,
+    isPayingInvoice,
+  });
 
   const grouped = filteredItems.reduce((acc, item) => {
     const dateKey = new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
@@ -34,12 +40,11 @@ export function Invoices() {
   }, {} as Record<string, typeof filteredItems>);
 
   async function handleToggleInvoicePayment() {
-    if (invoiceStatus === 'paid' && paidTransactionIds.length === 0) return;
-    if (invoiceStatus === 'open' && payableTransactionIds.length === 0) return;
+    if (invoiceAction.action === 'none') return;
 
     setIsPayingInvoice(true);
     try {
-      if (invoiceStatus === 'paid') {
+      if (invoiceAction.action === 'reopen') {
         await reopenCreditInvoiceTransactions(paidTransactionIds);
       } else {
         await payCreditInvoiceTransactions(payableTransactionIds);
@@ -47,7 +52,7 @@ export function Invoices() {
       await refetch();
     } catch (error) {
       console.error('Error toggling invoice payment:', error);
-      window.alert(invoiceStatus === 'paid'
+      window.alert(invoiceAction.action === 'reopen'
         ? 'Não foi possível reabrir a fatura.'
         : 'Não foi possível marcar a fatura como paga.');
     } finally {
@@ -94,12 +99,10 @@ export function Invoices() {
           <button
             type="button"
             onClick={handleToggleInvoicePayment}
-            disabled={isPayingInvoice || (invoiceStatus === 'paid' ? paidTransactionIds.length === 0 : payableTransactionIds.length === 0)}
+            disabled={invoiceAction.disabled}
             className="mt-md px-md py-sm rounded-lg border border-primary/30 text-primary text-[13px] font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPayingInvoice
-              ? invoiceStatus === 'paid' ? 'Reabrindo fatura...' : 'Marcando pagamento...'
-              : invoiceStatus === 'paid' ? 'Reabrir fatura' : payableTransactionIds.length === 0 ? 'Fatura quitada' : 'Marcar fatura como paga'}
+            {invoiceAction.label}
           </button>
         </div>
         <div className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden hover:border-primary/50 transition-colors">

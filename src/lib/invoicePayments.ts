@@ -2,6 +2,62 @@ import type { InvoiceItem, Transaction } from '../types/financial';
 
 type InvoicePaymentItem = Pick<InvoiceItem, 'id'> & Partial<Pick<InvoiceItem, 'description' | 'amount' | 'date'>>;
 type InvoicePaymentTransaction = Pick<Transaction, 'id' | 'notes' | 'status'> & Partial<Pick<Transaction, 'description' | 'amount' | 'date' | 'payment_method'>>;
+type InvoiceStatus = ReturnType<typeof getInvoicePaymentStatus>;
+
+export function getInvoiceActionState(input: {
+  invoiceStatus: InvoiceStatus;
+  payableTransactionIds: string[];
+  paidTransactionIds: string[];
+  isPayingInvoice: boolean;
+}) {
+  const { invoiceStatus, payableTransactionIds, paidTransactionIds, isPayingInvoice } = input;
+
+  if (isPayingInvoice) {
+    if (invoiceStatus === 'paid' || (invoiceStatus === 'open' && payableTransactionIds.length === 0 && paidTransactionIds.length > 0)) {
+      return {
+        label: 'Reabrindo fatura...',
+        disabled: true,
+        action: 'reopen' as const,
+      };
+    }
+
+    return {
+      label: 'Marcando pagamento...',
+      disabled: true,
+      action: 'pay' as const,
+    };
+  }
+
+  if (invoiceStatus === 'paid') {
+    return {
+      label: 'Reabrir fatura',
+      disabled: paidTransactionIds.length === 0,
+      action: 'reopen' as const,
+    };
+  }
+
+  if (payableTransactionIds.length > 0) {
+    return {
+      label: 'Marcar fatura como paga',
+      disabled: false,
+      action: 'pay' as const,
+    };
+  }
+
+  if (paidTransactionIds.length > 0) {
+    return {
+      label: 'Reabrir fatura',
+      disabled: false,
+      action: 'reopen' as const,
+    };
+  }
+
+  return {
+    label: 'Fatura quitada',
+    disabled: true,
+    action: 'none' as const,
+  };
+}
 
 export function getPayableInvoiceTransactionIds(
   items: InvoicePaymentItem[],

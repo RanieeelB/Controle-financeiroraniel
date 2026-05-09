@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getInvoicePaymentStatus, getPayableInvoiceTransactionIds, getPaidInvoiceTransactionIds } from './invoicePayments';
+import {
+  getInvoiceActionState,
+  getInvoicePaymentStatus,
+  getPayableInvoiceTransactionIds,
+  getPaidInvoiceTransactionIds,
+} from './invoicePayments';
 
 describe('invoicePayments', () => {
   it('returns pending credit transaction ids for the selected invoice items', () => {
@@ -79,5 +84,18 @@ describe('invoicePayments', () => {
     expect(getInvoicePaymentStatus(items, transactions)).toBe('paid');
     expect(getPaidInvoiceTransactionIds(items, transactions)).toEqual(['tx-legacy-1']);
     expect(getPayableInvoiceTransactionIds(items, transactions)).toEqual([]);
+  });
+
+  it('allows reopening when the invoice is open but only paid transactions were matched', () => {
+    expect(getInvoiceActionState({
+      invoiceStatus: 'open',
+      payableTransactionIds: [],
+      paidTransactionIds: ['tx-legacy-1'],
+      isPayingInvoice: false,
+    })).toEqual({
+      label: 'Reabrir fatura',
+      disabled: false,
+      action: 'reopen',
+    });
   });
 });
