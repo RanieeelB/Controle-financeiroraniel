@@ -11,15 +11,15 @@ import {
 } from 'lucide-react';
 import type { ElementType } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import type { FinancialLayoutContext } from '../components/layout/Layout';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 import { useFixedBills } from '../hooks/useFixedBills';
 import { useInvestments } from '../hooks/useInvestments';
 import { useTransactions } from '../hooks/useTransactions';
+import type { LayoutContext } from '../components/layout/Layout';
 
 export function Reports() {
-  const { selectedMonthRange } = useOutletContext<FinancialLayoutContext>();
+  const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const { transactions: allTx, isLoading: transactionsLoading } = useTransactions(undefined, selectedMonthRange);
   const { invoiceItems, cards, isLoading: cardsLoading } = useCreditCards(selectedMonthRange);
   const { bills, isLoading: billsLoading, totals: billTotals } = useFixedBills();

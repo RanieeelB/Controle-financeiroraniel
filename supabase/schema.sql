@@ -1,7 +1,18 @@
 -- =============================================================
--- SALDO REAL — Schema Definitivo
--- Rode este SQL no Supabase SQL Editor para criar as tabelas.
+-- SALDO REAL — Schema Definitivo (Reset & Recreate)
+-- Rode este SQL no Supabase SQL Editor para limpar e recriar.
 -- =============================================================
+
+-- 0. LIMPEZA (Apaga tudo para recriar do zero)
+DROP TABLE IF EXISTS public.investment_deposits CASCADE;
+DROP TABLE IF EXISTS public.investments CASCADE;
+DROP TABLE IF EXISTS public.financial_goals CASCADE;
+DROP TABLE IF EXISTS public.salary_settings CASCADE;
+DROP TABLE IF EXISTS public.fixed_bills CASCADE;
+DROP TABLE IF EXISTS public.invoice_items CASCADE;
+DROP TABLE IF EXISTS public.credit_cards CASCADE;
+DROP TABLE IF EXISTS public.transactions CASCADE;
+DROP TABLE IF EXISTS public.categories CASCADE;
 
 -- 1. CATEGORIAS
 CREATE TABLE public.categories (
@@ -83,7 +94,17 @@ CREATE TABLE public.financial_goals (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- 7. INVESTIMENTOS
+-- 7. CONFIGURAÇÃO DE SALÁRIO FIXO
+CREATE TABLE public.salary_settings (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+    amount DECIMAL(12,2) NOT NULL,
+    day_of_month INTEGER NOT NULL CHECK (day_of_month >= 1 AND day_of_month <= 31),
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- 8. INVESTIMENTOS
 CREATE TABLE public.investments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -96,7 +117,7 @@ CREATE TABLE public.investments (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- 8. APORTES EM INVESTIMENTOS / CAIXINHAS
+-- 9. APORTES DE INVESTIMENTO (Depende de investments)
 CREATE TABLE public.investment_deposits (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -116,18 +137,54 @@ ALTER TABLE public.credit_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fixed_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.salary_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investment_deposits ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================
--- POLÍTICAS: Enquanto não temos auth, permitir acesso total
--- Quando implementar login, trocar para auth.uid() = user_id
+-- POLÍTICAS: Apenas o próprio usuário pode acessar seus dados
 -- =============================================================
-CREATE POLICY "Allow all for categories" ON public.categories FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for credit_cards" ON public.credit_cards FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for invoice_items" ON public.invoice_items FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for fixed_bills" ON public.fixed_bills FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for financial_goals" ON public.financial_goals FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for investments" ON public.investments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for investment_deposits" ON public.investment_deposits FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Users can view own categories" ON public.categories FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own categories" ON public.categories FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own categories" ON public.categories FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own categories" ON public.categories FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own transactions" ON public.transactions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own transactions" ON public.transactions FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own transactions" ON public.transactions FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own transactions" ON public.transactions FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own credit_cards" ON public.credit_cards FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own credit_cards" ON public.credit_cards FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own credit_cards" ON public.credit_cards FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own credit_cards" ON public.credit_cards FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own invoice_items" ON public.invoice_items FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own invoice_items" ON public.invoice_items FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own invoice_items" ON public.invoice_items FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own invoice_items" ON public.invoice_items FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own fixed_bills" ON public.fixed_bills FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own fixed_bills" ON public.fixed_bills FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own fixed_bills" ON public.fixed_bills FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own fixed_bills" ON public.fixed_bills FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own financial_goals" ON public.financial_goals FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own financial_goals" ON public.financial_goals FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own financial_goals" ON public.financial_goals FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own financial_goals" ON public.financial_goals FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own salary_settings" ON public.salary_settings FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own salary_settings" ON public.salary_settings FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own salary_settings" ON public.salary_settings FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own salary_settings" ON public.salary_settings FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own investments" ON public.investments FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own investments" ON public.investments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own investments" ON public.investments FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own investments" ON public.investments FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own investment_deposits" ON public.investment_deposits FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own investment_deposits" ON public.investment_deposits FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own investment_deposits" ON public.investment_deposits FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own investment_deposits" ON public.investment_deposits FOR DELETE USING (auth.uid() = user_id);

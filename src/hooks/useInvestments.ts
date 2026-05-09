@@ -22,6 +22,8 @@ export function useInvestments() {
           amount_invested: Number(i.amount_invested),
           current_value: Number(i.current_value),
           return_percentage: Number(i.return_percentage),
+          monthly_contribution: Number(i.monthly_contribution || 0),
+          last_auto_contribution_at: i.last_auto_contribution_at as string | null,
         })) as Investment[]);
       }
 

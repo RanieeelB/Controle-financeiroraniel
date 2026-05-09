@@ -3,10 +3,14 @@ import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import type { MonthRange } from '../lib/monthSelection';
 import { supabase } from '../lib/supabase';
 import type { Transaction } from '../types/financial';
+import type { MonthRange } from '../lib/monthSelection';
 
 export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const startDate = monthRange?.startDate;
+  const endDate = monthRange?.endDate;
+
   const startDate = monthRange?.startDate;
   const endDate = monthRange?.endDate;
 
@@ -18,9 +22,9 @@ export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRa
         .select('*, category:categories(*)')
         .order('date', { ascending: false });
       
-      if (type) {
-        query = query.eq('type', type);
-      }
+      if (type) query = query.eq('type', type);
+      if (startDate) query = query.gte('date', startDate);
+      if (endDate) query = query.lt('date', endDate);
 
       if (startDate && endDate) {
         query = query
@@ -44,10 +48,7 @@ export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRa
   }, [type, startDate, endDate]);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      void fetchTransactions();
-    }, 0);
-
+    const timeout = window.setTimeout(() => { void fetchTransactions(); }, 0);
     return () => window.clearTimeout(timeout);
   }, [fetchTransactions]);
 
@@ -63,7 +64,6 @@ export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRa
     pendingCount: transactions.filter(t => t.status === 'pendente').length,
   };
 
-  // Find top category
   const categoryMap = new Map<string, number>();
   transactions.forEach(t => {
     const catName = t.category?.name || 'Sem categoria';

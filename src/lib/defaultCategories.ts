@@ -5,18 +5,6 @@ export interface DefaultCategoryDefinition {
   color: string;
 }
 
-export interface ExistingCategoryIdentity {
-  name: string;
-  type: 'entrada' | 'gasto' | 'ambos';
-}
-
-export interface CategoryPayloadInput {
-  name: string;
-  type: 'entrada' | 'gasto' | 'ambos';
-  color: string;
-  icon?: string | null;
-}
-
 export const defaultCategories: DefaultCategoryDefinition[] = [
   { name: 'Estudo', icon: 'book-open', type: 'gasto', color: '#7bd0ff' },
   { name: 'Transporte', icon: 'bus', type: 'gasto', color: '#ffba79' },
@@ -33,25 +21,5 @@ export const defaultCategories: DefaultCategoryDefinition[] = [
   { name: 'Rendimentos', icon: 'trending-up', type: 'entrada', color: '#00e676' },
   { name: 'Reembolso', icon: 'receipt', type: 'entrada', color: '#ffba79' },
   { name: 'Outros recebimentos', icon: 'plus-circle', type: 'entrada', color: '#859585' },
+  { name: 'Impostos PJ', icon: 'building-2', type: 'gasto', color: '#ff6b6b' },
 ];
-
-export function buildCategoryPayload(input: CategoryPayloadInput) {
-  return {
-    name: input.name.trim(),
-    type: input.type,
-    color: input.color,
-    icon: input.icon?.trim() || 'tag',
-  };
-}
-
-export function getMissingDefaultCategories(existingCategories: ExistingCategoryIdentity[]) {
-  const existingKeys = new Set(
-    existingCategories.map(category => categoryKey(category.name, category.type)),
-  );
-
-  return defaultCategories.filter(category => !existingKeys.has(categoryKey(category.name, category.type)));
-}
-
-function categoryKey(name: string, type: ExistingCategoryIdentity['type']) {
-  return `${name.trim().toLocaleLowerCase('pt-BR')}::${type}`;
-}

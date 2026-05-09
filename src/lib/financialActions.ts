@@ -1,6 +1,33 @@
 import { supabase } from './supabase';
 import { emitFinancialDataChanged } from './financialEvents';
+
+// Helper function to add months to a YYYY-MM-DD date string
+function addMonthsToDate(dateStr: string, months: number): string {
+  if (months === 0) return dateStr;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1 + months, day);
+  
+  // Handle cases where the target month has fewer days than the source day
+  // (e.g. Jan 31 + 1 month should be Feb 28/29, not March 3)
+  const expectedMonth = (month - 1 + months) % 12;
+  const normalizedExpectedMonth = expectedMonth < 0 ? expectedMonth + 12 : expectedMonth;
+  
+  if (date.getMonth() !== normalizedExpectedMonth) {
+    date.setDate(0); // Set to the last day of the previous month
+  }
+  
+  return date.toISOString().split('T')[0];
+}
+
+async function getUserId(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) throw new Error('Usuário não autenticado.');
+  return session.user.id;
+}
 import {
+  buildSalarySettingPayload,
+  buildSalaryTransactionNote,
+  buildSalaryTransactionPayload,
   buildCreditCardPayload,
   buildFinancialGoalPayload,
   buildFixedBillPayload,
@@ -9,6 +36,7 @@ import {
   buildInvestmentDepositTransactionPayload,
   buildInvoicePurchasePayload,
   buildLinkedRecordNote,
+  normalizeInvoicePurchaseBatch,
   buildTransactionPayload,
   getInvestmentTotalsAfterDeposit,
   getInvestmentTotalsAfterDepositRemoval,
@@ -18,44 +46,32 @@ import {
   type FixedBillPayloadInput,
   type InvestmentDepositPayloadInput,
   type InvestmentPayloadInput,
+  type InvoicePurchaseBatchItemInput,
   type InvoicePurchasePayloadInput,
+  type SalarySettingPayloadInput,
   type TransactionPayloadInput,
 } from './financialPayloads';
-import { buildCategoryPayload, getMissingDefaultCategories } from './defaultCategories';
-import type { Category, Investment, InvestmentDeposit, InvoiceItem, Transaction } from '../types/financial';
-
-export type CreateFinancialTransactionInput = TransactionPayloadInput & {
-  cardId?: string | null;
-  currentInstallment?: number;
-};
+import type { Category, FixedBill, Investment, InvestmentDeposit, InvoiceItem, SalarySetting, Transaction } from '../types/financial';
+import { defaultCategories } from './defaultCategories';
 
 export interface CreateCategoryInput {
   name: string;
   type: Category['type'];
   color: string;
-  icon?: string | null;
-}
-
-let defaultCategoriesEnsured = false;
-let defaultCategoriesPromise: Promise<void> | null = null;
-
-export async function ensureDefaultCategories() {
-  if (defaultCategoriesEnsured) return;
-  if (defaultCategoriesPromise) return defaultCategoriesPromise;
-
-  defaultCategoriesPromise = ensureDefaultCategoriesOnce().finally(() => {
-    defaultCategoriesPromise = null;
-  });
-
-  return defaultCategoriesPromise;
+  icon?: string;
 }
 
 export async function createCategory(input: CreateCategoryInput) {
-  const payload = buildCategoryPayload(input);
+  const userId = await getUserId();
+  const payload = {
+    user_id: userId,
+    name: input.name.trim(),
+    type: input.type,
+    color: input.color,
+    icon: input.icon?.trim() || 'tag',
+  };
 
-  if (!payload.name) {
-    throw new Error('Informe o nome da categoria.');
-  }
+  if (!payload.name) throw new Error('Informe o nome da categoria.');
 
   const { data, error } = await supabase
     .from('categories')
@@ -65,19 +81,46 @@ export async function createCategory(input: CreateCategoryInput) {
 
   if (error) throw error;
   emitFinancialDataChanged();
-
   return data as Category;
 }
 
-export async function createFinancialTransaction(input: CreateFinancialTransactionInput) {
-  let invoiceItemId: string | null = null;
+export async function ensureDefaultCategories() {
+  const userId = await getUserId();
+  
+  // Get existing categories for this user
+  const { data: existing, error } = await supabase
+    .from('categories')
+    .select('name, type')
+    .eq('user_id', userId);
+    
+  if (error) throw error;
 
+  const missing = defaultCategories.filter(def => 
+    !existing?.some(ex => ex.name === def.name && ex.type === def.type)
+  );
+
+  if (missing.length === 0) return;
+
+  const { error: insertError } = await supabase
+    .from('categories')
+    .insert(missing.map(m => ({ ...m, user_id: userId })));
+
+  if (insertError) throw insertError;
+  emitFinancialDataChanged();
+}
+
+export type CreateFinancialTransactionInput = TransactionPayloadInput & {
+  cardId?: string | null;
+  currentInstallment?: number;
+};
+
+export async function createFinancialTransaction(input: CreateFinancialTransactionInput) {
   if (input.paymentMethod === 'credito') {
     if (!input.cardId) {
       throw new Error('Selecione um cartão para lançar no crédito.');
     }
 
-    const invoiceItem = await insertInvoicePurchase({
+    await createCreditPurchase({
       cardId: input.cardId,
       categoryId: input.categoryId,
       description: input.description,
@@ -86,72 +129,94 @@ export async function createFinancialTransaction(input: CreateFinancialTransacti
       totalInstallments: input.totalInstallments,
       currentInstallment: input.currentInstallment,
     });
-
-    invoiceItemId = invoiceItem.id;
+    return;
   }
 
   const transactionPayload = buildTransactionPayload(input);
+  const userId = await getUserId();
   const { error } = await supabase
     .from('transactions')
     .insert({
       ...transactionPayload,
-      notes: invoiceItemId ? buildLinkedRecordNote('invoice_item', invoiceItemId) : transactionPayload.notes,
+      user_id: userId,
+      notes: transactionPayload.notes,
     });
 
   if (error) throw error;
   emitFinancialDataChanged();
-}
-
-async function ensureDefaultCategoriesOnce() {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('name,type');
-
-  if (error) throw error;
-
-  const missingCategories = getMissingDefaultCategories(
-    (data ?? []) as Array<{ name: string; type: Category['type'] }>,
-  );
-
-  if (missingCategories.length > 0) {
-    const { error: insertError } = await supabase
-      .from('categories')
-      .insert(missingCategories.map(category => buildCategoryPayload(category)));
-
-    if (insertError) throw insertError;
-    emitFinancialDataChanged();
-  }
-
-  defaultCategoriesEnsured = true;
 }
 
 export async function createCreditPurchase(input: InvoicePurchasePayloadInput) {
-  const invoiceItem = await insertInvoicePurchase(input);
-
-  const transactionPayload = buildTransactionPayload({
-    type: 'gasto',
-    description: input.description,
-    amount: input.amount,
-    date: input.date,
-    paymentMethod: 'credito',
-    categoryId: input.categoryId,
-    totalInstallments: input.totalInstallments,
-  });
-  const { error } = await supabase
-    .from('transactions')
-    .insert({
-      ...transactionPayload,
-      notes: buildLinkedRecordNote('invoice_item', invoiceItem.id),
-    });
-
-  if (error) throw error;
+  await createCreditPurchaseInternal(input);
   emitFinancialDataChanged();
 }
 
+export async function createCreditPurchasesBatch(input: {
+  cardId: string;
+  items: InvoicePurchaseBatchItemInput[];
+}) {
+  const normalizedItems = normalizeInvoicePurchaseBatch(input.items);
+
+  for (const item of normalizedItems) {
+    await createCreditPurchaseInternal({
+      cardId: input.cardId,
+      ...item,
+    });
+  }
+
+  emitFinancialDataChanged();
+}
+
+async function createCreditPurchaseInternal(input: InvoicePurchasePayloadInput) {
+  const userId = await getUserId();
+  const totalInstallments = input.totalInstallments || 1;
+  const currentInstallment = input.currentInstallment || 1;
+  const remainingCount = totalInstallments - currentInstallment + 1;
+
+  for (let i = 0; i < remainingCount; i++) {
+    const installmentNum = currentInstallment + i;
+    const date = addMonthsToDate(input.date, i);
+    
+    // 1. Insert into invoice_items
+    const { data: itemData, error: itemError } = await supabase
+      .from('invoice_items')
+      .insert({ 
+        ...buildInvoicePurchasePayload({ ...input, date, currentInstallment: installmentNum }), 
+        user_id: userId 
+      })
+      .select('id')
+      .single();
+
+    if (itemError) throw itemError;
+
+    // 2. Create the linked transaction
+    const transactionPayload = buildTransactionPayload({
+      type: 'gasto',
+      description: input.description,
+      amount: input.amount,
+      date,
+      paymentMethod: 'credito',
+      categoryId: input.categoryId,
+      totalInstallments: totalInstallments,
+    });
+
+    const { error: txError } = await supabase
+      .from('transactions')
+      .insert({
+        ...transactionPayload,
+        user_id: userId,
+        notes: buildLinkedRecordNote('invoice_item', itemData.id),
+      });
+
+    if (txError) throw txError;
+  }
+}
+
 export async function createCreditCard(input: CreditCardPayloadInput) {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('credit_cards')
-    .insert(buildCreditCardPayload(input));
+    .insert({ ...buildCreditCardPayload(input), user_id: userId });
 
   if (error) throw error;
   emitFinancialDataChanged();
@@ -168,25 +233,57 @@ export async function updateCreditCard(cardId: string, input: CreditCardPayloadI
 }
 
 export async function createFixedBill(input: FixedBillPayloadInput) {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('fixed_bills')
-    .insert(buildFixedBillPayload(input));
+    .insert({ ...buildFixedBillPayload(input), user_id: userId });
 
   if (error) throw error;
   emitFinancialDataChanged();
 }
 
+export async function payFixedBill(bill: FixedBill) {
+  const userId = await getUserId();
+  
+  // 1. Create the transaction (gasto)
+  const transactionPayload = buildTransactionPayload({
+    type: 'gasto',
+    description: `Pagamento: ${bill.description}`,
+    amount: bill.amount,
+    date: new Date().toISOString().split('T')[0],
+    paymentMethod: 'pix', // Default for fixed bills
+    categoryId: bill.category_id
+  });
+
+  const { error: txError } = await supabase
+    .from('transactions')
+    .insert({ 
+      ...transactionPayload, 
+      user_id: userId,
+      notes: `fixed_bill:${bill.id}` // Link transaction to this bill
+    });
+
+  if (txError) throw txError;
+
+  emitFinancialDataChanged();
+}
+
 export async function createInvestment(input: InvestmentPayloadInput) {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('investments')
-    .insert(buildInvestmentPayload(input));
+    .insert({ ...buildInvestmentPayload(input), user_id: userId });
 
   if (error) throw error;
   emitFinancialDataChanged();
 }
 
 export async function createInvestmentDeposit(input: InvestmentDepositPayloadInput & { investment: Investment }) {
-  const depositPayload = buildInvestmentDepositPayload(input);
+  const userId = await getUserId();
+  const depositPayload = {
+    ...buildInvestmentDepositPayload(input),
+    user_id: userId,
+  };
 
   const { data: depositData, error: depositError } = await supabase
     .from('investment_deposits')
@@ -221,6 +318,7 @@ export async function createInvestmentDeposit(input: InvestmentDepositPayloadInp
         date: input.date,
         notes: input.notes,
       }),
+      user_id: userId,
       notes: depositId
         ? buildLinkedRecordNote('investment_deposit', depositId, input.investment.id)
         : buildLinkedRecordNote('investment_deposit', input.investment.id),
@@ -293,26 +391,122 @@ export async function deleteInvestmentDeposit(input: { deposit: InvestmentDeposi
 }
 
 export async function createFinancialGoal(input: FinancialGoalPayloadInput) {
+  const userId = await getUserId();
   const { error } = await supabase
     .from('financial_goals')
-    .insert(buildFinancialGoalPayload(input));
+    .insert({ ...buildFinancialGoalPayload(input), user_id: userId });
 
   if (error) throw error;
   emitFinancialDataChanged();
 }
 
-async function insertInvoicePurchase(input: InvoicePurchasePayloadInput) {
+export async function upsertSalarySetting(input: SalarySettingPayloadInput) {
+  const userId = await getUserId();
+  const payload = buildSalarySettingPayload(input);
+
   const { data, error } = await supabase
-    .from('invoice_items')
-    .insert(buildInvoicePurchasePayload(input))
-    .select('id')
+    .from('salary_settings')
+    .upsert({
+      user_id: userId,
+      ...payload,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+    .select('*')
     .single();
 
   if (error) throw error;
-  if (!data?.id) throw new Error('Não foi possível identificar o lançamento da fatura.');
-
-  return { id: data.id as string };
+  emitFinancialDataChanged();
+  return {
+    ...(data as SalarySetting),
+    amount: Number(data.amount),
+    day_of_month: Number(data.day_of_month),
+  } as SalarySetting;
 }
+
+export async function markTransactionStatus(transactionId: string, status: Transaction['status']) {
+  const { error } = await supabase
+    .from('transactions')
+    .update({ status })
+    .eq('id', transactionId);
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
+export async function payCreditInvoiceTransactions(transactionIds: string[]) {
+  if (transactionIds.length === 0) return;
+
+  const { error } = await supabase
+    .from('transactions')
+    .update({ status: 'pago' })
+    .in('id', transactionIds);
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
+export async function ensureMonthlySalaryTransaction(monthKey: string) {
+  const userId = await getUserId();
+  const { data: settingData, error: settingError } = await supabase
+    .from('salary_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (settingError) throw settingError;
+  if (!settingData) return null;
+
+  const amount = Number(settingData.amount);
+  const dayOfMonth = Number(settingData.day_of_month);
+  const note = buildSalaryTransactionNote(monthKey);
+  const transactionPayload = buildSalaryTransactionPayload({
+    amount,
+    dayOfMonth,
+    monthKey,
+  });
+
+  const { data: existingTransaction, error: existingError } = await supabase
+    .from('transactions')
+    .select('id, status')
+    .eq('user_id', userId)
+    .eq('notes', note)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+
+  if (existingTransaction) {
+    if (existingTransaction.status === 'pendente') {
+      const { error: updateError } = await supabase
+        .from('transactions')
+        .update({
+          description: transactionPayload.description,
+          amount: transactionPayload.amount,
+          date: transactionPayload.date,
+          payment_method: transactionPayload.payment_method,
+        })
+        .eq('id', existingTransaction.id);
+
+      if (updateError) throw updateError;
+      emitFinancialDataChanged();
+    }
+    return existingTransaction;
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      ...transactionPayload,
+      user_id: userId,
+    })
+    .select('id, status')
+    .single();
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+  return data;
+}
+
+
 
 function isMissingInvestmentDepositsTable(error: { code?: string; message?: string }) {
   return error.code === '42P01'

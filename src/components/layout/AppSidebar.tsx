@@ -12,6 +12,7 @@ import {
   Settings
 } from 'lucide-react';
 import { cn } from '../../lib/utils'; // I will create a utils file
+import { useAuth } from '../../hooks/useAuth';
 
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
@@ -27,6 +28,14 @@ const navItems = [
 ];
 
 export function AppSidebar() {
+  const { user } = useAuth();
+  const email = user?.email ?? 'sem-email@conta.local';
+  const displayName = typeof user?.user_metadata?.name === 'string' && user.user_metadata.name.trim()
+    ? user.user_metadata.name.trim()
+    : email.split('@')[0];
+  const avatarUrl = typeof user?.user_metadata?.avatar_url === 'string' ? user.user_metadata.avatar_url : '';
+  const avatarInitial = displayName.charAt(0).toUpperCase() || 'U';
+
   return (
     <nav className="bg-surface dark:bg-surface font-body-md text-body-md fixed left-0 top-0 h-screen w-64 border-r border-outline-variant dark:border-outline-variant flex flex-col py-lg px-md z-50">
       <div className="mb-xl px-sm">
@@ -60,15 +69,19 @@ export function AppSidebar() {
       <div className="mt-auto pt-lg border-t border-outline-variant">
         <div className="flex items-center gap-sm px-sm">
           <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant">
-            <img
-              alt="Raniel Avatar"
-              className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJuef7tu_ZVLwLcPOLjuyly6RLanLz-tmki58uZT54M3pCCLA0eGTMDioNjGR6pQ-YNd-94F8k_aeuuhokqzhgFX1YFMfRwrrJ3bKFWAEbiL-ZBXUE9rXX5UcbiKySuFDUMyaWlezRq9HGU_-6e8AmWR71jc3PryyezABCoj62jqlT3f7OZf8PzdO5xUzbl4vyvq8lqq0eMEI9xATCmmd-MNdZMzK16ItJipoym2nGdrXFPt5a1Vn3PkFuxkPYqqecQWVmTuEVC7c"
-            />
+            {avatarUrl ? (
+              <img
+                alt={`${displayName} Avatar`}
+                className="w-full h-full object-cover"
+                src={avatarUrl}
+              />
+            ) : (
+              <span className="font-label-md text-[16px] font-semibold text-on-surface">{avatarInitial}</span>
+            )}
           </div>
           <div>
-            <p className="font-label-md text-[14px] font-semibold text-on-background">Raniel</p>
-            <p className="text-[12px] text-on-surface-variant">raniel@saldoreal.com</p>
+            <p className="font-label-md text-[14px] font-semibold text-on-background">{displayName}</p>
+            <p className="text-[12px] text-on-surface-variant">{email}</p>
           </div>
         </div>
       </div>

@@ -5,12 +5,13 @@ import { MonthlyAnalysisCard } from '../components/dashboard/MonthlyAnalysisCard
 import { UpcomingBills } from '../components/dashboard/UpcomingBills';
 import { CreditCardInvoices } from '../components/dashboard/CreditCardInvoices';
 import { FinancialGoalCard } from '../components/dashboard/FinancialGoalCard';
+import { ProjectionsSection } from '../components/dashboard/ProjectionsSection';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useOutletContext } from 'react-router-dom';
-import type { FinancialLayoutContext } from '../components/layout/Layout';
+import type { LayoutContext } from '../components/layout/Layout';
 
 export function Dashboard() {
-  const { selectedMonthRange } = useOutletContext<FinancialLayoutContext>();
+  const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const { 
     fixedBills, 
     creditCards, 
@@ -57,6 +58,8 @@ export function Dashboard() {
           <FinancialGoalCard data={financialGoals} />
         </div>
       </section>
+
+      <ProjectionsSection />
     </>
   );
 }

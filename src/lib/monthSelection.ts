@@ -1,3 +1,5 @@
+// === Month Selection Helpers ===
+
 export interface MonthRange {
   monthKey: string;
   startDate: string;
@@ -12,7 +14,6 @@ export function buildMonthRange(monthKey: string): MonthRange {
   const [year, month] = monthKey.split('-').map(Number);
   const start = new Date(year, month - 1, 1);
   const end = new Date(year, month, 1);
-
   return {
     monthKey,
     startDate: toDateKey(start),
@@ -23,16 +24,15 @@ export function buildMonthRange(monthKey: string): MonthRange {
 export function moveMonth(monthKey: string, offset: number) {
   const [year, month] = monthKey.split('-').map(Number);
   const next = new Date(year, month - 1 + offset, 1);
-
   return getCurrentMonthKey(next);
 }
 
 export function formatMonthLabel(monthKey: string) {
   const [year, month] = monthKey.split('-').map(Number);
-  const label = `${new Date(year, month - 1, 1).toLocaleDateString('pt-BR', {
+  const label = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', {
     month: 'long',
-  })} ${year}`;
-
+    year: 'numeric',
+  });
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 

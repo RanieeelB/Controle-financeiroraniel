@@ -1,28 +1,33 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { NewTransactionModal } from '../dashboard/NewTransactionModal';
-import {
-  buildMonthRange,
-  formatMonthLabel,
-  getCurrentMonthKey,
-  moveMonth,
-  type MonthRange,
-} from '../../lib/monthSelection';
+import { PjTaxesModal } from '../dashboard/PjTaxesModal';
+import { useAutoInvestments } from '../../hooks/useAutoInvestments';
+import { useAutoSalary } from '../../hooks/useAutoSalary';
+import { getCurrentMonthKey, buildMonthRange, moveMonth, formatMonthLabel } from '../../lib/monthSelection';
+import type { MonthRange } from '../../lib/monthSelection';
 
-export interface FinancialLayoutContext {
+// Context type shared with child pages via Outlet context
+export interface LayoutContext {
   selectedMonthRange: MonthRange;
 }
 
 export function Layout() {
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState(false);
-  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey);
+  const [isPjTaxesModalOpen, setIsPjTaxesModalOpen] = useState(false);
+  const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const location = useLocation();
-  const selectedMonthRange = useMemo(() => buildMonthRange(selectedMonthKey), [selectedMonthKey]);
-  const monthLabel = useMemo(() => formatMonthLabel(selectedMonthKey), [selectedMonthKey]);
 
-  // Basic title mapping based on route path
+  const selectedMonthRange = buildMonthRange(selectedMonthKey);
+  const monthLabel = formatMonthLabel(selectedMonthKey);
+  useAutoInvestments();
+  useAutoSalary(selectedMonthKey);
+
+  const handlePreviousMonth = () => setSelectedMonthKey(prev => moveMonth(prev, -1));
+  const handleNextMonth = () => setSelectedMonthKey(prev => moveMonth(prev, 1));
+
   const getPageTitle = () => {
     switch (location.pathname) {
       case '/': return 'Dashboard';
@@ -50,13 +55,14 @@ export function Layout() {
         <DashboardHeader 
           title={getPageTitle()}
           monthLabel={monthLabel}
-          onPreviousMonth={() => setSelectedMonthKey(current => moveMonth(current, -1))}
-          onNextMonth={() => setSelectedMonthKey(current => moveMonth(current, 1))}
-          onOpenNewTransaction={() => setIsNewTransactionModalOpen(true)} 
+          onPreviousMonth={handlePreviousMonth}
+          onNextMonth={handleNextMonth}
+          onOpenNewTransaction={() => setIsNewTransactionModalOpen(true)}
+          onOpenPjTaxes={() => setIsPjTaxesModalOpen(true)}
         />
 
         <div className="flex-1 p-xl max-w-[1440px] w-full mx-auto space-y-xl relative z-10">
-          <Outlet context={{ selectedMonthRange } satisfies FinancialLayoutContext} />
+          <Outlet context={{ selectedMonthRange } satisfies LayoutContext} />
         </div>
       </main>
 
@@ -64,6 +70,13 @@ export function Layout() {
         isOpen={isNewTransactionModalOpen} 
         onClose={() => setIsNewTransactionModalOpen(false)} 
       />
+
+      {isPjTaxesModalOpen && (
+        <PjTaxesModal 
+          monthRange={selectedMonthRange} 
+          onClose={() => setIsPjTaxesModalOpen(false)} 
+        />
+      )}
     </div>
   );
 }

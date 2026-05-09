@@ -8,6 +8,7 @@ import {
   buildInvestmentPayload,
   buildInvoicePurchasePayload,
   buildLinkedRecordNote,
+  normalizeInvoicePurchaseBatch,
   getInvestmentTotalsAfterDepositRemoval,
   getInvestmentTotalsAfterDeposit,
   parseLinkedRecordNote,
@@ -93,6 +94,28 @@ describe('buildInvoicePurchasePayload', () => {
       current_installment: 2,
     });
   });
+
+  it('normalizes batch invoice items without losing installment fields', () => {
+    expect(normalizeInvoicePurchaseBatch([
+      {
+        description: 'Mercado',
+        amount: 250,
+        date: '2026-05-09',
+        categoryId: 'cat-1',
+        totalInstallments: 3,
+        currentInstallment: 2,
+      },
+    ])).toEqual([
+      {
+        description: 'Mercado',
+        amount: 250,
+        date: '2026-05-09',
+        categoryId: 'cat-1',
+        totalInstallments: 3,
+        currentInstallment: 2,
+      },
+    ]);
+  });
 });
 
 describe('entity payload builders', () => {
@@ -101,14 +124,26 @@ describe('entity payload builders', () => {
       bank: 'Nubank',
       brand: 'Mastercard',
       lastDigits: '1234',
+      dueDay: 25,
     })).toMatchObject({
       name: 'Nubank',
       brand: 'Mastercard',
       last_digits: '1234',
       card_holder: '',
       credit_limit: 0,
-      due_day: 10,
+      due_day: 25,
       closing_day: 3,
+    });
+  });
+
+  it('clamps the due day into the valid monthly range', () => {
+    expect(buildCreditCardPayload({
+      bank: 'Inter',
+      brand: 'Visa',
+      lastDigits: '4321',
+      dueDay: 45,
+    })).toMatchObject({
+      due_day: 31,
     });
   });
 

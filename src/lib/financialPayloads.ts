@@ -21,10 +21,20 @@ export interface InvoicePurchasePayloadInput {
   currentInstallment?: number;
 }
 
+export interface InvoicePurchaseBatchItemInput {
+  categoryId?: string | null;
+  description: string;
+  amount: number;
+  date: string;
+  totalInstallments: number;
+  currentInstallment: number;
+}
+
 export interface CreditCardPayloadInput {
   bank: string;
   brand: string;
   lastDigits: string;
+  dueDay?: number;
 }
 
 export interface FixedBillPayloadInput {
@@ -41,6 +51,7 @@ export interface InvestmentPayloadInput {
   category: InvestmentCategory;
   amountInvested: number;
   currentValue: number;
+  monthlyContribution?: number;
 }
 
 export interface InvestmentDepositPayloadInput {
@@ -76,6 +87,11 @@ export interface FinancialGoalPayloadInput {
   targetAmount: number;
   currentAmount: number;
   deadline?: string | null;
+}
+
+export interface SalarySettingPayloadInput {
+  amount: number;
+  dayOfMonth: number;
 }
 
 const cardBrandColors: Record<string, string> = {
@@ -145,10 +161,21 @@ export function buildCreditCardPayload(input: CreditCardPayloadInput) {
     brand,
     card_holder: '',
     credit_limit: 0,
-    due_day: 10,
+    due_day: clampDay(input.dueDay ?? 10),
     closing_day: 3,
     color: cardBrandColors[normalizedBrand] ?? '#75ff9e',
   };
+}
+
+export function normalizeInvoicePurchaseBatch(items: InvoicePurchaseBatchItemInput[]) {
+  return items.map(item => ({
+    description: normalizeRequiredText(item.description),
+    amount: roundCurrency(item.amount),
+    date: item.date,
+    categoryId: normalizeOptionalId(item.categoryId),
+    totalInstallments: normalizeInstallments(item.totalInstallments),
+    currentInstallment: normalizeCurrentInstallment(item.currentInstallment, normalizeInstallments(item.totalInstallments)),
+  }));
 }
 
 export function buildFixedBillPayload(input: FixedBillPayloadInput) {
@@ -165,6 +192,7 @@ export function buildFixedBillPayload(input: FixedBillPayloadInput) {
 export function buildInvestmentPayload(input: InvestmentPayloadInput) {
   const amountInvested = roundCurrency(input.amountInvested);
   const currentValue = roundCurrency(input.currentValue);
+  const monthlyContribution = roundCurrency(input.monthlyContribution ?? 0);
   const returnPercentage = amountInvested > 0
     ? roundCurrency(((currentValue - amountInvested) / amountInvested) * 100)
     : 0;
@@ -175,6 +203,7 @@ export function buildInvestmentPayload(input: InvestmentPayloadInput) {
     category: input.category,
     amount_invested: amountInvested,
     current_value: currentValue,
+    monthly_contribution: monthlyContribution,
     return_percentage: returnPercentage,
   };
 }
@@ -263,6 +292,35 @@ export function buildFinancialGoalPayload(input: FinancialGoalPayloadInput) {
     current_amount: roundCurrency(input.currentAmount),
     deadline: normalizeOptionalText(input.deadline),
     icon: 'target',
+  };
+}
+
+export function buildSalarySettingPayload(input: SalarySettingPayloadInput) {
+  return {
+    amount: roundCurrency(input.amount),
+    day_of_month: clampDay(input.dayOfMonth),
+  };
+}
+
+export function buildSalaryTransactionNote(monthKey: string) {
+  return `salary:auto:${monthKey}`;
+}
+
+export function buildSalaryTransactionPayload(input: SalarySettingPayloadInput & { monthKey: string }) {
+  const payload = buildSalarySettingPayload(input);
+  const [year, month] = input.monthKey.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  const resolvedDay = String(Math.min(lastDay, payload.day_of_month)).padStart(2, '0');
+
+  return {
+    type: 'entrada' as const,
+    description: 'Salário',
+    amount: payload.amount,
+    date: `${year}-${String(month).padStart(2, '0')}-${resolvedDay}`,
+    status: 'pendente' as const,
+    payment_method: 'transferencia' as const,
+    category_id: null,
+    notes: buildSalaryTransactionNote(input.monthKey),
   };
 }
 

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ensureDefaultCategories } from '../lib/financialActions';
 import { supabase } from '../lib/supabase';
 import type { Category } from '../types/financial';
+import { ensureDefaultCategories } from '../lib/financialActions';
+import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 
 export function useCategories(type?: 'entrada' | 'gasto') {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -10,6 +11,7 @@ export function useCategories(type?: 'entrada' | 'gasto') {
   const fetchCategories = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Bootstrap missing default categories first
       await ensureDefaultCategories();
 
       let query = supabase
@@ -38,6 +40,10 @@ export function useCategories(type?: 'entrada' | 'gasto') {
 
     return () => window.clearTimeout(timeout);
   }, [fetchCategories]);
+
+  useEffect(() => subscribeFinancialDataChanged(() => {
+    void fetchCategories();
+  }), [fetchCategories]);
 
   return { categories, isLoading, refetch: fetchCategories };
 }

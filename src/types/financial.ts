@@ -101,6 +101,8 @@ export interface Investment {
   amount_invested: number;
   current_value: number;
   return_percentage: number;
+  monthly_contribution: number;
+  last_auto_contribution_at: string | null;
   created_at: string;
 }
 
@@ -117,9 +119,20 @@ export interface InvestmentDeposit {
   investment?: Investment;
 }
 
+// === CONFIGURAÇÃO DE SALÁRIO FIXO ===
+export interface SalarySetting {
+  id: string;
+  user_id: string;
+  amount: number;
+  day_of_month: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // === TIPOS DE APRESENTAÇÃO (UI) ===
 export interface SummaryCards {
-  freeBalance: number;
+  currentBalance: number;
+  projectedBalance: number;
   totalIncome: number;
   totalExpense: number;
   savedAmount: number;
@@ -128,7 +141,7 @@ export interface SummaryCards {
 }
 
 export interface BalanceEvolutionData {
-  month: string;
+  label: string;
   balance: number;
 }
 
@@ -143,3 +156,8 @@ export interface MonthlyAnalysis {
   description: string;
   actionText: string;
 }
+
+export type DynamicFixedBill = FixedBill & {
+  dynamicStatus: 'pago' | 'pendente' | 'atrasado';
+  daysOverdue: number;
+};

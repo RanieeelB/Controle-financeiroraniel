@@ -1,12 +1,12 @@
 import { ArrowUpRight, Calendar, Search, Inbox } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
-import type { FinancialLayoutContext } from '../components/layout/Layout';
 import { useTransactions } from '../hooks/useTransactions';
-import { deleteFinancialTransaction } from '../lib/financialActions';
+import { deleteFinancialTransaction, markTransactionStatus } from '../lib/financialActions';
+import type { LayoutContext } from '../components/layout/Layout';
 
 export function Incomes() {
-  const { selectedMonthRange } = useOutletContext<FinancialLayoutContext>();
+  const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const { transactions, isLoading, totals, topCategory, refetch } = useTransactions('entrada', selectedMonthRange);
 
   if (isLoading) {
@@ -124,6 +124,11 @@ export function Incomes() {
                   <td className="py-md px-lg text-right">
                     <RecordActionsMenu
                       label={t.description}
+                      primaryActionLabel={t.status === 'pendente' ? 'Marcar como recebido' : undefined}
+                      onPrimaryAction={t.status === 'pendente' ? async () => {
+                        await markTransactionStatus(t.id, 'recebido');
+                        await refetch();
+                      } : undefined}
                       onDelete={async () => {
                         await deleteFinancialTransaction(t);
                         await refetch();
