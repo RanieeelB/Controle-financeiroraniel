@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { supabase } from '../lib/supabase';
-import type { CreditCard, InvoiceItem } from '../types/financial';
+import type { CreditCard, InvoiceItem, Transaction } from '../types/financial';
 import type { MonthRange } from '../lib/monthSelection';
 
 export function useCreditCards(monthRange?: MonthRange) {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
+  const [creditTransactions, setCreditTransactions] = useState<Array<Pick<Transaction, 'id' | 'notes' | 'status'>>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const startDate = monthRange?.startDate;
@@ -31,8 +32,14 @@ export function useCreditCards(monthRange?: MonthRange) {
         .from('invoice_items')
         .select('*, category:categories(*), credit_card:credit_cards(*)')
         .order('date', { ascending: false });
+      let creditTransactionsQuery = supabase
+        .from('transactions')
+        .select('id, notes, status')
+        .eq('payment_method', 'credito');
       if (startDate) itemsQuery = itemsQuery.gte('date', startDate);
       if (endDate) itemsQuery = itemsQuery.lt('date', endDate);
+      if (startDate) creditTransactionsQuery = creditTransactionsQuery.gte('date', startDate);
+      if (endDate) creditTransactionsQuery = creditTransactionsQuery.lt('date', endDate);
 
       const { data: itemsData, error: itemsErr } = await itemsQuery;
       if (itemsErr) throw itemsErr;
@@ -42,6 +49,10 @@ export function useCreditCards(monthRange?: MonthRange) {
           amount: Number(i.amount),
         })) as InvoiceItem[]);
       }
+
+      const { data: creditTransactionsData, error: creditTransactionsErr } = await creditTransactionsQuery;
+      if (creditTransactionsErr) throw creditTransactionsErr;
+      setCreditTransactions((creditTransactionsData ?? []) as Array<Pick<Transaction, 'id' | 'notes' | 'status'>>);
     } catch (error) {
       console.error('Error fetching credit cards:', error);
     } finally {
@@ -66,5 +77,5 @@ export function useCreditCards(monthRange?: MonthRange) {
     return getCardItems(cardId).reduce((s, i) => s + i.amount, 0);
   }
 
-  return { cards, invoiceItems, isLoading, getCardItems, getCardTotal, refetch: fetchData };
+  return { cards, invoiceItems, creditTransactions, isLoading, getCardItems, getCardTotal, refetch: fetchData };
 }

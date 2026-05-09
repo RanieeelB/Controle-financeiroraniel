@@ -4,14 +4,16 @@ import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { InvoicePurchaseModal } from '../components/finance/FinanceModals';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
-import { deleteInvoicePurchase } from '../lib/financialActions';
+import { deleteInvoicePurchase, payCreditInvoiceTransactions } from '../lib/financialActions';
+import { getInvoicePaymentStatus, getPayableInvoiceTransactionIds } from '../lib/invoicePayments';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function Invoices() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
-  const { cards, invoiceItems, isLoading, refetch } = useCreditCards(selectedMonthRange);
+  const { cards, invoiceItems, creditTransactions, isLoading, refetch } = useCreditCards(selectedMonthRange);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isPayingInvoice, setIsPayingInvoice] = useState(false);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
 
@@ -20,6 +22,8 @@ export function Invoices() {
   const filteredItems = activeCard ? invoiceItems.filter(i => i.card_id === activeCard.id) : invoiceItems;
   const cardTotal = filteredItems.reduce((s, i) => s + i.amount, 0);
   const available = activeCard ? activeCard.credit_limit - cardTotal : 0;
+  const invoiceStatus = getInvoicePaymentStatus(filteredItems, creditTransactions);
+  const payableTransactionIds = getPayableInvoiceTransactionIds(filteredItems, creditTransactions);
 
   const grouped = filteredItems.reduce((acc, item) => {
     const dateKey = new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
@@ -27,6 +31,21 @@ export function Invoices() {
     acc[dateKey].push(item);
     return acc;
   }, {} as Record<string, typeof filteredItems>);
+
+  async function handlePayInvoice() {
+    if (payableTransactionIds.length === 0) return;
+
+    setIsPayingInvoice(true);
+    try {
+      await payCreditInvoiceTransactions(payableTransactionIds);
+      await refetch();
+    } catch (error) {
+      console.error('Error paying invoice:', error);
+      window.alert('Não foi possível marcar a fatura como paga.');
+    } finally {
+      setIsPayingInvoice(false);
+    }
+  }
 
   return (
     <div className="space-y-xl">
@@ -52,8 +71,25 @@ export function Invoices() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
         <div className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[2px]" style={{ backgroundColor: activeCard?.color }}></div>
-          <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Fatura Atual</span><span className="inline-flex bg-tertiary-container/20 text-tertiary-container border border-tertiary-container/30 text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase">Aberta</span></div>
+          <div className="flex justify-between items-start mb-md">
+            <span className="text-on-surface-variant">Fatura Atual</span>
+            <span className={`inline-flex text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase border ${
+              invoiceStatus === 'paid'
+                ? 'bg-primary/10 text-primary border-primary/30'
+                : 'bg-tertiary-container/20 text-tertiary-container border-tertiary-container/30'
+            }`}>
+              {invoiceStatus === 'paid' ? 'Paga' : 'Aberta'}
+            </span>
+          </div>
           <span className="font-numeral-lg text-[36px] font-bold text-on-surface">R$ {fmt(cardTotal)}</span>
+          <button
+            type="button"
+            onClick={handlePayInvoice}
+            disabled={isPayingInvoice || payableTransactionIds.length === 0}
+            className="mt-md px-md py-sm rounded-lg border border-primary/30 text-primary text-[13px] font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isPayingInvoice ? 'Marcando pagamento...' : payableTransactionIds.length === 0 ? 'Fatura quitada' : 'Marcar fatura como paga'}
+          </button>
         </div>
         <div className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden hover:border-primary/50 transition-colors">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/30"></div>

@@ -412,6 +412,18 @@ export async function markTransactionStatus(transactionId: string, status: Trans
   emitFinancialDataChanged();
 }
 
+export async function payCreditInvoiceTransactions(transactionIds: string[]) {
+  if (transactionIds.length === 0) return;
+
+  const { error } = await supabase
+    .from('transactions')
+    .update({ status: 'pago' })
+    .in('id', transactionIds);
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
 export async function ensureMonthlySalaryTransaction(monthKey: string) {
   const userId = await getUserId();
   const { data: settingData, error: settingError } = await supabase
