@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
 import { calculateSummaryCards } from '../lib/financialPlanning';
 import { supabase } from '../lib/supabase';
 import type {
@@ -49,13 +50,12 @@ export function useDashboardData(monthRange?: MonthRange) {
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
-
     try {
       let txQuery = supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false });
       if (startDate) txQuery = txQuery.gte('date', startDate);
       if (endDate) txQuery = txQuery.lt('date', endDate);
 
-      let invoiceQuery = supabase.from('invoice_items').select('amount');
+      let invoiceQuery = supabase.from('invoice_items').select('id, amount, description, date');
       if (startDate) invoiceQuery = invoiceQuery.gte('date', startDate);
       if (endDate) invoiceQuery = invoiceQuery.lt('date', endDate);
 
@@ -82,47 +82,11 @@ export function useDashboardData(monthRange?: MonthRange) {
       const currentMonth = today.getMonth() + 1;
       const currentYear = today.getFullYear();
       
-      const [viewYear, viewMonth] = monthRange 
-        ? monthRange.monthKey.split('-').map(Number) 
-        : [currentYear, currentMonth];
-
-      const isViewingCurrentMonth = viewYear === currentYear && viewMonth === currentMonth;
-      const isViewingPastMonth = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
-
-      // Create a set of paid bill IDs for the selected month
-      const paidBillIds = new Set(
-        mappedTransactions
-          .filter(tx => tx.notes?.includes('fixed_bill:'))
-          .map(tx => tx.notes?.replace('fixed_bill:', ''))
-      );
-
-      const mappedBills = (billsResult.data ?? []).map((bill: Record<string, unknown>) => {
-        const amount = Number(bill.amount);
-        const isPaidThisMonth = paidBillIds.has(bill.id as string);
-        let dynamicStatus: 'pago' | 'pendente' | 'atrasado' = 'pendente';
-        let daysOverdue = 0;
-
-        if (isPaidThisMonth) {
-          dynamicStatus = 'pago';
-        } else {
-          if (isViewingPastMonth) {
-            dynamicStatus = 'atrasado';
-          } else if (isViewingCurrentMonth) {
-            const dueDay = Number(bill.due_day);
-            const currentDay = today.getDate();
-            if (currentDay > dueDay) {
-              dynamicStatus = 'atrasado';
-              daysOverdue = currentDay - dueDay;
-            }
-          }
-        }
-
-        return {
-          ...bill,
-          amount,
-          dynamicStatus,
-          daysOverdue
-        };
+      const mappedBills = resolveDynamicFixedBills({
+        bills: (billsResult.data ?? []) as DynamicFixedBill[],
+        payments: mappedTransactions,
+        monthKey: monthRange?.monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+        today,
       }) as DynamicFixedBill[];
 
       const mappedCards = (cardsResult.data ?? []).map((card: Record<string, unknown>) => ({
@@ -143,8 +107,28 @@ export function useDashboardData(monthRange?: MonthRange) {
         .filter(transaction => transaction.type === 'gasto')
         .reduce((sum, transaction) => sum + transaction.amount, 0);
       const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + bill.amount, 0);
-      const openInvoices = (invoiceResult.data ?? [])
-        .reduce((sum: number, item: Record<string, unknown>) => sum + Number(item.amount), 0);
+      const openInvoices = (invoiceResult.data as Array<{ id: string; amount: number; description: string; date: string }> ?? [])
+        .filter((item) => {
+          const linkedTx = mappedTransactions.find(t => t.notes === `invoice_item:${item.id}`);
+          if (linkedTx) {
+            return linkedTx.status !== 'pago';
+          }
+          
+          // Legacy fallback
+          const signature = `${(item.description || '').trim().toLocaleLowerCase('pt-BR')}|${Number(item.amount).toFixed(2)}|${item.date}`;
+          const fallbackTx = mappedTransactions.find(t => {
+            if (t.payment_method !== undefined && t.payment_method !== 'credito') return false;
+            if (!t.description || typeof t.amount !== 'number' || !t.date) return false;
+            const tSig = `${t.description.trim().toLocaleLowerCase('pt-BR')}|${t.amount.toFixed(2)}|${t.date}`;
+            return tSig === signature;
+          });
+          
+          if (fallbackTx) {
+            return fallbackTx.status !== 'pago';
+          }
+          return true; // Not matched, so it's open
+        })
+        .reduce((sum, item) => sum + Number(item.amount), 0);
       const savedAmount = mappedGoals.reduce((sum, goal) => sum + goal.current_amount, 0);
 
       setTransactions(mappedTransactions);

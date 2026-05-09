@@ -7,7 +7,7 @@ import type { MonthRange } from '../lib/monthSelection';
 export function useCreditCards(monthRange?: MonthRange) {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
-  const [creditTransactions, setCreditTransactions] = useState<Array<Pick<Transaction, 'id' | 'notes' | 'status'>>>([]);
+  const [creditTransactions, setCreditTransactions] = useState<Array<Pick<Transaction, 'id' | 'notes' | 'status' | 'description' | 'amount' | 'date' | 'payment_method'>>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const startDate = monthRange?.startDate;
@@ -34,7 +34,7 @@ export function useCreditCards(monthRange?: MonthRange) {
         .order('date', { ascending: false });
       let creditTransactionsQuery = supabase
         .from('transactions')
-        .select('id, notes, status')
+        .select('id, notes, status, description, amount, date, payment_method')
         .eq('payment_method', 'credito');
       if (startDate) itemsQuery = itemsQuery.gte('date', startDate);
       if (endDate) itemsQuery = itemsQuery.lt('date', endDate);
@@ -52,7 +52,10 @@ export function useCreditCards(monthRange?: MonthRange) {
 
       const { data: creditTransactionsData, error: creditTransactionsErr } = await creditTransactionsQuery;
       if (creditTransactionsErr) throw creditTransactionsErr;
-      setCreditTransactions((creditTransactionsData ?? []) as Array<Pick<Transaction, 'id' | 'notes' | 'status'>>);
+      setCreditTransactions(((creditTransactionsData ?? []) as Array<Record<string, unknown>>).map(transaction => ({
+        ...transaction,
+        amount: Number(transaction.amount),
+      })) as Array<Pick<Transaction, 'id' | 'notes' | 'status' | 'description' | 'amount' | 'date' | 'payment_method'>>);
     } catch (error) {
       console.error('Error fetching credit cards:', error);
     } finally {

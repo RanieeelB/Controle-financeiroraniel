@@ -1,13 +1,20 @@
+import { useState } from 'react';
 import { ArrowDownRight, Calendar, Search, Inbox } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { useTransactions } from '../hooks/useTransactions';
-import { deleteFinancialTransaction } from '../lib/financialActions';
+import { deleteFinancialTransaction, markTransactionStatus } from '../lib/financialActions';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function Expenses() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const { transactions, isLoading, totals, topCategory, refetch } = useTransactions('gasto', selectedMonthRange);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTransactions = transactions.filter(t => 
+    t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (t.category?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -80,6 +87,8 @@ export function Expenses() {
               className="bg-surface border border-outline-variant rounded-lg pl-10 pr-md py-sm text-on-surface font-body-md text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all w-64 placeholder-on-surface-variant/50" 
               placeholder="Buscar gasto..." 
               type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
@@ -96,16 +105,16 @@ export function Expenses() {
               </tr>
             </thead>
             <tbody className="font-body-md text-body-md">
-              {transactions.length === 0 ? (
+              {filteredTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-xl text-center text-on-surface-variant">
                     <div className="flex flex-col items-center gap-md">
                       <Inbox size={48} className="text-outline-variant" />
-                      <p>Nenhum gasto registrado ainda.</p>
+                      <p>{searchQuery ? 'Nenhum gasto encontrado para a busca.' : 'Nenhum gasto registrado ainda.'}</p>
                     </div>
                   </td>
                 </tr>
-              ) : transactions.map(t => (
+              ) : filteredTransactions.map(t => (
                 <tr key={t.id} className="border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors group">
                   <td className="py-md px-lg text-on-surface">{new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                   <td className="py-md px-lg text-on-surface font-medium">{t.description}</td>
@@ -124,6 +133,11 @@ export function Expenses() {
                   <td className="py-md px-lg text-right">
                     <RecordActionsMenu
                       label={t.description}
+                      primaryActionLabel={t.status === 'pendente' ? 'Marcar como pago' : 'Marcar como pendente'}
+                      onPrimaryAction={async () => {
+                        await markTransactionStatus(t.id, t.status === 'pendente' ? 'pago' : 'pendente');
+                        await refetch();
+                      }}
                       onDelete={async () => {
                         await deleteFinancialTransaction(t);
                         await refetch();

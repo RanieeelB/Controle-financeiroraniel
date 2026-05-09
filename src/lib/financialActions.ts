@@ -268,6 +268,18 @@ export async function payFixedBill(bill: FixedBill) {
   emitFinancialDataChanged();
 }
 
+export async function removeFixedBillPayments(transactionIds: string[]) {
+  if (transactionIds.length === 0) return;
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .in('id', transactionIds);
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
 export async function createInvestment(input: InvestmentPayloadInput) {
   const userId = await getUserId();
   const { error } = await supabase
@@ -434,11 +446,19 @@ export async function markTransactionStatus(transactionId: string, status: Trans
 }
 
 export async function payCreditInvoiceTransactions(transactionIds: string[]) {
+  await updateCreditInvoiceTransactionsStatus(transactionIds, 'pago');
+}
+
+export async function reopenCreditInvoiceTransactions(transactionIds: string[]) {
+  await updateCreditInvoiceTransactionsStatus(transactionIds, 'pendente');
+}
+
+async function updateCreditInvoiceTransactionsStatus(transactionIds: string[], status: Transaction['status']) {
   if (transactionIds.length === 0) return;
 
   const { error } = await supabase
     .from('transactions')
-    .update({ status: 'pago' })
+    .update({ status })
     .in('id', transactionIds);
 
   if (error) throw error;

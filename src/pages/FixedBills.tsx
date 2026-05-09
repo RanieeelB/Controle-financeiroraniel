@@ -1,9 +1,9 @@
-import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Check } from 'lucide-react';
+import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Check, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { FixedBillModal } from '../components/finance/FinanceModals';
 import { useFixedBills } from '../hooks/useFixedBills';
 import type { DynamicFixedBill } from '../types/financial';
-import { payFixedBill } from '../lib/financialActions';
+import { payFixedBill, removeFixedBillPayments } from '../lib/financialActions';
 import { useOutletContext } from 'react-router-dom';
 import type { LayoutContext } from '../components/layout/Layout';
 
@@ -11,7 +11,7 @@ export function FixedBills() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const { bills, isLoading, totals, categoryBreakdown } = useFixedBills(selectedMonthRange);
   const [isFixedBillModalOpen, setIsFixedBillModalOpen] = useState(false);
-  const [isPaying, setIsPaying] = useState<string | null>(null);
+  const [activeBillAction, setActiveBillAction] = useState<string | null>(null);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
 
@@ -20,14 +20,27 @@ export function FixedBills() {
   const colors = ['bg-primary', 'bg-secondary', 'bg-tertiary-container', 'bg-outline'];
 
   async function handlePay(bill: DynamicFixedBill) {
-    if (isPaying) return;
-    setIsPaying(bill.id);
+    if (activeBillAction) return;
+    setActiveBillAction(bill.id);
     try {
       await payFixedBill(bill);
     } catch (error) {
       console.error('Error paying bill:', error);
     } finally {
-      setIsPaying(null);
+      setActiveBillAction(null);
+    }
+  }
+
+  async function handleReopen(bill: DynamicFixedBill) {
+    if (activeBillAction || bill.paymentTransactionIds.length === 0) return;
+
+    setActiveBillAction(bill.id);
+    try {
+      await removeFixedBillPayments(bill.paymentTransactionIds);
+    } catch (error) {
+      console.error('Error reopening fixed bill payment:', error);
+    } finally {
+      setActiveBillAction(null);
     }
   }
 
@@ -94,19 +107,19 @@ export function FixedBills() {
                     </td>
                     <td className="py-md px-lg text-center">
                       <button
-                        onClick={() => handlePay(b)}
-                        disabled={b.dynamicStatus === 'pago' || isPaying === b.id}
+                        onClick={() => (b.dynamicStatus === 'pago' ? handleReopen(b) : handlePay(b))}
+                        disabled={activeBillAction === b.id}
                         className={`p-2 rounded-lg transition-all ${
-                          b.dynamicStatus === 'pago' 
-                            ? 'text-primary bg-primary/5 cursor-not-allowed' 
+                          b.dynamicStatus === 'pago'
+                            ? 'text-secondary hover:text-secondary hover:bg-secondary/10'
                             : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
                         }`}
-                        title={b.dynamicStatus === 'pago' ? 'Conta já paga neste mês' : 'Pagar conta neste mês'}
+                        title={b.dynamicStatus === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta neste mês'}
                       >
-                        {isPaying === b.id ? (
+                        {activeBillAction === b.id ? (
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
                         ) : (
-                          <Check size={20} />
+                          b.dynamicStatus === 'pago' ? <RotateCcw size={20} /> : <Check size={20} />
                         )}
                       </button>
                     </td>
