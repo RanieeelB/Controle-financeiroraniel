@@ -45,7 +45,9 @@ export function useAuth() {
 
   async function signOut() {
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (error) {
+      console.warn('Erro ao deslogar (pode já estar expirado):', error);
+    }
   }
 
   return { user, session, isLoading, signInWithEmail, signUpWithEmail, signOut };
