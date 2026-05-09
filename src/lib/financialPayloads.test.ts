@@ -101,13 +101,14 @@ describe('entity payload builders', () => {
       bank: 'Nubank',
       brand: 'Mastercard',
       lastDigits: '1234',
+      dueDay: 25,
     })).toMatchObject({
       name: 'Nubank',
       brand: 'Mastercard',
       last_digits: '1234',
       card_holder: '',
       credit_limit: 0,
-      due_day: 10,
+      due_day: 25,
       closing_day: 3,
     });
   });

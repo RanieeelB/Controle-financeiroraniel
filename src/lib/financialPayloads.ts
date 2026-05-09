@@ -25,6 +25,7 @@ export interface CreditCardPayloadInput {
   bank: string;
   brand: string;
   lastDigits: string;
+  dueDay?: number;
 }
 
 export interface FixedBillPayloadInput {
@@ -146,7 +147,7 @@ export function buildCreditCardPayload(input: CreditCardPayloadInput) {
     brand,
     card_holder: '',
     credit_limit: 0,
-    due_day: 10,
+    due_day: clampDay(input.dueDay ?? 10),
     closing_day: 3,
     color: cardBrandColors[normalizedBrand] ?? '#75ff9e',
   };
