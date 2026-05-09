@@ -39,6 +39,11 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+-- Garante que os usuários antigos (já existentes no auth.users) tenham um perfil
+INSERT INTO public.profiles (id)
+SELECT id FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
 
 -- 1. CATEGORIAS
 CREATE TABLE public.categories (
