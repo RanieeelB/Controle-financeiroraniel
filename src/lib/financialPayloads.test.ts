@@ -8,6 +8,7 @@ import {
   buildInvestmentPayload,
   buildInvoicePurchasePayload,
   buildLinkedRecordNote,
+  normalizeInvoicePurchaseBatch,
   getInvestmentTotalsAfterDepositRemoval,
   getInvestmentTotalsAfterDeposit,
   parseLinkedRecordNote,
@@ -92,6 +93,28 @@ describe('buildInvoicePurchasePayload', () => {
       total_installments: 3,
       current_installment: 2,
     });
+  });
+
+  it('normalizes batch invoice items without losing installment fields', () => {
+    expect(normalizeInvoicePurchaseBatch([
+      {
+        description: 'Mercado',
+        amount: 250,
+        date: '2026-05-09',
+        categoryId: 'cat-1',
+        totalInstallments: 3,
+        currentInstallment: 2,
+      },
+    ])).toEqual([
+      {
+        description: 'Mercado',
+        amount: 250,
+        date: '2026-05-09',
+        categoryId: 'cat-1',
+        totalInstallments: 3,
+        currentInstallment: 2,
+      },
+    ]);
   });
 });
 

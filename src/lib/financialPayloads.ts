@@ -21,6 +21,8 @@ export interface InvoicePurchasePayloadInput {
   currentInstallment?: number;
 }
 
+export type InvoicePurchaseBatchItemInput = Omit<InvoicePurchasePayloadInput, 'cardId'>;
+
 export interface CreditCardPayloadInput {
   bank: string;
   brand: string;
@@ -151,6 +153,17 @@ export function buildCreditCardPayload(input: CreditCardPayloadInput) {
     closing_day: 3,
     color: cardBrandColors[normalizedBrand] ?? '#75ff9e',
   };
+}
+
+export function normalizeInvoicePurchaseBatch(items: InvoicePurchaseBatchItemInput[]) {
+  return items.map(item => ({
+    description: normalizeRequiredText(item.description),
+    amount: roundCurrency(item.amount),
+    date: item.date,
+    categoryId: normalizeOptionalId(item.categoryId),
+    totalInstallments: normalizeInstallments(item.totalInstallments),
+    currentInstallment: normalizeCurrentInstallment(item.currentInstallment, normalizeInstallments(item.totalInstallments)),
+  }));
 }
 
 export function buildFixedBillPayload(input: FixedBillPayloadInput) {
