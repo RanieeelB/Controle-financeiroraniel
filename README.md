@@ -10,20 +10,28 @@ O **Saldo Real** é uma aplicação completa (SaaS-like) de gestão financeira p
 
 ## ✨ Principais Funcionalidades
 
-- **Dashboard Analítico:** Visão geral da saúde financeira, evolução de saldo e quebra de gastos por categoria usando gráficos modernos (Recharts).
+O aplicativo conta com módulos abrangentes para cobrir toda a sua vida financeira:
+
+- **Dashboard Analítico:** Visão geral da saúde financeira, evolução de saldo diário e quebra de gastos por categoria usando gráficos modernos (Recharts).
+- **Sobra Prevista Inteligente:** Cálculo automático da projeção de sobra no fim do mês, subtraindo do salário todas as faturas de cartão, contas fixas pendentes e transações agendadas.
+- **Gestão de Entradas e Saídas:** Painéis dedicados para lançamentos avulsos de receitas e despesas, com sistema de busca, filtros e categorização detalhada.
+- **Cartões de Crédito e Faturas:** Cadastro ilimitado de cartões, com acompanhamento de limites e lançamentos de compras parceladas (projetando faturas automaticamente para os meses seguintes).
+- **Contas Fixas Recorrentes:** Controle inteligente de assinaturas e despesas fixas. O sistema avisa os dias de vencimento, detecta automaticamente se já foi pago no mês e calcula dias de atraso.
+- **Investimentos e Caixinhas:** Módulo completo para acompanhamento de patrimônio (Renda Fixa, Ações, FIIs e Cripto), registrando aportes, rentabilidade atualizada e sistema de contribuições mensais automatizadas.
+- **Metas Financeiras:** Criação de objetivos de poupança com definição de prazos e acompanhamento visual do progresso dos depósitos.
 - **Gestão de Impostos PJ (Exclusivo):** Ferramenta integrada para cálculo e lançamento rápido de impostos (DAS MEI e Simples Nacional) baseados no faturamento dinâmico do mês.
-- **Controle de Contas Fixas:** Gestão inteligente de contas recorrentes. O sistema detecta se a conta já foi paga no mês atual e calcula automaticamente os dias de atraso se o vencimento tiver passado.
+- **Planejamento de Salário:** Configuração de salário fixo e dia de pagamento para lançamento contínuo da receita principal de forma automatizada.
 - **Bootstrapping de Categorias:** Novos usuários recebem automaticamente um conjunto inteligente de categorias padronizadas (Estudo, Lazer, iFood, Impostos PJ, etc.) logo no primeiro acesso.
-- **Filtros Temporais Globais:** Navegue entre os meses com facilidade. Todos os relatórios e faturas se adaptam instantaneamente ao mês selecionado.
-- **Autenticação Segura:** Login, cadastro e gestão de sessão gerenciados via Supabase Auth.
+- **Filtros Temporais Globais:** Navegue entre os meses com facilidade. Todos os relatórios, dashboards, investimentos e faturas se adaptam instantaneamente ao mês selecionado.
+- **Autenticação Segura:** Login, cadastro e gestão de sessão gerenciados nativamente via Supabase Auth.
 
 ## 🛠 Arquitetura & Segurança
 
 O projeto adota uma abordagem robusta de segurança focada no banco de dados:
 
-- **Row Level Security (RLS):** Todas as 8 tabelas do sistema (`transactions`, `categories`, `fixed_bills`, `credit_cards`, etc.) possuem políticas restritas (`auth.uid() = user_id`), tornando tecnicamente impossível que um usuário acesse ou modifique dados de outro.
+- **Row Level Security (RLS):** Todas as tabelas do sistema (`transactions`, `categories`, `fixed_bills`, `credit_cards`, `investments`, etc.) possuem políticas restritas (`auth.uid() = user_id`), tornando tecnicamente impossível que um usuário acesse ou modifique dados de outro.
 - **Schema como Código:** Toda a estrutura de banco e permissões está consolidada em `/supabase/schema.sql`, permitindo rápida reconstrução do ambiente.
-- **Event-Driven Reactivity:** A UI se mantém sincronizada globalmente através de um sistema pub/sub simples (EventTarget) que avisa todos os hooks (`useTransactions`, `useFixedBills`) quando uma nova mutação é realizada.
+- **Event-Driven Reactivity:** A UI se mantém sincronizada globalmente através de um sistema pub/sub simples (`EventTarget`) que avisa todos os hooks quando uma nova mutação é realizada (atualizando a tela instantaneamente em todos os componentes).
 
 ## 💻 Stack Tecnológica
 
