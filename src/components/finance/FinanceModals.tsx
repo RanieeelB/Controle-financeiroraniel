@@ -2,14 +2,14 @@ import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { CheckCircle, ChevronDown, X } from 'lucide-react';
 import {
   createCreditCard,
-  createCreditPurchase,
+  createCreditPurchasesBatch,
   createFinancialGoal,
   createFixedBill,
   createInvestment,
   createInvestmentDeposit,
   updateCreditCard,
 } from '../../lib/financialActions';
-import { getInstallmentAmount, parseCurrencyValue } from '../../lib/financialPayloads';
+import { getInstallmentAmount, parseCurrencyValue, type InvoicePurchaseBatchItemInput } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
 import type { CreditCard, Investment, InvestmentCategory } from '../../types/financial';
@@ -66,10 +66,21 @@ function ErrorMessage({ error }: { error: string }) {
   );
 }
 
-function SubmitButton({ isSaving, children }: { isSaving: boolean; children: ReactNode }) {
+function SubmitButton({
+  isSaving,
+  children,
+  type = 'submit',
+  onClick,
+}: {
+  isSaving: boolean;
+  children: ReactNode;
+  type?: 'button' | 'submit';
+  onClick?: () => void;
+}) {
   return (
     <button
-      type="submit"
+      type={type}
+      onClick={onClick}
       disabled={isSaving}
       className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-primary rounded-lg hover:bg-primary-fixed transition-all flex items-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed"
     >
@@ -94,12 +105,23 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
   const [categoryId, setCategoryId] = useState('');
   const [totalInstallments, setTotalInstallments] = useState(1);
   const [currentInstallment, setCurrentInstallment] = useState(1);
+  const [batchItems, setBatchItems] = useState<InvoicePurchaseBatchItemInput[]>([]);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const resolvedCardId = cardId || defaultCardId || cards[0]?.id || '';
+  const selectedCard = cards.find(card => card.id === resolvedCardId);
   const parsedAmount = useMemo(() => parseCurrencyValue(amount), [amount]);
   const installmentAmount = parsedAmount ? getInstallmentAmount(parsedAmount, totalInstallments) : 0;
+  const batchTotal = useMemo(
+    () => batchItems.reduce((sum, item) => sum + item.amount, 0),
+    [batchItems],
+  );
+
+  const categoryById = useMemo(
+    () => new Map(categories.map(category => [category.id, category])),
+    [categories],
+  );
 
   function handleInstallmentsChange(value: number) {
     const normalized = Math.max(1, Math.min(48, value));
@@ -107,7 +129,16 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
     setCurrentInstallment(current => Math.min(current, normalized));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function resetItemForm() {
+    setDescription('');
+    setAmount('');
+    setDate(today());
+    setCategoryId('');
+    setTotalInstallments(1);
+    setCurrentInstallment(1);
+  }
+
+  function handleAddToBatch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
 
@@ -125,32 +156,62 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
       return;
     }
 
-    setIsSaving(true);
-    try {
-      await createCreditPurchase({
-        cardId: resolvedCardId,
-        categoryId,
-        description,
+    setBatchItems(current => [
+      ...current,
+      {
+        description: description.trim(),
         amount: value,
         date,
+        categoryId: categoryId || null,
         totalInstallments,
         currentInstallment,
+      },
+    ]);
+    resetItemForm();
+  }
+
+  async function handleSubmitBatch() {
+    setError('');
+
+    if (!resolvedCardId) {
+      setError('Cadastre ou selecione um cartão antes de registrar a compra.');
+      return;
+    }
+    if (batchItems.length === 0) {
+      setError('Adicione pelo menos uma compra ao lote antes de salvar a fatura.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await createCreditPurchasesBatch({
+        cardId: resolvedCardId,
+        items: batchItems,
       });
       onClose();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar a compra.');
+      setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar a fatura.');
     } finally {
       setIsSaving(false);
     }
   }
 
+  function removeBatchItem(indexToRemove: number) {
+    setBatchItems(current => current.filter((_, index) => index !== indexToRemove));
+  }
+
   return (
-    <ModalShell title="Nova compra" subtitle="Registre uma compra feita no cartão." onClose={onClose}>
-      <form onSubmit={handleSubmit} className="p-lg space-y-md">
+    <ModalShell title="Nova fatura" subtitle="Monte a fatura com vários lançamentos antes de salvar." onClose={onClose}>
+      <form onSubmit={handleAddToBatch} className="p-lg space-y-md">
         <label>
           <span className={labelClass}>Cartão</span>
           <div className="relative">
-            <select value={resolvedCardId} onChange={event => setCardId(event.target.value)} className={selectClass}>
+            <select
+              value={resolvedCardId}
+              onChange={event => setCardId(event.target.value)}
+              className={selectClass}
+              disabled={batchItems.length > 0}
+            >
               <option value="">Selecione</option>
               {cards.map(card => (
                 <option key={card.id} value={card.id}>{card.name} • {card.brand} final {card.last_digits}</option>
@@ -159,6 +220,14 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
             <SelectChevron />
           </div>
         </label>
+
+        {selectedCard && (
+          <div className="rounded-lg border border-primary/30 bg-primary/10 px-md py-sm text-[14px] text-on-surface flex flex-col gap-1">
+            <span>Cartão selecionado: <strong>{selectedCard.name}</strong></span>
+            <span>Vence todo dia <strong>{selectedCard.due_day}</strong>.</span>
+            {batchItems.length > 0 && <span>Para trocar de cartão, remova todos os itens do lote primeiro.</span>}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
           <label>
@@ -207,9 +276,61 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
 
         <ErrorMessage error={error} />
 
-        <div className="flex justify-end gap-md pt-md border-t border-outline-variant">
-          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
-          <SubmitButton isSaving={isSaving}>Salvar compra</SubmitButton>
+        <div className="rounded-xl border border-outline-variant bg-surface p-md space-y-md">
+          <div className="flex items-center justify-between gap-md">
+            <div>
+              <p className="font-label-md text-[14px] font-semibold text-on-surface uppercase tracking-wider">Lote em montagem</p>
+              <p className="text-[13px] text-on-surface-variant">{batchItems.length} item(ns) adicionados</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[13px] text-on-surface-variant">Subtotal</p>
+              <p className="font-numeral-lg text-[20px] text-on-surface">R$ {fmt(batchTotal)}</p>
+            </div>
+          </div>
+
+          {batchItems.length === 0 ? (
+            <p className="text-[14px] text-on-surface-variant">Adicione compras acima para montar a fatura antes de salvar.</p>
+          ) : (
+            <div className="space-y-sm max-h-60 overflow-y-auto pr-1">
+              {batchItems.map((item, index) => (
+                <div key={`${item.description}-${item.date}-${index}`} className="flex items-start justify-between gap-md rounded-lg border border-outline-variant/60 bg-background px-md py-sm">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-medium text-on-surface">{item.description}</p>
+                    <p className="text-[13px] text-on-surface-variant">
+                      {new Date(item.date).toLocaleDateString('pt-BR')}
+                      {item.categoryId ? ` • ${categoryById.get(item.categoryId)?.name ?? 'Sem categoria'}` : ' • Sem categoria'}
+                      {item.totalInstallments > 1 ? ` • ${item.currentInstallment}/${item.totalInstallments}` : ' • À vista'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-sm shrink-0">
+                    <span className="font-numeral-lg text-[15px] text-on-surface">R$ {fmt(item.amount)}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeBatchItem(index)}
+                      className="rounded-lg border border-outline-variant px-sm py-xs text-[13px] text-on-surface-variant hover:text-error hover:border-error/50 transition-colors"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-md pt-md border-t border-outline-variant">
+          <button
+            type="submit"
+            className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-secondary rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-xs"
+          >
+            <CheckCircle size={18} />
+            <span>Adicionar ao lote</span>
+          </button>
+
+          <div className="flex justify-end gap-md">
+            <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
+            <SubmitButton isSaving={isSaving} type="button" onClick={handleSubmitBatch}>Salvar fatura</SubmitButton>
+          </div>
         </div>
       </form>
     </ModalShell>
@@ -225,6 +346,7 @@ export function CreditCardModal({ card, onClose }: CreditCardModalProps) {
   const [bank, setBank] = useState(card?.name ?? '');
   const [brand, setBrand] = useState(card?.brand ?? 'Mastercard');
   const [lastDigits, setLastDigits] = useState(card?.last_digits ?? '');
+  const [dueDay, setDueDay] = useState(card?.due_day ?? 10);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -240,10 +362,14 @@ export function CreditCardModal({ card, onClose }: CreditCardModalProps) {
       setError('Informe os 4 últimos dígitos.');
       return;
     }
+    if (dueDay < 1 || dueDay > 31) {
+      setError('Informe um dia de vencimento entre 1 e 31.');
+      return;
+    }
 
     setIsSaving(true);
     try {
-      const payload = { bank, brand, lastDigits };
+      const payload = { bank, brand, lastDigits, dueDay };
       if (card) {
         await updateCreditCard(card.id, payload);
       } else {
@@ -258,7 +384,7 @@ export function CreditCardModal({ card, onClose }: CreditCardModalProps) {
   }
 
   return (
-    <ModalShell title={card ? 'Editar cartão' : 'Adicionar cartão'} subtitle="Cadastre bandeira, banco e últimos dígitos." onClose={onClose}>
+    <ModalShell title={card ? 'Editar cartão' : 'Adicionar cartão'} subtitle="Cadastre bandeira, banco, vencimento e últimos dígitos." onClose={onClose}>
       <form onSubmit={handleSubmit} className="p-lg space-y-md">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
           <label>
@@ -279,10 +405,23 @@ export function CreditCardModal({ card, onClose }: CreditCardModalProps) {
             </div>
           </label>
         </div>
-        <label>
-          <span className={labelClass}>Últimos dígitos</span>
-          <input value={lastDigits} onChange={event => setLastDigits(event.target.value.replace(/\D/g, '').slice(0, 4))} className={inputClass} inputMode="numeric" maxLength={4} placeholder="1234" />
-        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+          <label>
+            <span className={labelClass}>Dia do vencimento</span>
+            <input
+              type="number"
+              min="1"
+              max="31"
+              value={dueDay}
+              onChange={event => setDueDay(Number(event.target.value))}
+              className={`${inputClass} text-center`}
+            />
+          </label>
+          <label>
+            <span className={labelClass}>Últimos dígitos</span>
+            <input value={lastDigits} onChange={event => setLastDigits(event.target.value.replace(/\D/g, '').slice(0, 4))} className={inputClass} inputMode="numeric" maxLength={4} placeholder="1234" />
+          </label>
+        </div>
 
         <ErrorMessage error={error} />
 

@@ -21,7 +21,14 @@ export interface InvoicePurchasePayloadInput {
   currentInstallment?: number;
 }
 
-export type InvoicePurchaseBatchItemInput = Omit<InvoicePurchasePayloadInput, 'cardId'>;
+export interface InvoicePurchaseBatchItemInput {
+  categoryId?: string | null;
+  description: string;
+  amount: number;
+  date: string;
+  totalInstallments: number;
+  currentInstallment: number;
+}
 
 export interface CreditCardPayloadInput {
   bank: string;

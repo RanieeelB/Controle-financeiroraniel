@@ -136,6 +136,17 @@ describe('entity payload builders', () => {
     });
   });
 
+  it('clamps the due day into the valid monthly range', () => {
+    expect(buildCreditCardPayload({
+      bank: 'Inter',
+      brand: 'Visa',
+      lastDigits: '4321',
+      dueDay: 45,
+    })).toMatchObject({
+      due_day: 31,
+    });
+  });
+
   it('creates fixed bill, investment, and goal payloads with normalized amounts', () => {
     expect(buildFixedBillPayload({
       description: 'Parcela do carro',
