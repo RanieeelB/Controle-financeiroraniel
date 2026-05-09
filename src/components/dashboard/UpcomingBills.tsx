@@ -1,6 +1,6 @@
-import { Wifi, Zap, Landmark, Home, GraduationCap, MonitorPlay, ReceiptText, Check } from 'lucide-react';
+import { Wifi, Zap, Landmark, Home, GraduationCap, MonitorPlay, ReceiptText, Check, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
-import { payFixedBill } from '../../lib/financialActions';
+import { payFixedBill, removeFixedBillPayments } from '../../lib/financialActions';
 import type { DynamicFixedBill } from '../../types/financial';
 
 interface UpcomingBillsProps {
@@ -18,7 +18,7 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export function UpcomingBills({ data }: UpcomingBillsProps) {
-  const [isPaying, setIsPaying] = useState<string | null>(null);
+  const [activeBillAction, setActiveBillAction] = useState<string | null>(null);
 
   if (data.length === 0) {
     return (
@@ -32,14 +32,27 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
   }
 
   async function handlePay(bill: DynamicFixedBill) {
-    if (isPaying) return;
-    setIsPaying(bill.id);
+    if (activeBillAction) return;
+    setActiveBillAction(bill.id);
     try {
       await payFixedBill(bill);
     } catch (error) {
       console.error('Error paying bill:', error);
     } finally {
-      setIsPaying(null);
+      setActiveBillAction(null);
+    }
+  }
+
+  async function handleReopen(bill: DynamicFixedBill) {
+    if (activeBillAction || bill.paymentTransactionIds.length === 0) return;
+
+    setActiveBillAction(bill.id);
+    try {
+      await removeFixedBillPayments(bill.paymentTransactionIds);
+    } catch (error) {
+      console.error('Error reopening fixed bill payment:', error);
+    } finally {
+      setActiveBillAction(null);
     }
   }
 
@@ -91,19 +104,19 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
                   </td>
                   <td className="p-md text-center">
                     <button
-                      onClick={() => handlePay(bill)}
-                      disabled={status === 'pago' || isPaying === bill.id}
+                      onClick={() => (status === 'pago' ? handleReopen(bill) : handlePay(bill))}
+                      disabled={activeBillAction === bill.id}
                       className={`p-1 rounded transition-all ${
-                        status === 'pago' 
-                          ? 'text-primary bg-primary/5 cursor-not-allowed' 
+                        status === 'pago'
+                          ? 'text-secondary hover:text-secondary hover:bg-secondary/10'
                           : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
                       }`}
-                      title={status === 'pago' ? 'Conta já paga neste mês' : 'Pagar conta'}
+                      title={status === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta'}
                     >
-                      {isPaying === bill.id ? (
+                      {activeBillAction === bill.id ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                       ) : (
-                        <Check size={18} />
+                        status === 'pago' ? <RotateCcw size={18} /> : <Check size={18} />
                       )}
                     </button>
                   </td>

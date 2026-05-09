@@ -268,6 +268,18 @@ export async function payFixedBill(bill: FixedBill) {
   emitFinancialDataChanged();
 }
 
+export async function removeFixedBillPayments(transactionIds: string[]) {
+  if (transactionIds.length === 0) return;
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .in('id', transactionIds);
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
 export async function createInvestment(input: InvestmentPayloadInput) {
   const userId = await getUserId();
   const { error } = await supabase

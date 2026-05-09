@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
 import { calculateSummaryCards } from '../lib/financialPlanning';
 import { supabase } from '../lib/supabase';
 import type {
@@ -82,47 +83,11 @@ export function useDashboardData(monthRange?: MonthRange) {
       const currentMonth = today.getMonth() + 1;
       const currentYear = today.getFullYear();
       
-      const [viewYear, viewMonth] = monthRange 
-        ? monthRange.monthKey.split('-').map(Number) 
-        : [currentYear, currentMonth];
-
-      const isViewingCurrentMonth = viewYear === currentYear && viewMonth === currentMonth;
-      const isViewingPastMonth = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
-
-      // Create a set of paid bill IDs for the selected month
-      const paidBillIds = new Set(
-        mappedTransactions
-          .filter(tx => tx.notes?.includes('fixed_bill:'))
-          .map(tx => tx.notes?.replace('fixed_bill:', ''))
-      );
-
-      const mappedBills = (billsResult.data ?? []).map((bill: Record<string, unknown>) => {
-        const amount = Number(bill.amount);
-        const isPaidThisMonth = paidBillIds.has(bill.id as string);
-        let dynamicStatus: 'pago' | 'pendente' | 'atrasado' = 'pendente';
-        let daysOverdue = 0;
-
-        if (isPaidThisMonth) {
-          dynamicStatus = 'pago';
-        } else {
-          if (isViewingPastMonth) {
-            dynamicStatus = 'atrasado';
-          } else if (isViewingCurrentMonth) {
-            const dueDay = Number(bill.due_day);
-            const currentDay = today.getDate();
-            if (currentDay > dueDay) {
-              dynamicStatus = 'atrasado';
-              daysOverdue = currentDay - dueDay;
-            }
-          }
-        }
-
-        return {
-          ...bill,
-          amount,
-          dynamicStatus,
-          daysOverdue
-        };
+      const mappedBills = resolveDynamicFixedBills({
+        bills: (billsResult.data ?? []) as DynamicFixedBill[],
+        payments: mappedTransactions,
+        monthKey: monthRange?.monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+        today,
       }) as DynamicFixedBill[];
 
       const mappedCards = (cardsResult.data ?? []).map((card: Record<string, unknown>) => ({

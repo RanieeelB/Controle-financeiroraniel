@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
 import { supabase } from '../lib/supabase';
 import type { FixedBill, DynamicFixedBill } from '../types/financial';
 import type { MonthRange } from '../lib/monthSelection';
@@ -22,7 +23,7 @@ export function useFixedBills(monthRange?: MonthRange) {
       // 2. Fetch transactions for the current month that are fixed bill payments
       let txQuery = supabase
         .from('transactions')
-        .select('notes, status')
+        .select('id, notes, status')
         .not('notes', 'is', null)
         .like('notes', 'fixed_bill:%');
         
@@ -33,53 +34,17 @@ export function useFixedBills(monthRange?: MonthRange) {
       const { data: txData, error: txError } = await txQuery;
       if (txError) throw txError;
 
-      // Create a set of paid bill IDs for the selected month
-      const paidBillIds = new Set(
-        (txData || [])
-          .filter(tx => tx.status === 'pago')
-          .map(tx => tx.notes?.replace('fixed_bill:', ''))
-      );
-
       const today = new Date();
       const currentMonth = today.getMonth() + 1; // 1-12
       const currentYear = today.getFullYear();
       
-      const [viewYear, viewMonth] = monthRange 
-        ? monthRange.monthKey.split('-').map(Number) 
-        : [currentYear, currentMonth];
-
-      const isViewingCurrentMonth = viewYear === currentYear && viewMonth === currentMonth;
-      const isViewingPastMonth = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
-
       if (billsData) {
-        const dynamicBills = billsData.map((b: FixedBill) => {
-          const isPaidThisMonth = paidBillIds.has(b.id);
-          let dynamicStatus: 'pago' | 'pendente' | 'atrasado' = 'pendente';
-          let daysOverdue = 0;
-
-          if (isPaidThisMonth) {
-            dynamicStatus = 'pago';
-          } else {
-            if (isViewingPastMonth) {
-              dynamicStatus = 'atrasado';
-            } else if (isViewingCurrentMonth) {
-              const dueDay = b.due_day;
-              const currentDay = today.getDate();
-              if (currentDay > dueDay) {
-                dynamicStatus = 'atrasado';
-                daysOverdue = currentDay - dueDay;
-              }
-            } else {
-              dynamicStatus = 'pendente';
-            }
-          }
-
-          return {
-            ...b,
-            amount: Number(b.amount),
-            dynamicStatus,
-            daysOverdue
-          };
+        const monthKey = monthRange?.monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+        const dynamicBills = resolveDynamicFixedBills({
+          bills: billsData as FixedBill[],
+          payments: (txData ?? []) as Array<{ id: string; notes: string | null; status: 'pago' | 'pendente' | 'recebido' }>,
+          monthKey,
+          today,
         }) as DynamicFixedBill[];
         
         setBills(dynamicBills);

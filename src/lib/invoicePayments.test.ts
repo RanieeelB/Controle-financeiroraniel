@@ -53,4 +53,31 @@ describe('invoicePayments', () => {
       ],
     )).toEqual(['tx-1']);
   });
+
+  it('falls back to matching legacy credit transactions when invoice notes are missing', () => {
+    const items = [
+      {
+        id: 'invoice-1',
+        description: 'Mensalidade da faculdade',
+        amount: 445.55,
+        date: '2026-05-09',
+      },
+    ];
+
+    const transactions = [
+      {
+        id: 'tx-legacy-1',
+        description: 'Mensalidade da faculdade',
+        amount: 445.55,
+        date: '2026-05-09',
+        payment_method: 'credito' as const,
+        notes: null,
+        status: 'pago' as const,
+      },
+    ];
+
+    expect(getInvoicePaymentStatus(items, transactions)).toBe('paid');
+    expect(getPaidInvoiceTransactionIds(items, transactions)).toEqual(['tx-legacy-1']);
+    expect(getPayableInvoiceTransactionIds(items, transactions)).toEqual([]);
+  });
 });
