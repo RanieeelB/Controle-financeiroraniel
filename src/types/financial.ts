@@ -2,6 +2,15 @@
 // Tipos TypeScript que espelham as tabelas do Supabase
 // ============================================================
 
+// === PERFIL DO USUÁRIO ===
+export interface Profile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}
+
 // === CATEGORIAS ===
 export interface Category {
   id: string;

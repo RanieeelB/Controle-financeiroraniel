@@ -13,6 +13,37 @@ DROP TABLE IF EXISTS public.invoice_items CASCADE;
 DROP TABLE IF EXISTS public.credit_cards CASCADE;
 DROP TABLE IF EXISTS public.transactions CASCADE;
 DROP TABLE IF EXISTS public.categories CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
+-- 0.5 PERFIS DE USUÁRIO
+CREATE TABLE public.profiles (
+    id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    first_name TEXT,
+    last_name TEXT,
+    avatar_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- Trigger para criar o perfil automaticamente no cadastro
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, first_name)
+  VALUES (new.id, new.raw_user_meta_data->>'first_name');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- Garante que os usuários antigos (já existentes no auth.users) tenham um perfil
+INSERT INTO public.profiles (id)
+SELECT id FROM auth.users
+ON CONFLICT (id) DO NOTHING;
+
 
 -- 1. CATEGORIAS
 CREATE TABLE public.categories (
@@ -140,6 +171,7 @@ ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.salary_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investment_deposits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================
 -- POLÍTICAS: Apenas o próprio usuário pode acessar seus dados
@@ -188,3 +220,6 @@ CREATE POLICY "Users can view own investment_deposits" ON public.investment_depo
 CREATE POLICY "Users can insert own investment_deposits" ON public.investment_deposits FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own investment_deposits" ON public.investment_deposits FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own investment_deposits" ON public.investment_deposits FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own profiles" ON public.profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profiles" ON public.profiles FOR UPDATE USING (auth.uid() = id);
