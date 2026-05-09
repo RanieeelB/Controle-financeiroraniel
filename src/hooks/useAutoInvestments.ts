@@ -30,7 +30,7 @@ export function useAutoInvestments() {
           amount_invested: Number(rawInv.amount_invested),
           current_value: Number(rawInv.current_value),
           monthly_contribution: Number(rawInv.monthly_contribution),
-        } as any;
+        };
 
         try {
           // 2. Create the deposit

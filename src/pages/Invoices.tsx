@@ -54,6 +54,7 @@ export function Invoices() {
           <div className="absolute top-0 left-0 w-full h-[2px]" style={{ backgroundColor: activeCard?.color }}></div>
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Fatura Atual</span><span className="inline-flex bg-tertiary-container/20 text-tertiary-container border border-tertiary-container/30 text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase">Aberta</span></div>
           <span className="font-numeral-lg text-[36px] font-bold text-on-surface">R$ {fmt(cardTotal)}</span>
+          {activeCard && <p className="text-[13px] text-on-surface-variant mt-sm">Vence todo dia {activeCard.due_day}</p>}
         </div>
         <div className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden hover:border-primary/50 transition-colors">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/30"></div>
