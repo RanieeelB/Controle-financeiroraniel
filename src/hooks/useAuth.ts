@@ -30,8 +30,16 @@ export function useAuth() {
     if (error) throw error;
   }
 
-  async function signUpWithEmail(email: string, password: string) {
-    const { error } = await supabase.auth.signUp({ email, password });
+  async function signUpWithEmail(email: string, password: string, firstName?: string) {
+    const { error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+        }
+      }
+    });
     if (error) throw error;
   }
 

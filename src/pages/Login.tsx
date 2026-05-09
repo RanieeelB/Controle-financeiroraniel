@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Wallet, Mail, Lock, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
+import { Wallet, Mail, Lock, Eye, EyeOff, LogIn, UserPlus, User } from 'lucide-react';
 
 export function Login() {
   const { signInWithEmail, signUpWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +21,7 @@ export function Login() {
 
     try {
       if (isSignUp) {
-        await signUpWithEmail(email, password);
+        await signUpWithEmail(email, password, name);
         setSuccessMsg('Conta criada! Verifique seu e-mail para confirmar.');
       } else {
         await signInWithEmail(email, password);
@@ -59,6 +60,24 @@ export function Login() {
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* Name */}
+            {isSignUp && (
+              <div>
+                <label className="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 block">Nome</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Seu nome"
+                    required={isSignUp}
+                    className="w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-3 text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-on-surface-variant/50"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label className="text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider mb-1 block">E-mail</label>
