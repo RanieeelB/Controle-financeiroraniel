@@ -7,6 +7,7 @@
 DROP TABLE IF EXISTS public.investment_deposits CASCADE;
 DROP TABLE IF EXISTS public.investments CASCADE;
 DROP TABLE IF EXISTS public.financial_goals CASCADE;
+DROP TABLE IF EXISTS public.salary_settings CASCADE;
 DROP TABLE IF EXISTS public.fixed_bills CASCADE;
 DROP TABLE IF EXISTS public.invoice_items CASCADE;
 DROP TABLE IF EXISTS public.credit_cards CASCADE;
@@ -93,7 +94,17 @@ CREATE TABLE public.financial_goals (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- 7. INVESTIMENTOS
+-- 7. CONFIGURAÇÃO DE SALÁRIO FIXO
+CREATE TABLE public.salary_settings (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+    amount DECIMAL(12,2) NOT NULL,
+    day_of_month INTEGER NOT NULL CHECK (day_of_month >= 1 AND day_of_month <= 31),
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- 8. INVESTIMENTOS
 CREATE TABLE public.investments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -106,7 +117,7 @@ CREATE TABLE public.investments (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- 8. APORTES DE INVESTIMENTO (Depende de investments)
+-- 9. APORTES DE INVESTIMENTO (Depende de investments)
 CREATE TABLE public.investment_deposits (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -126,6 +137,7 @@ ALTER TABLE public.credit_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fixed_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.salary_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investment_deposits ENABLE ROW LEVEL SECURITY;
 
@@ -161,6 +173,11 @@ CREATE POLICY "Users can view own financial_goals" ON public.financial_goals FOR
 CREATE POLICY "Users can insert own financial_goals" ON public.financial_goals FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own financial_goals" ON public.financial_goals FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own financial_goals" ON public.financial_goals FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own salary_settings" ON public.salary_settings FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own salary_settings" ON public.salary_settings FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own salary_settings" ON public.salary_settings FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own salary_settings" ON public.salary_settings FOR DELETE USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can view own investments" ON public.investments FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own investments" ON public.investments FOR INSERT WITH CHECK (auth.uid() = user_id);

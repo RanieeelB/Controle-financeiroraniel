@@ -119,9 +119,20 @@ export interface InvestmentDeposit {
   investment?: Investment;
 }
 
+// === CONFIGURAÇÃO DE SALÁRIO FIXO ===
+export interface SalarySetting {
+  id: string;
+  user_id: string;
+  amount: number;
+  day_of_month: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // === TIPOS DE APRESENTAÇÃO (UI) ===
 export interface SummaryCards {
-  freeBalance: number;
+  currentBalance: number;
+  projectedBalance: number;
   totalIncome: number;
   totalExpense: number;
   savedAmount: number;

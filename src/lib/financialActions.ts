@@ -25,6 +25,9 @@ async function getUserId(): Promise<string> {
   return session.user.id;
 }
 import {
+  buildSalarySettingPayload,
+  buildSalaryTransactionNote,
+  buildSalaryTransactionPayload,
   buildCreditCardPayload,
   buildFinancialGoalPayload,
   buildFixedBillPayload,
@@ -43,9 +46,10 @@ import {
   type InvestmentDepositPayloadInput,
   type InvestmentPayloadInput,
   type InvoicePurchasePayloadInput,
+  type SalarySettingPayloadInput,
   type TransactionPayloadInput,
 } from './financialPayloads';
-import type { Category, FixedBill, Investment, InvestmentDeposit, InvoiceItem, Transaction } from '../types/financial';
+import type { Category, FixedBill, Investment, InvestmentDeposit, InvoiceItem, SalarySetting, Transaction } from '../types/financial';
 import { defaultCategories } from './defaultCategories';
 
 export interface CreateCategoryInput {
@@ -373,6 +377,100 @@ export async function createFinancialGoal(input: FinancialGoalPayloadInput) {
 
   if (error) throw error;
   emitFinancialDataChanged();
+}
+
+export async function upsertSalarySetting(input: SalarySettingPayloadInput) {
+  const userId = await getUserId();
+  const payload = buildSalarySettingPayload(input);
+
+  const { data, error } = await supabase
+    .from('salary_settings')
+    .upsert({
+      user_id: userId,
+      ...payload,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+  return {
+    ...(data as SalarySetting),
+    amount: Number(data.amount),
+    day_of_month: Number(data.day_of_month),
+  } as SalarySetting;
+}
+
+export async function markTransactionStatus(transactionId: string, status: Transaction['status']) {
+  const { error } = await supabase
+    .from('transactions')
+    .update({ status })
+    .eq('id', transactionId);
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
+export async function ensureMonthlySalaryTransaction(monthKey: string) {
+  const userId = await getUserId();
+  const { data: settingData, error: settingError } = await supabase
+    .from('salary_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (settingError) throw settingError;
+  if (!settingData) return null;
+
+  const amount = Number(settingData.amount);
+  const dayOfMonth = Number(settingData.day_of_month);
+  const note = buildSalaryTransactionNote(monthKey);
+  const transactionPayload = buildSalaryTransactionPayload({
+    amount,
+    dayOfMonth,
+    monthKey,
+  });
+
+  const { data: existingTransaction, error: existingError } = await supabase
+    .from('transactions')
+    .select('id, status')
+    .eq('user_id', userId)
+    .eq('notes', note)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+
+  if (existingTransaction) {
+    if (existingTransaction.status === 'pendente') {
+      const { error: updateError } = await supabase
+        .from('transactions')
+        .update({
+          description: transactionPayload.description,
+          amount: transactionPayload.amount,
+          date: transactionPayload.date,
+          payment_method: transactionPayload.payment_method,
+        })
+        .eq('id', existingTransaction.id);
+
+      if (updateError) throw updateError;
+      emitFinancialDataChanged();
+    }
+    return existingTransaction;
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert({
+      ...transactionPayload,
+      user_id: userId,
+    })
+    .select('id, status')
+    .single();
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+  return data;
 }
 
 

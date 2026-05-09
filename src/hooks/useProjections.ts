@@ -4,6 +4,14 @@ import { useInvestments } from './useInvestments';
 import { buildMonthRange, moveMonth, formatMonthLabel } from '../lib/monthSelection';
 import { supabase } from '../lib/supabase';
 
+interface FutureInvoiceItem {
+  description: string;
+  amount: number | string;
+  date: string;
+  current_installment: number;
+  total_installments: number;
+}
+
 export interface MonthProjection {
   monthKey: string;
   label: string;
@@ -23,7 +31,7 @@ export interface MonthProjection {
 export function useProjections() {
   const { bills: fixedBills } = useFixedBills();
   const { investments } = useInvestments();
-  const [allFutureItems, setAllFutureItems] = useState<any[]>([]);
+  const [allFutureItems, setAllFutureItems] = useState<FutureInvoiceItem[]>([]);
 
   useEffect(() => {
     async function fetchFutureItems() {
@@ -40,7 +48,7 @@ export function useProjections() {
         .lt('date', endDate);
 
       if (!error && data) {
-        setAllFutureItems(data);
+        setAllFutureItems(data as FutureInvoiceItem[]);
       }
     }
     fetchFutureItems();
