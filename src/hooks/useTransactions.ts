@@ -3,14 +3,10 @@ import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import type { MonthRange } from '../lib/monthSelection';
 import { supabase } from '../lib/supabase';
 import type { Transaction } from '../types/financial';
-import type { MonthRange } from '../lib/monthSelection';
 
 export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const startDate = monthRange?.startDate;
-  const endDate = monthRange?.endDate;
-
   const startDate = monthRange?.startDate;
   const endDate = monthRange?.endDate;
 
@@ -25,12 +21,6 @@ export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRa
       if (type) query = query.eq('type', type);
       if (startDate) query = query.gte('date', startDate);
       if (endDate) query = query.lt('date', endDate);
-
-      if (startDate && endDate) {
-        query = query
-          .gte('date', startDate)
-          .lt('date', endDate);
-      }
 
       const { data, error } = await query;
       if (error) throw error;
