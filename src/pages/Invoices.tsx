@@ -1,6 +1,7 @@
 import { CreditCard, Plus, ShoppingBag, Filter, Inbox, Eye, X } from 'lucide-react';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useOutletContext } from 'react-router-dom';
 import { InvoicePurchaseModal } from '../components/finance/FinanceModals';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
@@ -203,8 +204,8 @@ export function Invoices() {
         />
       )}
 
-      {selectedInvoiceCard && selectedInvoiceState && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-end sm:items-center justify-center p-0 sm:p-lg">
+      {selectedInvoiceCard && selectedInvoiceState && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-lg">
           <div className="bg-surface-container border border-outline-variant rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-[680px] max-h-[90dvh] overflow-y-auto">
             <div className="sticky top-0 z-10 bg-surface-container/95 backdrop-blur border-b border-outline-variant p-md sm:p-lg flex items-start justify-between gap-md">
               <div className="min-w-0">
@@ -267,7 +268,8 @@ export function Invoices() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
