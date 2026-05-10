@@ -41,7 +41,7 @@ export function AppSidebar({ onCloseMobile }: AppSidebarProps) {
   const avatarInitial = displayName.charAt(0).toUpperCase() || 'U';
 
   return (
-    <nav className="bg-surface dark:bg-surface font-body-md text-body-md h-[100dvh] w-[min(18rem,85vw)] lg:w-64 border-r border-outline-variant dark:border-outline-variant flex flex-col py-lg px-md z-50">
+    <nav className="bg-surface dark:bg-surface font-body-md text-body-md h-[100dvh] lg:h-[100dvh] w-[min(18rem,85vw)] lg:w-64 border-r border-outline-variant dark:border-outline-variant flex flex-col py-lg px-md z-50">
       <div className="mb-xl px-sm">
         <h1 className="font-display-lg text-h1 font-bold text-primary dark:text-primary leading-none">
           Saldo Real

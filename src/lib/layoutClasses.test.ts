@@ -187,8 +187,8 @@ describe('layout width classes', () => {
     expect(cards).toContain('Fatura atual');
     expect(cards).toContain('hidden md:grid');
     expect(cards).toContain('hidden md:block');
-    expect(invoices).toContain('grid grid-cols-2 sm:flex');
-    expect(invoices).toContain('aria-pressed');
+    expect(invoices).toContain('Faturas por cartão');
+    expect(invoices).toContain('Fatura e vencimento');
     expect(modals).toContain('grid grid-cols-2 md:grid-cols-3');
     expect(modals).toContain('sticky bottom-0');
   });
@@ -204,5 +204,40 @@ describe('layout width classes', () => {
     expect(investments).toContain('Histórico de aportes');
     expect(reports).toContain('grid grid-cols-2 lg:grid-cols-3');
     expect(modals).toContain('Dados principais');
+  });
+
+  it('keeps modals above sticky chrome with stable internal form footers', () => {
+    const financeModals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
+    const transactionModal = readFileSync(join(process.cwd(), 'src/components/dashboard/NewTransactionModal.tsx'), 'utf8');
+    const taxesModal = readFileSync(join(process.cwd(), 'src/components/dashboard/PjTaxesModal.tsx'), 'utf8');
+
+    expect(financeModals).toContain('z-[100]');
+    expect(financeModals).toContain('modalBodyClass');
+    expect(financeModals).toContain('modalFooterClass');
+    expect(financeModals).toContain('CartãoPreview');
+    expect(transactionModal).toContain('z-[100]');
+    expect(taxesModal).toContain('z-[100]');
+  });
+
+  it('shows invoices as compact card rows instead of a card picker', () => {
+    const invoices = readFileSync(join(process.cwd(), 'src/pages/Invoices.tsx'), 'utf8');
+
+    expect(invoices).toContain('cards.map(card => {');
+    expect(invoices).toContain('Fatura e vencimento');
+    expect(invoices).toContain('handleToggleInvoicePayment(card.id)');
+    expect(invoices).not.toContain('selectedCardId');
+    expect(invoices).not.toContain('aria-pressed');
+  });
+
+  it('lets desktop sidebar follow the scroll while header casts a blur below it', () => {
+    const layout = readFileSync(join(process.cwd(), 'src/components/layout/Layout.tsx'), 'utf8');
+    const sidebar = readFileSync(join(process.cwd(), 'src/components/layout/AppSidebar.tsx'), 'utf8');
+    const header = readFileSync(join(process.cwd(), 'src/components/layout/DashboardHeader.tsx'), 'utf8');
+
+    expect(layout).toContain('lg:sticky');
+    expect(layout).toContain('lg:top-0');
+    expect(sidebar).toContain('lg:h-[100dvh]');
+    expect(header).toContain('after:absolute');
+    expect(header).toContain('after:backdrop-blur-md');
   });
 });

@@ -17,6 +17,8 @@ import type { CreditCard, Investment, InvestmentCategory } from '../../types/fin
 const inputClass = 'w-full min-h-11 bg-background border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none placeholder:text-outline';
 const selectClass = `${inputClass} appearance-none pr-xl`;
 const labelClass = 'block font-label-md text-[13px] font-semibold text-on-surface-variant mb-xs uppercase tracking-wider';
+const modalBodyClass = 'p-md sm:p-lg space-y-md';
+const modalFooterClass = 'sticky bottom-0 z-10 -mx-md sm:-mx-lg px-md sm:px-lg py-md bg-surface-container-low/95 backdrop-blur border-t border-outline-variant flex flex-col min-[390px]:flex-row justify-end gap-md';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
@@ -30,8 +32,8 @@ interface ModalShellProps {
 
 function ModalShell({ title, subtitle, onClose, children }: ModalShellProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-md overflow-y-auto">
-      <div className="w-full max-w-[36rem] max-h-[90dvh] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden relative flex flex-col">
+    <div className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-center bg-background/85 backdrop-blur-md p-0 sm:p-md">
+      <div className="w-full sm:max-w-[36rem] h-[100dvh] sm:h-auto sm:max-h-[90dvh] bg-surface-container-low border border-outline-variant rounded-none sm:rounded-xl shadow-2xl overflow-hidden relative flex flex-col">
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary" />
         <div className="flex items-start justify-between gap-md px-md sm:px-lg py-md border-b border-outline-variant shrink-0">
           <div className="min-w-0">
@@ -47,7 +49,7 @@ function ModalShell({ title, subtitle, onClose, children }: ModalShellProps) {
             <X size={22} />
           </button>
         </div>
-        <div className="min-h-0 overflow-y-auto">
+        <div className="min-h-0 overflow-y-auto overscroll-contain">
           {children}
         </div>
       </div>
@@ -204,7 +206,7 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
 
   return (
     <ModalShell title="Nova fatura" subtitle="Monte a fatura com vários lançamentos antes de salvar." onClose={onClose}>
-      <form onSubmit={handleAddToBatch} className="p-md sm:p-lg space-y-md">
+      <form onSubmit={handleAddToBatch} className={modalBodyClass}>
         <label>
           <span className={labelClass}>Cartão</span>
           <div className="relative">
@@ -320,7 +322,7 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
           )}
         </div>
 
-        <div className="sticky bottom-0 -mx-md sm:-mx-lg px-md sm:px-lg py-md bg-surface-container-low/95 backdrop-blur border-t border-outline-variant flex flex-col-reverse sm:flex-row sm:justify-between gap-md">
+        <div className={`${modalFooterClass} sm:justify-between flex-col-reverse min-[390px]:flex-row`}>
           <button
             type="submit"
             className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-secondary rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-xs min-h-11"
@@ -387,48 +389,61 @@ export function CreditCardModal({ card, onClose }: CreditCardModalProps) {
 
   return (
     <ModalShell title={card ? 'Editar cartão' : 'Adicionar cartão'} subtitle="Cadastre bandeira, banco, vencimento e últimos dígitos." onClose={onClose}>
-      <form onSubmit={handleSubmit} className="p-md sm:p-lg space-y-md">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-          <label>
-            <span className={labelClass}>Banco</span>
-            <input value={bank} onChange={event => setBank(event.target.value)} className={inputClass} placeholder="Ex: Nubank" />
-          </label>
-          <label>
-            <span className={labelClass}>Bandeira</span>
-            <div className="relative">
-              <select value={brand} onChange={event => setBrand(event.target.value)} className={selectClass}>
-                <option>Mastercard</option>
-                <option>Visa</option>
-                <option>Elo</option>
-                <option>Amex</option>
-                <option>Hipercard</option>
-              </select>
-              <SelectChevron />
-            </div>
-          </label>
+      <form onSubmit={handleSubmit} className={modalBodyClass}>
+        <div aria-label="CartãoPreview" className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 to-surface p-md min-h-32 flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-md">
+            <span className="text-[12px] uppercase tracking-widest text-on-surface-variant">{brand}</span>
+            <span className="text-[12px] text-on-surface-variant">Vence dia {dueDay || '--'}</span>
+          </div>
+          <div>
+            <p className="font-numeral-lg text-[20px] text-on-surface tracking-[0.18em]">•••• •••• •••• {lastDigits || '0000'}</p>
+            <p className="mt-xs text-[14px] font-semibold text-on-surface truncate">{bank || 'Nome do cartão'}</p>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-          <label>
-            <span className={labelClass}>Dia do vencimento</span>
-            <input
-              type="number"
-              min="1"
-              max="31"
-              value={dueDay}
-              onChange={event => setDueDay(Number(event.target.value))}
-              className={`${inputClass} text-center`}
-            />
-          </label>
-          <label>
-            <span className={labelClass}>Últimos dígitos</span>
-            <input value={lastDigits} onChange={event => setLastDigits(event.target.value.replace(/\D/g, '').slice(0, 4))} className={inputClass} inputMode="numeric" maxLength={4} placeholder="1234" />
-          </label>
+
+        <div className="rounded-xl border border-outline-variant bg-surface/60 p-md space-y-md">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+            <label>
+              <span className={labelClass}>Banco</span>
+              <input value={bank} onChange={event => setBank(event.target.value)} className={inputClass} placeholder="Ex: Nubank" />
+            </label>
+            <label>
+              <span className={labelClass}>Bandeira</span>
+              <div className="relative">
+                <select value={brand} onChange={event => setBrand(event.target.value)} className={selectClass}>
+                  <option>Mastercard</option>
+                  <option>Visa</option>
+                  <option>Elo</option>
+                  <option>Amex</option>
+                  <option>Hipercard</option>
+                </select>
+                <SelectChevron />
+              </div>
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-md">
+            <label>
+              <span className={labelClass}>Vencimento</span>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                value={dueDay}
+                onChange={event => setDueDay(Number(event.target.value))}
+                className={`${inputClass} text-center`}
+              />
+            </label>
+            <label>
+              <span className={labelClass}>Final</span>
+              <input value={lastDigits} onChange={event => setLastDigits(event.target.value.replace(/\D/g, '').slice(0, 4))} className={`${inputClass} text-center`} inputMode="numeric" maxLength={4} placeholder="1234" />
+            </label>
+          </div>
         </div>
 
         <ErrorMessage error={error} />
 
-        <div className="flex justify-end gap-md pt-md border-t border-outline-variant">
-          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
+        <div className={modalFooterClass}>
+          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors min-h-11">Cancelar</button>
           <SubmitButton isSaving={isSaving}>Salvar cartão</SubmitButton>
         </div>
       </form>
@@ -473,50 +488,52 @@ export function FixedBillModal({ onClose }: { onClose: () => void }) {
 
   return (
     <ModalShell title="Nova conta fixa" subtitle="Cadastre despesas que se repetem todo mês." onClose={onClose}>
-      <form onSubmit={handleSubmit} className="p-lg space-y-md">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+      <form onSubmit={handleSubmit} className={modalBodyClass}>
+        <div className="rounded-xl border border-outline-variant bg-surface/60 p-md space-y-md">
           <label>
             <span className={labelClass}>Descrição</span>
             <input value={description} onChange={event => setDescription(event.target.value)} className={inputClass} placeholder="Ex: Parcela do carro" />
           </label>
-          <label>
-            <span className={labelClass}>Valor mensal</span>
-            <input value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
-          </label>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-md">
-          <label>
-            <span className={labelClass}>Vencimento</span>
-            <input type="number" min="1" max="31" value={dueDay} onChange={event => setDueDay(Number(event.target.value))} className={`${inputClass} text-center`} />
-          </label>
-          <label>
-            <span className={labelClass}>Status</span>
-            <div className="relative">
-              <select value={status} onChange={event => setStatus(event.target.value as 'pago' | 'pendente' | 'atrasado')} className={selectClass}>
-                <option value="pendente">Pendente</option>
-                <option value="pago">Pago</option>
-                <option value="atrasado">Atrasado</option>
-              </select>
-              <SelectChevron />
-            </div>
-          </label>
-          <label className="col-span-2 md:col-span-1">
-            <span className={labelClass}>Categoria</span>
-            <div className="relative">
-              <select value={categoryId} onChange={event => setCategoryId(event.target.value)} className={selectClass}>
-                <option value="">Sem categoria</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>{category.name}</option>
-                ))}
-              </select>
-              <SelectChevron />
-            </div>
-          </label>
+          <div className="grid grid-cols-2 gap-md">
+            <label>
+              <span className={labelClass}>Valor mensal</span>
+              <input value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+            </label>
+            <label>
+              <span className={labelClass}>Vencimento</span>
+              <input type="number" min="1" max="31" value={dueDay} onChange={event => setDueDay(Number(event.target.value))} className={`${inputClass} text-center`} />
+            </label>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+            <label>
+              <span className={labelClass}>Status</span>
+              <div className="relative">
+                <select value={status} onChange={event => setStatus(event.target.value as 'pago' | 'pendente' | 'atrasado')} className={selectClass}>
+                  <option value="pendente">Pendente</option>
+                  <option value="pago">Pago</option>
+                  <option value="atrasado">Atrasado</option>
+                </select>
+                <SelectChevron />
+              </div>
+            </label>
+            <label>
+              <span className={labelClass}>Categoria</span>
+              <div className="relative">
+                <select value={categoryId} onChange={event => setCategoryId(event.target.value)} className={selectClass}>
+                  <option value="">Sem categoria</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+                <SelectChevron />
+              </div>
+            </label>
+          </div>
         </div>
 
         <ErrorMessage error={error} />
 
-        <div className="sticky bottom-0 -mx-md sm:-mx-lg px-md sm:px-lg py-md bg-surface-container-low/95 backdrop-blur border-t border-outline-variant flex flex-col min-[390px]:flex-row justify-end gap-md">
+        <div className={modalFooterClass}>
           <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors min-h-11">Cancelar</button>
           <SubmitButton isSaving={isSaving}>Salvar conta</SubmitButton>
         </div>
@@ -620,7 +637,7 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
 
         <ErrorMessage error={error} />
 
-        <div className="sticky bottom-0 -mx-md sm:-mx-lg px-md sm:px-lg py-md bg-surface-container-low/95 backdrop-blur border-t border-outline-variant flex flex-col min-[390px]:flex-row justify-end gap-md">
+        <div className={modalFooterClass}>
           <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors min-h-11">Cancelar</button>
           <SubmitButton isSaving={isSaving}>Salvar investimento</SubmitButton>
         </div>
