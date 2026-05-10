@@ -36,7 +36,7 @@ export function Dashboard() {
       <SummaryCardsGrid data={summaryCards} />
       
       {/* Charts & Complex Data */}
-      <section className="grid grid-cols-1 min-[390px]:grid-cols-2 lg:grid-cols-3 gap-lg lg:gap-xl min-w-0">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-lg lg:gap-xl min-w-0">
         <BalanceEvolutionChart data={balanceEvolution} />
         
         <div className="flex flex-col gap-lg min-w-0">

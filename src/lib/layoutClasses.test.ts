@@ -115,9 +115,18 @@ describe('layout width classes', () => {
     expect(summaryCards).toContain('grid-cols-2 lg:grid-cols-3 xl:grid-cols-6');
     expect(summaryCards).not.toContain('sm:col-span-2');
     expect(summaryCards).toContain('text-[18px]');
-    expect(dashboard).toContain('min-[390px]:grid-cols-2 lg:grid-cols-3');
+    expect(dashboard).toContain('grid-cols-1 lg:grid-cols-3');
+    expect(dashboard).not.toContain('min-[390px]:grid-cols-2');
     expect(balanceChart).toContain('min-[390px]:min-h-[230px]');
     expect(balanceChart).toContain('lg:col-span-2');
+  });
+
+  it('shows a value axis on the balance evolution chart at every width', () => {
+    const balanceChart = readFileSync(join(process.cwd(), 'src/components/dashboard/BalanceEvolutionChart.tsx'), 'utf8');
+
+    expect(balanceChart).toContain('YAxis');
+    expect(balanceChart).toContain('tickFormatter');
+    expect(balanceChart).not.toContain('left: -32');
   });
 
   it('orders dashboard summary cards as a readable financial story', () => {
