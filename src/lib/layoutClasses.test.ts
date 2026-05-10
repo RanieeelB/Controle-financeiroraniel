@@ -101,10 +101,23 @@ describe('layout width classes', () => {
     const upcomingBills = readFileSync(join(process.cwd(), 'src/components/dashboard/UpcomingBills.tsx'), 'utf8');
 
     expect(dashboard).toContain('gap-lg lg:gap-xl');
-    expect(summaryCards).toContain('sm:grid-cols-2');
+    expect(summaryCards).toContain('grid-cols-2');
     expect(summaryCards).toContain('lg:col-span-1');
     expect(upcomingBills).toContain('md:hidden');
     expect(upcomingBills).toContain('hidden md:block');
+  });
+
+  it('keeps dashboard metrics and charts dense on mobile without losing desktop hierarchy', () => {
+    const dashboard = readFileSync(join(process.cwd(), 'src/pages/Dashboard.tsx'), 'utf8');
+    const summaryCards = readFileSync(join(process.cwd(), 'src/components/dashboard/SummaryCardsGrid.tsx'), 'utf8');
+    const balanceChart = readFileSync(join(process.cwd(), 'src/components/dashboard/BalanceEvolutionChart.tsx'), 'utf8');
+
+    expect(summaryCards).toContain('grid-cols-2 lg:grid-cols-3 xl:grid-cols-6');
+    expect(summaryCards).not.toContain('sm:col-span-2');
+    expect(summaryCards).toContain('text-[18px]');
+    expect(dashboard).toContain('min-[390px]:grid-cols-2 lg:grid-cols-3');
+    expect(balanceChart).toContain('min-[390px]:min-h-[230px]');
+    expect(balanceChart).toContain('lg:col-span-2');
   });
 
   it('uses mobile card lists for data-heavy pages before switching to tables', () => {

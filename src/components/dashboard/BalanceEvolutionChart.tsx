@@ -7,11 +7,11 @@ interface BalanceEvolutionChartProps {
 
 export function BalanceEvolutionChart({ data }: BalanceEvolutionChartProps) {
   return (
-    <div className="glass-card rounded-xl p-md sm:p-lg lg:col-span-2 flex flex-col h-full min-h-[260px] sm:min-h-[300px] min-w-0">
+    <div className="glass-card rounded-xl p-md sm:p-lg lg:col-span-2 flex flex-col h-full min-h-[260px] min-[390px]:min-h-[230px] sm:min-h-[300px] min-w-0">
       <div className="flex items-start justify-between gap-md mb-md">
-        <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-background">Evolução do saldo</h3>
+        <h3 className="font-h2 text-[18px] sm:text-[24px] font-semibold text-on-background">Evolução do saldo</h3>
       </div>
-      <div className="flex-1 w-full h-[200px] min-[390px]:h-[220px] sm:h-[250px] relative min-w-0">
+      <div className="flex-1 w-full h-[200px] min-[390px]:h-[160px] sm:h-[250px] relative min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 10, right: 8, left: -32, bottom: 0 }}>
             <defs>
