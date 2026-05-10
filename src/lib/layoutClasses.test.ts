@@ -120,6 +120,21 @@ describe('layout width classes', () => {
     expect(balanceChart).toContain('lg:col-span-2');
   });
 
+  it('orders dashboard summary cards as a readable financial story', () => {
+    const summaryCards = readFileSync(join(process.cwd(), 'src/components/dashboard/SummaryCardsGrid.tsx'), 'utf8');
+
+    expect(summaryCards).toContain('summaryCardOrder');
+    expect(summaryCards).toContain('border-t-2');
+    expect(summaryCards).toContain('Disponível');
+    expect(summaryCards).toContain('Compromissos');
+    expect(summaryCards).toContain('Previsão');
+    expect(summaryCards.indexOf('Saldo atual')).toBeLessThan(summaryCards.indexOf('Entradas do mês'));
+    expect(summaryCards.indexOf('Entradas do mês')).toBeLessThan(summaryCards.indexOf('Gastos do mês'));
+    expect(summaryCards.indexOf('Gastos do mês')).toBeLessThan(summaryCards.indexOf('Faturas abertas'));
+    expect(summaryCards.indexOf('Faturas abertas')).toBeLessThan(summaryCards.indexOf('Contas fixas'));
+    expect(summaryCards.indexOf('Contas fixas')).toBeLessThan(summaryCards.indexOf('Sobra prevista'));
+  });
+
   it('uses mobile card lists for data-heavy pages before switching to tables', () => {
     const files = [
       'src/pages/Incomes.tsx',
