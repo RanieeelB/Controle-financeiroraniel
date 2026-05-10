@@ -137,4 +137,14 @@ describe('layout width classes', () => {
       expect(contents, file).toContain('w-full');
     }
   });
+
+  it('presents the dashboard header with grouped navigation and icon actions', () => {
+    const header = readFileSync(join(process.cwd(), 'src/components/layout/DashboardHeader.tsx'), 'utf8');
+
+    expect(header).toContain('backdrop-blur-xl');
+    expect(header).toContain('rounded-full border border-outline-variant');
+    expect(header).toContain('FileDown');
+    expect(header).toContain('Plus');
+    expect(header).toContain('aria-label="Exportar PDF"');
+  });
 });
