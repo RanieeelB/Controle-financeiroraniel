@@ -38,7 +38,27 @@ export function Reports() {
 
   const income = allTx.filter(t => t.type === 'entrada').reduce((s, t) => s + t.amount, 0);
   const expense = allTx.filter(t => t.type === 'gasto').reduce((s, t) => s + t.amount, 0);
-  const openInvoices = invoiceItems.reduce((s, item) => s + item.amount, 0);
+  const openInvoiceItems = invoiceItems.filter((item) => {
+    const linkedTx = allTx.find(t => t.notes === `invoice_item:${item.id}`);
+    if (linkedTx) {
+      return linkedTx.status !== 'pago';
+    }
+    
+    const signature = `${(item.description || '').trim().toLocaleLowerCase('pt-BR')}|${Number(item.amount).toFixed(2)}|${item.date}`;
+    const fallbackTx = allTx.find(t => {
+      if (t.payment_method !== undefined && t.payment_method !== 'credito') return false;
+      if (!t.description || typeof t.amount !== 'number' || !t.date) return false;
+      const tSig = `${t.description.trim().toLocaleLowerCase('pt-BR')}|${t.amount.toFixed(2)}|${t.date}`;
+      return tSig === signature;
+    });
+    
+    if (fallbackTx) {
+      return fallbackTx.status !== 'pago';
+    }
+    return true;
+  });
+
+  const openInvoices = openInvoiceItems.reduce((s, item) => s + item.amount, 0);
   const operationalBalance = income - expense;
   const analyzedItems = allTx.length + invoiceItems.length + bills.length + investments.length + goals.length;
 
@@ -67,7 +87,7 @@ export function Reports() {
         investmentsTotal: totalCurrentValue,
         operationalBalance,
         transactions: allTx,
-        invoiceItems,
+        invoiceItems: openInvoiceItems,
         cards,
         bills,
         investments,
@@ -164,7 +184,7 @@ export function Reports() {
           <div className="flex items-center gap-sm mb-lg"><CreditCard className="text-secondary" size={24} /><h3 className="font-h2 text-[24px] font-semibold text-on-surface">Cartões</h3></div>
           <div className="space-y-md">
             {cards.map(card => {
-              const total = invoiceItems.filter(item => item.card_id === card.id).reduce((sum, item) => sum + item.amount, 0);
+              const total = openInvoiceItems.filter(item => item.card_id === card.id).reduce((sum, item) => sum + item.amount, 0);
               return (
                 <div key={card.id} className="flex justify-between items-center gap-md border-b border-outline-variant/50 pb-sm last:border-0 min-w-0">
                   <div className="min-w-0">
