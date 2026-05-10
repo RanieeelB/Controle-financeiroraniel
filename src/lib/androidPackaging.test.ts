@@ -16,8 +16,9 @@ describe('Android packaging setup', () => {
     expect(packageJson.devDependencies).toHaveProperty('@capacitor/cli');
     expect(packageJson.scripts).toMatchObject({
       'android:sync': 'npm run build && npx cap sync android',
-      'android:apk': 'npm run android:sync && cd android && gradlew.bat assembleDebug',
+      'android:apk': 'powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android-apk.ps1',
     });
+    expect(existsSync(join(process.cwd(), 'scripts/build-android-apk.ps1'))).toBe(true);
     expect(existsSync(configPath)).toBe(true);
 
     const config = readFileSync(configPath, 'utf8');
@@ -30,5 +31,12 @@ describe('Android packaging setup', () => {
     const agents = readFileSync(join(process.cwd(), 'AGENTS.md'), 'utf8');
 
     expect(agents).toContain('Run `npm run android:sync` after each feature that changes the web app');
+  });
+
+  it('keeps generated Android artifacts out of the web lint target', () => {
+    const eslintConfig = readFileSync(join(process.cwd(), 'eslint.config.js'), 'utf8');
+
+    expect(eslintConfig).toContain('android/**/build');
+    expect(eslintConfig).toContain('android/app/src/main/assets/public');
   });
 });
