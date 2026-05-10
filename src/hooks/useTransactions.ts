@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import type { MonthRange } from '../lib/monthSelection';
 import { supabase } from '../lib/supabase';
 import type { Transaction } from '../types/financial';
-import type { MonthRange } from '../lib/monthSelection';
 
 export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
   const startDate = monthRange?.startDate;
   const endDate = monthRange?.endDate;
 
