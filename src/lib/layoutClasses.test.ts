@@ -21,4 +21,47 @@ describe('layout width classes', () => {
 
     expect(offenders).toEqual([]);
   });
+
+  it('keeps the application shell responsive below tablet widths', () => {
+    const layout = readFileSync(join(process.cwd(), 'src/components/layout/Layout.tsx'), 'utf8');
+    const sidebar = readFileSync(join(process.cwd(), 'src/components/layout/AppSidebar.tsx'), 'utf8');
+    const header = readFileSync(join(process.cwd(), 'src/components/layout/DashboardHeader.tsx'), 'utf8');
+
+    expect(layout).toContain('px-4');
+    expect(layout).toContain('sm:px-6');
+    expect(layout).toContain('lg:px-xl');
+    expect(sidebar).toContain('h-[100dvh]');
+    expect(header).toContain('min-w-0');
+    expect(header).toContain('w-full sm:w-auto');
+  });
+
+  it('keeps dialogs inside the mobile viewport with internal scrolling', () => {
+    const modalFiles = [
+      'src/components/dashboard/NewTransactionModal.tsx',
+      'src/components/dashboard/PjTaxesModal.tsx',
+      'src/components/finance/FinanceModals.tsx',
+    ];
+
+    for (const file of modalFiles) {
+      const contents = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(contents, file).toContain('max-h-[90dvh]');
+      expect(contents, file).toContain('overflow-y-auto');
+    }
+  });
+
+  it('sets minimum table widths only inside horizontal scroll regions', () => {
+    const tableFiles = [
+      'src/pages/Incomes.tsx',
+      'src/pages/Expenses.tsx',
+      'src/pages/FixedBills.tsx',
+      'src/pages/Reports.tsx',
+      'src/components/dashboard/UpcomingBills.tsx',
+    ];
+
+    for (const file of tableFiles) {
+      const contents = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(contents, file).toContain('overflow-x-auto');
+      expect(contents, file).toMatch(/<table className="[^"]*min-w-\[/);
+    }
+  });
 });

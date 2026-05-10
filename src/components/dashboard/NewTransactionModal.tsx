@@ -119,24 +119,24 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-md">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-md overflow-y-auto">
       <div
-        className="w-full max-w-[42rem] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
+        className="w-full max-w-[42rem] max-h-[90dvh] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
         style={{ boxShadow: '0 0 40px rgba(117, 255, 158, 0.05)' }}
       >
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary" />
 
-        <div className="flex items-center justify-between px-lg py-md border-b border-outline-variant">
-          <div>
-            <h2 className="font-h2 text-[24px] font-semibold text-on-surface">Novo lançamento</h2>
-            <p className="font-body-md text-[16px] text-on-surface-variant">
+        <div className="flex items-start justify-between gap-md px-md sm:px-lg py-md border-b border-outline-variant shrink-0">
+          <div className="min-w-0">
+            <h2 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface">Novo lançamento</h2>
+            <p className="font-body-md text-[14px] sm:text-[16px] text-on-surface-variant">
               Registre uma entrada, gasto no Pix, dinheiro ou compra no cartão.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-on-surface-variant hover:text-primary transition-colors focus:outline-none"
+            className="text-on-surface-variant hover:text-primary transition-colors focus:outline-none min-h-11 min-w-11 flex items-center justify-center"
             aria-label="Fechar modal"
           >
             <X size={24} />
@@ -144,7 +144,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0">
-          <div className="p-lg overflow-y-auto max-h-[70vh] space-y-lg">
+          <div className="p-md sm:p-lg overflow-y-auto space-y-lg">
             <div>
               <label className="block font-label-md text-[14px] text-on-surface-variant mb-sm uppercase">
                 Tipo de lançamento
@@ -354,18 +354,18 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
             )}
           </div>
 
-          <div className="px-lg py-md border-t border-outline-variant bg-surface/50 flex justify-end gap-md">
+          <div className="px-md sm:px-lg py-md border-t border-outline-variant bg-surface/50 flex flex-col-reverse sm:flex-row sm:justify-end gap-md shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-lg py-sm font-label-md text-[14px] text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors"
+              className="px-lg py-sm font-label-md text-[14px] text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors min-h-11 w-full sm:w-auto"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="px-lg py-sm font-label-md text-[14px] text-background bg-primary rounded-lg hover:bg-primary-fixed hover:shadow-[0_0_15px_rgba(117,255,158,0.4)] transition-all flex items-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-lg py-sm font-label-md text-[14px] text-background bg-primary rounded-lg hover:bg-primary-fixed hover:shadow-[0_0_15px_rgba(117,255,158,0.4)] transition-all flex items-center justify-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed min-h-11 w-full sm:w-auto"
             >
               <CheckCircle size={18} />
               <span>{isSaving ? 'Salvando...' : 'Salvar lançamento'}</span>

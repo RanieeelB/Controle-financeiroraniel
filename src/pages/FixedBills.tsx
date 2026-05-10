@@ -80,7 +80,7 @@ export function FixedBills() {
             <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button></div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[760px] text-left border-collapse">
               <thead><tr className="border-b border-outline-variant text-on-surface-variant font-label-md text-[14px] font-semibold uppercase tracking-wider">
                 <th className="py-md px-lg">Descrição</th><th className="py-md px-lg">Categoria</th><th className="py-md px-lg">Vencimento</th><th className="py-md px-lg text-right">Valor</th><th className="py-md px-lg text-center">Status</th><th className="py-md px-lg text-center">Ação</th>
               </tr></thead>

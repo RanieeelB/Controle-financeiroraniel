@@ -73,7 +73,7 @@ export function Layout() {
           onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
         />
 
-        <div className="flex-1 p-xl max-w-[1440px] w-full mx-auto space-y-xl relative z-10">
+        <div className="flex-1 px-4 py-lg sm:px-6 sm:py-xl lg:px-xl lg:py-xl max-w-[1440px] w-full mx-auto space-y-lg lg:space-y-xl relative z-10 min-w-0">
           <Outlet context={{ selectedMonthRange } satisfies LayoutContext} />
         </div>
       </main>

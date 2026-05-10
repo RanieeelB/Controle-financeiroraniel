@@ -73,21 +73,21 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-md bg-black/60 backdrop-blur-sm">
-      <div className="bg-surface-container border border-outline-variant rounded-2xl w-full max-w-md min-w-[320px] overflow-hidden flex flex-col shadow-2xl transition-all">
-        <div className="flex justify-between items-center p-lg border-b border-outline-variant">
-          <div className="flex items-center gap-sm">
+    <div className="fixed inset-0 z-[9999] flex items-start sm:items-center justify-center p-4 sm:p-md bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-surface-container border border-outline-variant rounded-2xl w-full max-w-[28rem] max-h-[90dvh] overflow-hidden flex flex-col shadow-2xl transition-all">
+        <div className="flex justify-between items-start gap-md p-md sm:p-lg border-b border-outline-variant shrink-0">
+          <div className="flex items-center gap-sm min-w-0">
             <div className="p-sm bg-tertiary-container/20 rounded-lg">
               <Building2 className="text-tertiary-container" size={24} />
             </div>
-            <h3 className="font-h2 text-[20px] font-semibold text-on-surface">Gestão de Impostos PJ</h3>
+            <h3 className="font-h2 text-[18px] sm:text-[20px] font-semibold text-on-surface">Gestão de Impostos PJ</h3>
           </div>
-          <button onClick={onClose} className="p-sm text-on-surface-variant hover:text-on-surface transition-colors rounded-full hover:bg-surface-variant">
+          <button onClick={onClose} className="p-sm text-on-surface-variant hover:text-on-surface transition-colors rounded-full hover:bg-surface-variant min-h-11 min-w-11 flex items-center justify-center" aria-label="Fechar modal">
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-lg space-y-lg">
+        <div className="p-md sm:p-lg space-y-lg overflow-y-auto">
           <div className="bg-surface rounded-lg p-md border border-outline-variant/50 text-center">
             <p className="text-on-surface-variant text-[14px]">Faturamento deste mês</p>
             <p className="font-numeral-lg text-[28px] text-primary mt-1">R$ {fmt(totalIncome)}</p>
@@ -103,7 +103,7 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
                 </div>
               </div>
               
-              <div className="flex items-center gap-md mb-md">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-md mb-md">
                 <div className="flex-1">
                   <label className="text-[12px] text-on-surface-variant mb-1 block">Alíquota (%)</label>
                   <input

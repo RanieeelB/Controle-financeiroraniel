@@ -30,24 +30,26 @@ interface ModalShellProps {
 
 function ModalShell({ title, subtitle, onClose, children }: ModalShellProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-md">
-      <div className="w-full max-w-[36rem] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden relative">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-md overflow-y-auto">
+      <div className="w-full max-w-[36rem] max-h-[90dvh] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden relative flex flex-col">
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary" />
-        <div className="flex items-center justify-between px-lg py-md border-b border-outline-variant">
-          <div>
-            <h2 className="font-h2 text-[24px] font-semibold text-on-surface">{title}</h2>
-            <p className="font-body-md text-[15px] text-on-surface-variant">{subtitle}</p>
+        <div className="flex items-start justify-between gap-md px-md sm:px-lg py-md border-b border-outline-variant shrink-0">
+          <div className="min-w-0">
+            <h2 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface">{title}</h2>
+            <p className="font-body-md text-[14px] sm:text-[15px] text-on-surface-variant">{subtitle}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-on-surface-variant hover:text-primary transition-colors"
+            className="text-on-surface-variant hover:text-primary transition-colors min-h-11 min-w-11 flex items-center justify-center"
             aria-label="Fechar modal"
           >
             <X size={22} />
           </button>
         </div>
-        {children}
+        <div className="min-h-0 overflow-y-auto">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -82,7 +84,7 @@ function SubmitButton({
       type={type}
       onClick={onClick}
       disabled={isSaving}
-      className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-primary rounded-lg hover:bg-primary-fixed transition-all flex items-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed"
+      className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-primary rounded-lg hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed min-h-11 w-full sm:w-auto"
     >
       <CheckCircle size={18} />
       <span>{isSaving ? 'Salvando...' : children}</span>

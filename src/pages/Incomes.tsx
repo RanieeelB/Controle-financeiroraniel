@@ -72,19 +72,19 @@ export function Incomes() {
 
       {/* Detailed List */}
       <section className="bg-surface-container-low border border-outline-variant rounded-xl flex flex-col overflow-hidden mb-xl">
-        <div className="p-lg border-b border-outline-variant flex justify-between items-center bg-surface-container-highest/30">
-          <h3 className="font-h2 text-[24px] font-semibold text-on-surface">Lançamentos Detalhados</h3>
-          <div className="relative">
+        <div className="p-md sm:p-lg border-b border-outline-variant flex flex-col sm:flex-row sm:justify-between sm:items-center gap-md bg-surface-container-highest/30">
+          <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface">Lançamentos Detalhados</h3>
+          <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} />
-            <input 
-              className="bg-surface border border-outline-variant rounded-lg pl-10 pr-md py-sm text-on-surface font-body-md text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all w-64 placeholder-on-surface-variant/50" 
+            <input
+              className="bg-surface border border-outline-variant rounded-lg pl-10 pr-md py-sm text-on-surface font-body-md text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all w-full sm:w-64 placeholder-on-surface-variant/50"
               placeholder="Buscar entrada..." 
               type="text"
             />
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[720px] text-left border-collapse">
             <thead>
               <tr className="border-b border-outline-variant/50">
                 <th className="py-md px-lg font-label-md text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Data</th>

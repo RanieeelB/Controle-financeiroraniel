@@ -122,10 +122,10 @@ export function Reports() {
         </div>
       </div>
 
-      <div className="bg-surface-container border border-outline-variant rounded-xl p-lg overflow-hidden">
-        <div className="flex justify-between items-center mb-lg"><h3 className="font-h2 text-[24px] font-semibold text-on-surface">Últimas Transações</h3></div>
+      <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg overflow-hidden">
+        <div className="flex justify-between items-center mb-lg"><h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface">Últimas Transações</h3></div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[640px] text-left border-collapse">
             <thead><tr className="border-b border-outline-variant"><th className="py-md px-sm text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Descrição</th><th className="py-md px-sm text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Tipo</th><th className="py-md px-sm text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Pagamento</th><th className="py-md px-sm text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold text-right">Valor</th></tr></thead>
             <tbody className="divide-y divide-outline-variant/50">
               {allTx.slice(0, 6).map(t => (
