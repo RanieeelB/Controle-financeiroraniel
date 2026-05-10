@@ -211,7 +211,7 @@ describe('layout width classes', () => {
     expect(header).toContain('order-2 lg:order-3');
     expect(header).toContain('order-3 lg:order-2');
     expect(header).toContain('grid grid-cols-3');
-    expect(header).toContain('lg:hidden');
+    expect(header).toContain('hidden lg:flex');
   });
 
   it('shows category expense percentages on the dashboard pie chart', () => {
@@ -298,5 +298,33 @@ describe('layout width classes', () => {
     expect(header).toContain('sticky top-0');
     expect(header).toContain('after:absolute');
     expect(header).toContain('after:backdrop-blur-lg');
+  });
+
+  it('replaces the mobile hamburger drawer with a futuristic bottom nav', () => {
+    const layout = readFileSync(join(process.cwd(), 'src/components/layout/Layout.tsx'), 'utf8');
+    const header = readFileSync(join(process.cwd(), 'src/components/layout/DashboardHeader.tsx'), 'utf8');
+    const mobileNav = readFileSync(join(process.cwd(), 'src/components/layout/MobileFloatingNav.tsx'), 'utf8');
+
+    expect(layout).toContain('MobileFloatingNav');
+    expect(layout).not.toContain('isMobileMenuOpen');
+    expect(layout).toContain('hidden lg:block');
+    expect(header).not.toContain('Menu');
+    expect(mobileNav).toContain('fixed bottom-4');
+    expect(mobileNav).toContain('backdrop-blur');
+    expect(mobileNav).toContain('shadow-[0_0_28px');
+    expect(mobileNav).toContain('Mais');
+    expect(mobileNav).toContain('lg:hidden');
+  });
+
+  it('keeps mobile chrome compact while the bottom nav fades into the page', () => {
+    const header = readFileSync(join(process.cwd(), 'src/components/layout/DashboardHeader.tsx'), 'utf8');
+    const mobileNav = readFileSync(join(process.cwd(), 'src/components/layout/MobileFloatingNav.tsx'), 'utf8');
+
+    expect(header).toContain('hidden lg:flex');
+    expect(header).toContain('py-2.5');
+    expect(header).not.toContain('lg:hidden rounded-full border border-outline-variant/50');
+    expect(mobileNav).toContain('bg-gradient-to-t');
+    expect(mobileNav).toContain('blur-2xl');
+    expect(mobileNav).toContain('from-background');
   });
 });

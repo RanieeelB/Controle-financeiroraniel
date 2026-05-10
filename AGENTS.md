@@ -14,6 +14,7 @@
 
 Use clear names:
 
+- Do not prefix branch names with `codex/`.
 - `feat/dashboard-layout`
 - `feat/financial-summary-cards`
 - `feat/dashboard-charts`
