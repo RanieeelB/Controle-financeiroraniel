@@ -106,4 +106,19 @@ describe('layout width classes', () => {
     expect(upcomingBills).toContain('md:hidden');
     expect(upcomingBills).toContain('hidden md:block');
   });
+
+  it('uses mobile card lists for data-heavy pages before switching to tables', () => {
+    const files = [
+      'src/pages/Incomes.tsx',
+      'src/pages/Expenses.tsx',
+      'src/pages/FixedBills.tsx',
+      'src/pages/Reports.tsx',
+    ];
+
+    for (const file of files) {
+      const contents = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(contents, file).toContain('md:hidden');
+      expect(contents, file).toContain('hidden md:block');
+    }
+  });
 });

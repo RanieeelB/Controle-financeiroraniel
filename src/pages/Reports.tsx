@@ -56,7 +56,7 @@ export function Reports() {
   }
 
   return (
-    <div className="space-y-xl">
+    <div className="space-y-lg lg:space-y-xl min-w-0">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-md min-w-0">
         <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
           <button className="px-lg py-sm rounded-md font-label-md text-[14px] font-semibold bg-primary/10 text-primary border border-primary/20 shadow-sm">Resumo Geral</button>
@@ -66,7 +66,7 @@ export function Reports() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-sm sm:gap-lg">
         <KpiCard title="Receita Total" value={`R$ ${fmt(income)}`} icon={ArrowUp} tone="primary" />
         <KpiCard title="Gastos Lançados" value={`R$ ${fmt(expense)}`} icon={ArrowDown} tone="tertiary" />
         <KpiCard title="Saldo Operacional" value={`R$ ${fmt(operationalBalance)}`} icon={Landmark} tone={operationalBalance >= 0 ? 'primary' : 'error'} />
@@ -75,10 +75,10 @@ export function Reports() {
         <KpiCard title="Investimentos" value={`R$ ${fmt(totalCurrentValue)}`} icon={Wallet} tone="primary" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg">
-        <div className="lg:col-span-4 bg-surface-container border border-outline-variant rounded-xl p-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg min-w-0">
+        <div className="lg:col-span-4 bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg min-w-0">
           <div className="flex items-center gap-sm mb-lg"><Target className="text-primary" size={24} /><h3 className="font-h2 text-[24px] font-semibold text-on-surface">Metas</h3></div>
-          <div className="font-numeral-lg text-[32px] text-on-surface mb-xs">R$ {fmt(totalSaved)}</div>
+          <div className="font-numeral-lg text-[24px] min-[390px]:text-[28px] sm:text-[32px] text-on-surface mb-xs break-words">R$ {fmt(totalSaved)}</div>
           <p className="text-on-surface-variant mb-md">de R$ {fmt(totalTarget)} acumulados</p>
           <div className="w-full bg-surface-variant h-2 rounded-full overflow-hidden">
             <div className="bg-primary h-full rounded-full" style={{ width: `${overallProgress}%` }}></div>
@@ -86,7 +86,7 @@ export function Reports() {
           <p className="text-[12px] text-primary mt-sm text-right">{overallProgress}%</p>
         </div>
 
-        <div className="lg:col-span-4 bg-surface-container border border-outline-variant rounded-xl p-lg">
+        <div className="lg:col-span-4 bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg min-w-0">
           <div className="flex items-center gap-sm mb-lg"><Flame className="text-tertiary-container" size={24} /><h3 className="font-h2 text-[24px] font-semibold text-on-surface">Maiores Gastos</h3></div>
           <div className="space-y-md">
             {topExpenses.map(([name, amount]) => (
@@ -102,7 +102,7 @@ export function Reports() {
           </div>
         </div>
 
-        <div className="lg:col-span-4 bg-surface-container border border-outline-variant rounded-xl p-lg">
+        <div className="lg:col-span-4 bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg min-w-0">
           <div className="flex items-center gap-sm mb-lg"><CreditCard className="text-secondary" size={24} /><h3 className="font-h2 text-[24px] font-semibold text-on-surface">Cartões</h3></div>
           <div className="space-y-md">
             {cards.map(card => {
@@ -124,7 +124,23 @@ export function Reports() {
 
       <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg overflow-hidden">
         <div className="flex justify-between items-center mb-lg"><h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface">Últimas Transações</h3></div>
-        <div className="overflow-x-auto">
+        <div className="md:hidden space-y-sm">
+          {allTx.length === 0 ? (
+            <div className="py-lg text-center text-on-surface-variant">Nenhuma transação registrada.</div>
+          ) : allTx.slice(0, 6).map(t => (
+            <article key={t.id} className="bg-surface border border-outline-variant/50 rounded-xl p-md min-w-0">
+              <div className="flex items-start justify-between gap-md">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium text-on-surface truncate">{t.description}</p>
+                  <p className="text-[12px] text-on-surface-variant mt-1">{paymentLabel(t.payment_method)}</p>
+                </div>
+                <span className={`text-sm shrink-0 ${t.type === 'entrada' ? 'text-primary' : 'text-tertiary-container'}`}>{t.type === 'entrada' ? 'Entrada' : 'Gasto'}</span>
+              </div>
+              <p className={`mt-md text-right font-numeral-lg text-[18px] font-bold ${t.type === 'entrada' ? 'text-primary' : 'text-on-surface'}`}>{t.type === 'entrada' ? '+' : '-'} R$ {fmt(t.amount)}</p>
+            </article>
+          ))}
+        </div>
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[640px] text-left border-collapse">
             <thead><tr className="border-b border-outline-variant"><th className="py-md px-sm text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Descrição</th><th className="py-md px-sm text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Tipo</th><th className="py-md px-sm text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold">Pagamento</th><th className="py-md px-sm text-[14px] text-on-surface-variant uppercase tracking-wider font-semibold text-right">Valor</th></tr></thead>
             <tbody className="divide-y divide-outline-variant/50">
@@ -163,12 +179,12 @@ function KpiCard({ title, value, icon: Icon, tone }: KpiCardProps) {
   };
 
   return (
-    <div className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden group hover:border-primary/50 transition-colors">
+    <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden group hover:border-primary/50 transition-colors min-w-0">
       <div className="flex justify-between items-start mb-md">
         <p className="font-label-md text-[14px] font-semibold text-on-surface-variant uppercase">{title}</p>
         <div className={`p-sm rounded-md border ${tones[tone]}`}><Icon size={20} /></div>
       </div>
-      <h3 className="font-numeral-lg text-[24px] font-medium text-on-surface mb-xs">{value}</h3>
+      <h3 className="font-numeral-lg text-[20px] sm:text-[24px] font-medium text-on-surface mb-xs break-words">{value}</h3>
     </div>
   );
 }
