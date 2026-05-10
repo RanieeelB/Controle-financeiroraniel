@@ -1,6 +1,7 @@
 import { Building2, Check, Plus, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useCategories } from '../../hooks/useCategories';
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { createFinancialTransaction } from '../../lib/financialActions';
 import { supabase } from '../../lib/supabase';
 import type { MonthRange } from '../../lib/monthSelection';
@@ -11,6 +12,8 @@ interface PjTaxesModalProps {
 }
 
 export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
+  useLockBodyScroll();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [simplesRateStr, setSimplesRateStr] = useState('6.00');
@@ -73,7 +76,7 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center p-4 sm:p-md bg-black/60 backdrop-blur-sm overflow-y-auto">
+    <div className="fixed inset-0 z-[999] flex items-start sm:items-center justify-center p-4 sm:p-md bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container border border-outline-variant rounded-2xl w-full max-w-[28rem] max-h-[90dvh] overflow-hidden flex flex-col shadow-2xl transition-all">
         <div className="flex justify-between items-start gap-md p-md sm:p-lg border-b border-outline-variant shrink-0">
           <div className="flex items-center gap-sm min-w-0">

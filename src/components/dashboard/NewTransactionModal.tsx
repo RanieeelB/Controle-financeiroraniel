@@ -13,6 +13,7 @@ import { createCategory, createFinancialTransaction } from '../../lib/financialA
 import { getInstallmentAmount, parseCurrencyValue } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
+import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import type { Transaction } from '../../types/financial';
 
 interface NewTransactionModalProps {
@@ -29,6 +30,8 @@ const fmt = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDi
 const categoryColors = ['#75ff9e', '#7bd0ff', '#ffba79', '#ffb4ab', '#859585'];
 
 export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProps) {
+  useLockBodyScroll(isOpen);
+
   const [type, setType] = useState<TransactionType>('entrada');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -164,7 +167,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-md overflow-y-auto">
+    <div className="fixed inset-0 z-[999] flex items-start sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-md overflow-y-auto">
       <div
         className="w-full max-w-[42rem] max-h-[90dvh] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
         style={{ boxShadow: '0 0 40px rgba(117, 255, 158, 0.05)' }}

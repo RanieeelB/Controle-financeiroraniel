@@ -49,6 +49,26 @@ describe('layout width classes', () => {
     }
   });
 
+  it('renders modals above app chrome and locks background scroll', () => {
+    const modalFiles = [
+      'src/components/dashboard/NewTransactionModal.tsx',
+      'src/components/dashboard/PjTaxesModal.tsx',
+      'src/components/finance/FinanceModals.tsx',
+    ];
+    const lockHook = readFileSync(join(process.cwd(), 'src/hooks/useLockBodyScroll.ts'), 'utf8');
+
+    expect(lockHook).toContain('document.body.style.overflow');
+    for (const file of modalFiles) {
+      const contents = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(contents, file).toContain('useLockBodyScroll');
+      expect(contents, file).toContain('z-[999]');
+    }
+
+    const financeModals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
+    expect(financeModals).toContain('createPortal');
+    expect(financeModals).toContain('document.body');
+  });
+
   it('sets minimum table widths only inside horizontal scroll regions', () => {
     const tableFiles = [
       'src/pages/Incomes.tsx',
@@ -235,12 +255,23 @@ describe('layout width classes', () => {
     const transactionModal = readFileSync(join(process.cwd(), 'src/components/dashboard/NewTransactionModal.tsx'), 'utf8');
     const taxesModal = readFileSync(join(process.cwd(), 'src/components/dashboard/PjTaxesModal.tsx'), 'utf8');
 
-    expect(financeModals).toContain('z-[100]');
+    expect(financeModals).toContain('z-[999]');
     expect(financeModals).toContain('modalBodyClass');
     expect(financeModals).toContain('modalFooterClass');
     expect(financeModals).toContain('CartãoPreview');
-    expect(transactionModal).toContain('z-[100]');
-    expect(taxesModal).toContain('z-[100]');
+    expect(transactionModal).toContain('z-[999]');
+    expect(taxesModal).toContain('z-[999]');
+  });
+
+  it('uses rebuilt compact form sections for finance modals', () => {
+    const financeModals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
+
+    expect(financeModals).toContain('modalSectionClass');
+    expect(financeModals).toContain('modalGridClass');
+    expect(financeModals).toContain('Nova compra');
+    expect(financeModals).toContain('Itens da compra');
+    expect(financeModals).toContain('Conta mensal');
+    expect(financeModals).toContain('Patrimônio inicial');
   });
 
   it('shows invoices as compact card rows instead of a card picker', () => {
@@ -260,8 +291,9 @@ describe('layout width classes', () => {
 
     expect(layout).toContain('lg:sticky');
     expect(layout).toContain('lg:top-0');
+    expect(layout).toContain('lg:z-30');
     expect(sidebar).toContain('lg:h-[100dvh]');
     expect(header).toContain('after:absolute');
-    expect(header).toContain('after:backdrop-blur-md');
+    expect(header).toContain('after:backdrop-blur-lg');
   });
 });

@@ -55,7 +55,7 @@ export function Layout() {
         />
       )}
       
-      <div className={`fixed inset-y-0 left-0 z-50 transform lg:sticky lg:top-0 lg:self-start lg:transform-none transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 lg:z-30 transform lg:sticky lg:top-0 lg:self-start lg:transform-none transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <AppSidebar onCloseMobile={() => setIsMobileMenuOpen(false)} />
       </div>
       
