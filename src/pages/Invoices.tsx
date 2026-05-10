@@ -205,8 +205,8 @@ export function Invoices() {
       )}
 
       {selectedInvoiceCard && selectedInvoiceState && createPortal(
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-lg">
-          <div className="bg-surface-container border border-outline-variant rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-[680px] max-h-[90dvh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-md sm:p-lg">
+          <div className="bg-surface-container border border-outline-variant rounded-2xl shadow-2xl w-full sm:max-w-[680px] max-h-[80dvh] sm:max-h-[90dvh] overflow-y-auto">
             <div className="sticky top-0 z-10 bg-surface-container/95 backdrop-blur border-b border-outline-variant p-md sm:p-lg flex items-start justify-between gap-md">
               <div className="min-w-0">
                 <p className="text-[12px] uppercase tracking-wider text-on-surface-variant">Fatura de {selectedInvoiceCard.name}</p>
