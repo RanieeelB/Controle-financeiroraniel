@@ -23,7 +23,7 @@ export function DashboardHeader({
   const { signOut } = useAuth();
 
   return (
-    <header className="relative bg-surface/92 dark:bg-surface/92 backdrop-blur-xl text-primary dark:text-primary sticky top-0 z-40 border-b border-outline-variant/70 dark:border-outline-variant/70 w-full px-4 py-3 md:px-xl md:py-md shadow-[0_12px_36px_rgba(0,0,0,0.2)] after:absolute after:left-0 after:right-0 after:-bottom-4 after:h-4 after:bg-background/20 after:backdrop-blur-md after:pointer-events-none after:content-['']">
+    <header className="relative bg-surface/92 dark:bg-surface/92 backdrop-blur-xl text-primary dark:text-primary sticky top-0 z-40 border-b border-outline-variant/70 dark:border-outline-variant/70 w-full px-4 py-3 md:px-xl md:py-md shadow-[0_12px_36px_rgba(0,0,0,0.2)] after:absolute after:left-0 after:right-0 after:-bottom-5 after:h-5 after:bg-background/25 after:backdrop-blur-lg after:pointer-events-none after:content-['']">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 min-w-0">
         <div className="order-1 flex items-start sm:items-center justify-between gap-md min-w-0">
           <div className="flex items-center gap-3 min-w-0">
