@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS public.profiles CASCADE;
 -- 0.5 PERFIS DE USUÁRIO
 CREATE TABLE public.profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+    email TEXT,
     first_name TEXT,
     last_name TEXT,
     avatar_url TEXT,
@@ -28,8 +29,8 @@ CREATE TABLE public.profiles (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, first_name)
-  VALUES (new.id, new.raw_user_meta_data->>'first_name');
+  INSERT INTO public.profiles (id, email, first_name)
+  VALUES (new.id, new.email, new.raw_user_meta_data->>'first_name');
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -40,8 +41,8 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- Garante que os usuários antigos (já existentes no auth.users) tenham um perfil
-INSERT INTO public.profiles (id)
-SELECT id FROM auth.users
+INSERT INTO public.profiles (id, email)
+SELECT id, email FROM auth.users
 ON CONFLICT (id) DO NOTHING;
 
 

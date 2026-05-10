@@ -7,11 +7,13 @@ interface BalanceEvolutionChartProps {
 
 export function BalanceEvolutionChart({ data }: BalanceEvolutionChartProps) {
   return (
-    <div className="glass-card rounded-xl p-lg lg:col-span-2 flex flex-col h-full min-h-[300px]">
-      <h3 className="font-h2 text-[24px] font-semibold text-on-background mb-md">Evolução do saldo</h3>
-      <div className="flex-1 w-full h-[250px] relative">
+    <div className="glass-card rounded-xl p-md sm:p-lg lg:col-span-2 flex flex-col h-full min-h-[260px] sm:min-h-[300px] min-w-0">
+      <div className="flex items-start justify-between gap-md mb-md">
+        <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-background">Evolução do saldo</h3>
+      </div>
+      <div className="flex-1 w-full h-[200px] min-[390px]:h-[220px] sm:h-[250px] relative min-w-0">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 10, right: 8, left: -32, bottom: 0 }}>
             <defs>
               <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#00e676" stopOpacity={0.3}/>
@@ -19,7 +21,7 @@ export function BalanceEvolutionChart({ data }: BalanceEvolutionChartProps) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3b4a3d" opacity={0.5} />
-            <XAxis dataKey="label" stroke="#94A3B8" fontSize={12} tickLine={false} axisLine={false} />
+            <XAxis dataKey="label" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} interval="preserveStartEnd" />
             <Tooltip 
               contentStyle={{ backgroundColor: '#111827', borderColor: '#243041', borderRadius: '8px' }}
               itemStyle={{ color: '#00e676', fontWeight: 'bold' }}

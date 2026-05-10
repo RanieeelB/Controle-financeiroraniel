@@ -59,13 +59,13 @@ export function Investments() {
   if (investments.length === 0) {
     return (
       <>
-        <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
+        <div className="flex flex-col items-center justify-center min-h-[360px] sm:min-h-[400px] text-on-surface-variant gap-md px-4 text-center">
           <div className="bg-surface-variant p-lg rounded-full"><Wallet size={48} className="text-primary" /></div>
-          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhum investimento cadastrado</h2>
+          <h2 className="font-h1 text-[24px] sm:text-[32px] font-semibold text-on-surface">Nenhum investimento cadastrado</h2>
           <p className="font-body-md text-[16px] max-w-[28rem] text-center">Adicione investimentos e caixinhas para acompanhar seu patrimônio.</p>
           <button
             onClick={() => setIsInvestmentModalOpen(true)}
-            className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+            className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center justify-center gap-sm min-h-11 w-full sm:w-auto"
           >
             <Plus size={18} />Novo investimento
           </button>
@@ -76,21 +76,21 @@ export function Investments() {
   }
 
   return (
-    <div className="space-y-xl">
+    <div className="space-y-lg lg:space-y-xl min-w-0">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-md">
-        <div>
-          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Investimentos e caixinhas</h2>
+        <div className="min-w-0">
+          <h2 className="font-h1 text-[24px] sm:text-[32px] font-semibold text-on-surface">Investimentos e caixinhas</h2>
           <p className="text-on-surface-variant mt-xs">Acompanhe o saldo guardado e registre seus aportes mensais.</p>
         </div>
         <button
           onClick={() => setIsInvestmentModalOpen(true)}
-          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center justify-center gap-sm min-h-11 w-full md:w-auto"
         >
           <Plus size={18} />Novo investimento
         </button>
       </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-lg">
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-sm sm:gap-lg">
         <SummaryCard title="Saldo guardado" value={`R$ ${fmt(totalCurrentValue)}`} icon={Wallet} tone="primary" />
         <SummaryCard title="Total aportado" value={`R$ ${fmt(totalInvested)}`} icon={ArrowDownToLine} tone="secondary" />
         <SummaryCard title="Retorno" value={`${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`} icon={LineChart} tone={totalReturn >= 0 ? 'primary' : 'error'} />
@@ -105,21 +105,21 @@ export function Investments() {
           const color = catColors[investment.category];
 
           return (
-            <article key={investment.id} className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden">
+            <article key={investment.id} className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden min-w-0">
               <div className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: color }}></div>
-              <div className="flex justify-between gap-md items-start mb-lg">
-                <div className="flex items-start gap-md">
-                  <div className="w-12 h-12 rounded-lg border border-outline-variant flex items-center justify-center" style={{ backgroundColor: `${color}20`, color }}>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-md sm:items-start mb-lg min-w-0">
+                <div className="flex items-start gap-md min-w-0">
+                  <div className="w-12 h-12 rounded-lg border border-outline-variant flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}20`, color }}>
                     <Icon size={22} />
                   </div>
-                  <div>
-                    <h3 className="font-h2 text-[24px] font-semibold text-on-surface">{investment.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface truncate">{investment.name}</h3>
                     <p className="text-[14px] text-on-surface-variant">{catLabels[investment.category]}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setDepositInvestment(investment)}
-                  className="shrink-0 font-label-md text-[13px] font-semibold bg-primary text-on-primary px-md py-sm rounded-lg hover:bg-primary-fixed transition-all flex items-center gap-xs"
+                  className="shrink-0 font-label-md text-[13px] font-semibold bg-primary text-on-primary px-md py-sm rounded-lg hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs min-h-11 w-full sm:w-auto"
                 >
                   <Plus size={16} />Adicionar valor
                 </button>
@@ -132,10 +132,10 @@ export function Investments() {
               </div>
 
               <div className="bg-background/50 border border-outline-variant rounded-lg p-md">
-                <div className="flex justify-between items-center mb-md">
+                <div className="flex flex-col min-[390px]:flex-row min-[390px]:justify-between min-[390px]:items-center gap-xs mb-md">
                   <h4 className="font-label-md text-[13px] font-semibold text-on-surface-variant uppercase tracking-wider">Histórico de aportes</h4>
                   {lastDeposit && (
-                    <span className="text-[12px] text-on-surface-variant">
+                    <span className="text-[12px] text-on-surface-variant shrink-0">
                       Último: {new Date(`${lastDeposit.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                     </span>
                   )}
@@ -145,14 +145,14 @@ export function Investments() {
                 ) : (
                   <ul className="space-y-sm">
                     {investmentDeposits.slice(0, 4).map(deposit => (
-                      <li key={deposit.id} className="flex justify-between items-center border-b border-outline-variant/40 pb-sm last:border-0 last:pb-0">
-                        <div>
+                      <li key={deposit.id} className="flex justify-between items-center gap-md border-b border-outline-variant/40 pb-sm last:border-0 last:pb-0 min-w-0">
+                        <div className="min-w-0">
                           <p className="text-on-surface">R$ {fmt(deposit.amount)}</p>
                           <p className="text-[12px] text-on-surface-variant">
                             {new Date(`${deposit.date}T00:00:00`).toLocaleDateString('pt-BR')}
                           </p>
                         </div>
-                        <div className="flex items-center gap-sm">
+                        <div className="flex items-center gap-sm shrink-0">
                           <span className="text-primary font-label-md text-[13px] font-semibold">Guardado</span>
                           <RecordActionsMenu
                             label={`aporte de ${investment.name}`}
@@ -195,21 +195,21 @@ function SummaryCard({ title, value, icon: Icon, tone }: { title: string; value:
   };
 
   return (
-    <div className="bg-surface-container border border-outline-variant rounded-xl p-lg">
+    <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg min-w-0">
       <div className="flex justify-between items-start mb-md">
         <span className="text-on-surface-variant">{title}</span>
         <div className={`p-sm rounded-md border ${tones[tone]}`}><Icon size={20} /></div>
       </div>
-      <p className="font-numeral-lg text-[28px] font-semibold text-on-surface">{value}</p>
+      <p className="font-numeral-lg text-[22px] sm:text-[28px] font-semibold text-on-surface break-words">{value}</p>
     </div>
   );
 }
 
 function Metric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="bg-background/50 border border-outline-variant rounded-lg p-md">
+    <div className="bg-background/50 border border-outline-variant rounded-lg p-md min-w-0">
       <p className="text-[12px] text-on-surface-variant mb-xs uppercase tracking-wider">{label}</p>
-      <p className={`font-numeral-lg text-[18px] font-semibold ${highlight ? 'text-primary' : 'text-on-surface'}`}>{value}</p>
+      <p className={`font-numeral-lg text-[16px] sm:text-[18px] font-semibold break-words ${highlight ? 'text-primary' : 'text-on-surface'}`}>{value}</p>
     </div>
   );
 }

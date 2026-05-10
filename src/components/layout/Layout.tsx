@@ -17,6 +17,7 @@ export interface LayoutContext {
 export function Layout() {
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState(false);
   const [isPjTaxesModalOpen, setIsPjTaxesModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const location = useLocation();
 
@@ -45,10 +46,20 @@ export function Layout() {
   };
 
   return (
-    <div className="bg-background text-on-background font-body-md min-h-screen flex selection:bg-primary-container selection:text-on-primary-container relative">
-      <AppSidebar />
+    <div className="bg-background text-on-background font-body-md min-h-[100dvh] flex selection:bg-primary-container selection:text-on-primary-container relative overflow-x-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
       
-      <main className="flex-1 ml-64 min-h-screen bg-background relative flex flex-col">
+      <div className={`fixed inset-y-0 left-0 z-50 transform lg:transform-none lg:relative transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <AppSidebar onCloseMobile={() => setIsMobileMenuOpen(false)} />
+      </div>
+      
+      <main className="flex-1 w-full min-w-0 min-h-[100dvh] bg-background relative flex flex-col">
         {/* Abstract Background Glow */}
         <div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-primary/5 to-transparent pointer-events-none z-0"></div>
         
@@ -59,9 +70,10 @@ export function Layout() {
           onNextMonth={handleNextMonth}
           onOpenNewTransaction={() => setIsNewTransactionModalOpen(true)}
           onOpenPjTaxes={() => setIsPjTaxesModalOpen(true)}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
         />
 
-        <div className="flex-1 p-xl max-w-[1440px] w-full mx-auto space-y-xl relative z-10">
+        <div className="flex-1 px-4 py-lg sm:px-6 sm:py-xl lg:px-xl lg:py-xl max-w-[1440px] w-full mx-auto space-y-lg lg:space-y-xl relative z-10 min-w-0">
           <Outlet context={{ selectedMonthRange } satisfies LayoutContext} />
         </div>
       </main>

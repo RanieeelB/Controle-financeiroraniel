@@ -37,13 +37,13 @@ export function Cards() {
   if (cards.length === 0) {
     return (
       <>
-        <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
+        <div className="flex flex-col items-center justify-center min-h-[360px] sm:min-h-[400px] text-on-surface-variant gap-md px-4 text-center">
           <div className="bg-surface-variant p-lg rounded-full"><CreditCardIcon size={48} className="text-primary" /></div>
-          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhum cartão cadastrado</h2>
+          <h2 className="font-h1 text-[24px] sm:text-[32px] font-semibold text-on-surface">Nenhum cartão cadastrado</h2>
           <p className="font-body-md text-[16px] max-w-[28rem] text-center">Adicione seu primeiro cartão para começar a gerenciar suas faturas.</p>
           <button
             onClick={openCreateModal}
-            className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+            className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center justify-center gap-sm min-h-11 w-full sm:w-auto"
           >
             <Plus size={18} />Adicionar cartão
           </button>
@@ -60,27 +60,27 @@ export function Cards() {
   }
 
   return (
-    <div className="space-y-lg">
+    <div className="space-y-lg min-w-0">
       <div className="flex justify-end">
         <button
           onClick={openCreateModal}
-          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center justify-center gap-sm min-h-11 w-full sm:w-auto"
         >
           <Plus size={18} />Adicionar cartão
         </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-xl w-full">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-lg xl:gap-xl w-full min-w-0">
         {cards.map(card => {
           const cardTotal = getCardTotal(card.id);
           const items = getCardItems(card.id);
           const recentItems = items.slice(0, 3);
 
           return (
-            <section key={card.id} className="flex flex-col gap-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-h2 text-[24px] font-semibold text-on-surface flex items-center gap-sm">
+            <section key={card.id} className="flex flex-col gap-lg min-w-0">
+              <div className="flex items-center justify-between gap-md min-w-0">
+                <div className="min-w-0">
+                  <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface flex items-center gap-sm min-w-0">
                     <span className="w-3 h-3 rounded-full" style={{ backgroundColor: card.color }}></span> {card.name}
                   </h3>
                   <p className="text-[13px] text-on-surface-variant mt-1">Vence todo dia {card.due_day}</p>
@@ -95,7 +95,7 @@ export function Cards() {
               </div>
             
               {/* Credit Card Visual */}
-              <div className="relative w-full h-56 rounded-xl p-lg flex flex-col justify-between border overflow-hidden"
+              <div className="relative w-full h-48 sm:h-56 rounded-xl p-md sm:p-lg flex flex-col justify-between border overflow-hidden"
                 style={{ 
                   background: `linear-gradient(135deg, ${card.color}40, ${card.color}90)`,
                   borderColor: `${card.color}50`,
@@ -103,25 +103,25 @@ export function Cards() {
                 }}>
                 <div className="relative z-10 flex justify-between items-start">
                   <Nfc className="text-white/80" size={32} />
-                  <span className="font-label-md text-[14px] font-semibold text-white/90 uppercase tracking-widest">{card.brand}</span>
+                  <span className="font-label-md text-[13px] sm:text-[14px] font-semibold text-white/90 uppercase tracking-widest">{card.brand}</span>
                 </div>
                 <div className="relative z-10">
-                  <p className="font-numeral-lg text-[24px] font-medium text-white/90 tracking-[0.2em] mb-xs">•••• •••• •••• {card.last_digits}</p>
-                  <div className="flex justify-between items-end">
-                    <p className="font-label-md text-[14px] font-semibold text-white/70">{card.name}</p>
+                  <p className="font-numeral-lg text-[18px] sm:text-[24px] font-medium text-white/90 tracking-[0.12em] sm:tracking-[0.2em] mb-xs whitespace-nowrap">•••• •••• •••• {card.last_digits}</p>
+                  <div className="flex justify-between items-end gap-md min-w-0">
+                    <p className="font-label-md text-[14px] font-semibold text-white/70 truncate min-w-0">{card.name}</p>
                     <CreditCardIcon className="text-white/80" size={32} />
                   </div>
                 </div>
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-md">
-                <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group" style={{ borderTopColor: card.color }}>
+              <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-sm sm:gap-md">
+                <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group min-w-0" style={{ borderTopColor: card.color }}>
                   <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: card.color }}></div>
                   <p className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-xs">Gasto atual</p>
-                  <p className="font-numeral-lg text-[24px] font-medium text-on-surface">R$ {fmt(cardTotal)}</p>
+                  <p className="font-numeral-lg text-[20px] sm:text-[24px] font-medium text-on-surface break-words">R$ {fmt(cardTotal)}</p>
                 </div>
-                <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group hover:border-primary transition-colors">
+                <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group hover:border-primary transition-colors min-w-0">
                   <div className="absolute top-0 left-0 w-full h-1 bg-primary"></div>
                   <p className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-xs">Compras</p>
                   <p className="font-numeral-lg text-[24px] font-medium text-primary">{items.length}</p>
@@ -129,27 +129,27 @@ export function Cards() {
               </div>
 
               {/* Recent Transactions */}
-              <div className="bg-surface-container-low border border-outline-variant rounded-xl p-lg mt-sm">
+              <div className="bg-surface-container-low border border-outline-variant rounded-xl p-md sm:p-lg mt-sm min-w-0">
                 <h4 className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-md uppercase tracking-wider">Lançamentos Recentes</h4>
                 {recentItems.length === 0 ? (
                   <p className="text-on-surface-variant text-center py-md">Nenhum lançamento neste cartão.</p>
                 ) : (
                   <ul className="flex flex-col gap-sm">
                     {recentItems.map(item => (
-                      <li key={item.id} className="flex justify-between items-center py-xs border-b border-outline-variant/50 last:border-0">
-                        <div className="flex items-center gap-md">
-                          <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                      <li key={item.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-sm py-xs border-b border-outline-variant/50 last:border-0 min-w-0">
+                        <div className="flex items-center gap-md min-w-0">
+                          <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant shrink-0">
                             <ShoppingBag size={18} />
                           </div>
-                          <div>
-                            <p className="font-body-md text-[16px] text-on-surface">{item.description}</p>
-                            <p className="font-label-md text-[14px] font-semibold text-on-surface-variant">
+                          <div className="min-w-0">
+                            <p className="font-body-md text-[16px] text-on-surface truncate">{item.description}</p>
+                            <p className="font-label-md text-[13px] sm:text-[14px] font-semibold text-on-surface-variant break-words">
                               {item.category?.name || 'Sem categoria'} • {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                               {item.total_installments > 1 && ` • ${item.current_installment}/${item.total_installments}`}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-sm">
+                        <div className="flex items-center justify-end gap-sm">
                           <span className="font-numeral-lg text-[16px] font-medium text-on-surface">R$ {fmt(item.amount)}</span>
                           <RecordActionsMenu
                             label={item.description}

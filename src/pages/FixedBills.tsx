@@ -45,42 +45,88 @@ export function FixedBills() {
   }
 
   return (
-    <div className="space-y-xl">
+    <div className="space-y-lg lg:space-y-xl min-w-0">
       <div className="flex justify-end">
         <button
           onClick={() => setIsFixedBillModalOpen(true)}
-          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center justify-center gap-sm min-h-11 w-full sm:w-auto"
         >
           <Plus size={18} />Nova Conta Fixa
         </button>
       </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-        <div className="bg-surface-container border border-outline-variant rounded-lg p-lg relative overflow-hidden group">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-sm sm:gap-lg">
+        <div className="bg-surface-container border border-outline-variant rounded-lg p-md sm:p-lg relative overflow-hidden group min-w-0 sm:col-span-2 lg:col-span-1">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-primary"></div>
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Total Mensal</span><Landmark className="text-primary" size={24} /></div>
-          <span className="font-numeral-lg text-[32px] text-on-surface">R$ {fmt(totals.total)}</span>
+          <span className="font-numeral-lg text-[24px] min-[390px]:text-[28px] sm:text-[32px] text-on-surface break-words">R$ {fmt(totals.total)}</span>
         </div>
-        <div className="bg-surface-container border border-outline-variant rounded-lg p-lg">
+        <div className="bg-surface-container border border-outline-variant rounded-lg p-md sm:p-lg min-w-0">
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Contas Pagas</span><CheckCircle2 className="text-secondary" size={24} /></div>
-          <span className="font-numeral-lg text-[32px] text-on-surface">R$ {fmt(totals.paid)}</span>
+          <span className="font-numeral-lg text-[24px] min-[390px]:text-[28px] sm:text-[32px] text-on-surface break-words">R$ {fmt(totals.paid)}</span>
           <div className="w-full bg-surface-variant rounded-full h-1.5 mt-md overflow-hidden"><div className="bg-secondary h-full rounded-full" style={{ width: `${paidPct}%` }}></div></div>
           <div className="flex justify-between mt-xs"><span className="text-[12px] text-on-surface-variant">{totals.paidCount} de {totals.count} contas</span><span className="text-[12px] text-secondary">{paidPct}%</span></div>
         </div>
-        <div className="bg-surface-container border border-outline-variant rounded-lg p-lg">
+        <div className="bg-surface-container border border-outline-variant rounded-lg p-md sm:p-lg min-w-0">
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Pendente</span><Clock className="text-tertiary-container" size={24} /></div>
-          <span className="font-numeral-lg text-[32px] text-on-surface">R$ {fmt(totals.pending)}</span>
+          <span className="font-numeral-lg text-[24px] min-[390px]:text-[28px] sm:text-[32px] text-on-surface break-words">R$ {fmt(totals.pending)}</span>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-xl">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-lg lg:gap-xl min-w-0">
         <div className="lg:col-span-2 bg-surface-container border border-outline-variant rounded-lg overflow-hidden">
-          <div className="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-high/50">
+          <div className="px-md sm:px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-high/50">
             <h3 className="font-h2 text-[18px] font-semibold text-on-surface">Detalhamento</h3>
             <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button></div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="md:hidden p-md space-y-sm">
+            {bills.length === 0 ? (
+              <div className="flex flex-col items-center gap-md py-xl text-center text-on-surface-variant">
+                <Inbox size={40} className="text-outline-variant" />
+                <p>Nenhuma conta fixa cadastrada.</p>
+              </div>
+            ) : bills.map(b => (
+              <article key={b.id} className={`bg-surface border border-outline-variant/50 rounded-xl p-md min-w-0 ${b.dynamicStatus === 'atrasado' ? 'bg-error-container/5 border-error/40' : ''}`}>
+                <div className="flex items-start justify-between gap-md">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-medium text-on-surface truncate">{b.description}</p>
+                    <p className={`text-[12px] mt-1 ${b.dynamicStatus === 'atrasado' ? 'text-error' : 'text-on-surface-variant'}`}>
+                      Dia {b.due_day}{b.dynamicStatus === 'atrasado' && b.daysOverdue > 0 ? ` • ${b.daysOverdue} dias de atraso` : ''}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => (b.dynamicStatus === 'pago' ? handleReopen(b) : handlePay(b))}
+                    disabled={activeBillAction === b.id}
+                    className={`p-2 rounded-lg transition-all min-h-11 min-w-11 shrink-0 ${
+                      b.dynamicStatus === 'pago'
+                        ? 'text-secondary bg-secondary/10'
+                        : 'text-primary bg-primary/10'
+                    }`}
+                    title={b.dynamicStatus === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta neste mês'}
+                  >
+                    {activeBillAction === b.id ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                    ) : (
+                      b.dynamicStatus === 'pago' ? <RotateCcw size={20} /> : <Check size={20} />
+                    )}
+                  </button>
+                </div>
+                <div className="mt-md flex items-end justify-between gap-md">
+                  <div className="min-w-0">
+                    <p className="text-[12px] text-on-surface-variant truncate">{b.category?.name || 'Sem categoria'}</p>
+                    <span className={`mt-sm inline-flex items-center justify-center font-label-md text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase tracking-wider border ${
+                      b.dynamicStatus === 'pago' ? 'bg-primary-container/20 text-primary border-primary/30' :
+                      b.dynamicStatus === 'atrasado' ? 'bg-error-container text-on-error-container border-error/50' :
+                      'bg-surface-variant text-on-surface border-outline-variant'
+                    }`}>{b.dynamicStatus === 'pago' ? 'Pago' : b.dynamicStatus === 'atrasado' ? 'Atrasado' : 'Pendente'}</span>
+                  </div>
+                  <p className="font-numeral-lg text-[18px] font-semibold text-on-surface text-right shrink-0">R$ {fmt(b.amount)}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left border-collapse">
               <thead><tr className="border-b border-outline-variant text-on-surface-variant font-label-md text-[14px] font-semibold uppercase tracking-wider">
                 <th className="py-md px-lg">Descrição</th><th className="py-md px-lg">Categoria</th><th className="py-md px-lg">Vencimento</th><th className="py-md px-lg text-right">Valor</th><th className="py-md px-lg text-center">Status</th><th className="py-md px-lg text-center">Ação</th>
               </tr></thead>
@@ -130,14 +176,14 @@ export function FixedBills() {
           </div>
         </div>
 
-        <div className="bg-surface-container border border-outline-variant rounded-lg p-lg flex flex-col">
+        <div className="bg-surface-container border border-outline-variant rounded-lg p-md sm:p-lg flex flex-col min-w-0">
           <div className="flex justify-between items-center mb-xl"><h3 className="font-h2 text-[18px] font-semibold text-on-surface">Distribuição</h3><PieChart className="text-on-surface-variant" size={24} /></div>
           <div className="flex-grow flex flex-col gap-lg justify-center">
             {categoryBreakdown.length === 0 ? <p className="text-on-surface-variant text-center">Sem dados.</p> : categoryBreakdown.map((cat, i) => (
               <div key={cat.name}>
                 <div className="flex justify-between items-end mb-xs">
-                  <div className="flex items-center gap-sm"><div className={`w-3 h-3 rounded-sm ${colors[i % colors.length]}`}></div><span className="text-on-surface">{cat.name}</span></div>
-                  <span className="text-[14px] text-on-surface-variant">R$ {fmt(cat.amount)} ({cat.percentage}%)</span>
+                  <div className="flex items-center gap-sm min-w-0"><div className={`w-3 h-3 rounded-sm ${colors[i % colors.length]} shrink-0`}></div><span className="text-on-surface truncate">{cat.name}</span></div>
+                  <span className="text-[14px] text-on-surface-variant shrink-0">R$ {fmt(cat.amount)} ({cat.percentage}%)</span>
                 </div>
                 <div className="w-full h-2 bg-surface-variant rounded-full overflow-hidden"><div className={`h-full ${colors[i % colors.length]} rounded-full`} style={{ width: `${cat.percentage}%` }}></div></div>
               </div>

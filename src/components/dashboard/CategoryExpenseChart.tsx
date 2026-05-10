@@ -10,8 +10,8 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
   const total = data.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="glass-card rounded-xl p-lg flex flex-col flex-1 h-full min-h-[320px]">
-      <h3 className="font-h2 text-[24px] font-semibold text-on-background w-full text-left mb-md">Gastos por categoria</h3>
+    <div className="glass-card rounded-xl p-md sm:p-lg flex flex-col overflow-hidden min-w-0">
+      <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-background mb-md">Gastos por categoria</h3>
 
       {data.length === 0 ? (
         <div className="flex-1 min-h-[220px] flex flex-col items-center justify-center gap-md text-center text-on-surface-variant">

@@ -27,7 +27,11 @@ const navItems = [
   { label: 'Configurações', icon: Settings, href: '/configuracoes' },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  onCloseMobile?: () => void;
+}
+
+export function AppSidebar({ onCloseMobile }: AppSidebarProps) {
   const { user } = useAuth();
   const email = user?.email ?? 'sem-email@conta.local';
   const displayName = typeof user?.user_metadata?.name === 'string' && user.user_metadata.name.trim()
@@ -37,7 +41,7 @@ export function AppSidebar() {
   const avatarInitial = displayName.charAt(0).toUpperCase() || 'U';
 
   return (
-    <nav className="bg-surface dark:bg-surface font-body-md text-body-md fixed left-0 top-0 h-screen w-64 border-r border-outline-variant dark:border-outline-variant flex flex-col py-lg px-md z-50">
+    <nav className="bg-surface dark:bg-surface font-body-md text-body-md h-[100dvh] w-[min(18rem,85vw)] lg:w-64 border-r border-outline-variant dark:border-outline-variant flex flex-col py-lg px-md z-50">
       <div className="mb-xl px-sm">
         <h1 className="font-display-lg text-h1 font-bold text-primary dark:text-primary leading-none">
           Saldo Real
@@ -49,7 +53,7 @@ export function AppSidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
-            <NavLink
+            <NavLink onClick={onCloseMobile}
               key={item.label}
               to={item.href}
               className={({ isActive }: { isActive: boolean }) => cn(
@@ -79,9 +83,9 @@ export function AppSidebar() {
               <span className="font-label-md text-[16px] font-semibold text-on-surface">{avatarInitial}</span>
             )}
           </div>
-          <div>
-            <p className="font-label-md text-[14px] font-semibold text-on-background">{displayName}</p>
-            <p className="text-[12px] text-on-surface-variant">{email}</p>
+          <div className="min-w-0">
+            <p className="font-label-md text-[14px] font-semibold text-on-background truncate">{displayName}</p>
+            <p className="text-[12px] text-on-surface-variant truncate">{email}</p>
           </div>
         </div>
       </div>
