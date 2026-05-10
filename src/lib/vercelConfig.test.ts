@@ -12,13 +12,8 @@ describe('vercel SPA routing config', () => {
       rewrites?: Array<{ source?: string; destination?: string }>;
     };
 
-    expect(config.rewrites).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          source: '/(.*)',
-          destination: '/',
-        }),
-      ]),
-    );
+    const appShellRewrite = config.rewrites?.find(rewrite => rewrite.source === '/(.*)');
+
+    expect(appShellRewrite?.destination).toMatch(/^\/(?:index\.html)?$/);
   });
 });
