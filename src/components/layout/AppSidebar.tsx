@@ -1,31 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  ArrowDownToLine,
-  ShoppingCart,
-  CreditCard,
-  ReceiptText,
-  CalendarDays,
-  TrendingUp,
-  Target,
-  BarChart3,
-  Settings
-} from 'lucide-react';
 import { cn } from '../../lib/utils'; // I will create a utils file
 import { useAuth } from '../../hooks/useAuth';
-
-const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
-  { label: 'Entradas', icon: ArrowDownToLine, href: '/entradas' },
-  { label: 'Gastos', icon: ShoppingCart, href: '/gastos' },
-  { label: 'Cartões', icon: CreditCard, href: '/cartoes' },
-  { label: 'Faturas', icon: ReceiptText, href: '/faturas' },
-  { label: 'Contas Fixas', icon: CalendarDays, href: '/contas-fixas' },
-  { label: 'Investimentos', icon: TrendingUp, href: '/investimentos' },
-  { label: 'Metas', icon: Target, href: '/metas' },
-  { label: 'Relatórios', icon: BarChart3, href: '/relatorios' },
-  { label: 'Configurações', icon: Settings, href: '/configuracoes' },
-];
+import { navItems } from './navigationItems';
 
 interface AppSidebarProps {
   onCloseMobile?: () => void;

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { DashboardHeader } from './DashboardHeader';
+import { MobileFloatingNav } from './MobileFloatingNav';
 import { NewTransactionModal } from '../dashboard/NewTransactionModal';
 import { PjTaxesModal } from '../dashboard/PjTaxesModal';
 import { useAutoInvestments } from '../../hooks/useAutoInvestments';
@@ -17,7 +18,6 @@ export interface LayoutContext {
 export function Layout() {
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState(false);
   const [isPjTaxesModalOpen, setIsPjTaxesModalOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedMonthKey, setSelectedMonthKey] = useState(getCurrentMonthKey());
   const location = useLocation();
 
@@ -47,16 +47,8 @@ export function Layout() {
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-[100dvh] flex selection:bg-primary-container selection:text-on-primary-container relative overflow-x-clip">
-      {/* Mobile Sidebar Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-      
-      <div className={`fixed inset-y-0 left-0 z-50 lg:z-30 transform lg:sticky lg:top-0 lg:self-start lg:transform-none transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <AppSidebar onCloseMobile={() => setIsMobileMenuOpen(false)} />
+      <div className="hidden lg:block lg:sticky lg:top-0 lg:z-30 lg:self-start">
+        <AppSidebar />
       </div>
       
       <main className="flex-1 w-full min-w-0 min-h-[100dvh] bg-background relative flex flex-col">
@@ -70,13 +62,14 @@ export function Layout() {
           onNextMonth={handleNextMonth}
           onOpenNewTransaction={() => setIsNewTransactionModalOpen(true)}
           onOpenPjTaxes={() => setIsPjTaxesModalOpen(true)}
-          onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
         />
 
-        <div className="flex-1 px-4 py-lg sm:px-6 sm:py-xl lg:px-xl lg:py-xl max-w-[1440px] w-full mx-auto space-y-lg lg:space-y-xl relative z-10 min-w-0">
+        <div className="flex-1 px-4 pt-lg pb-32 sm:px-6 sm:pt-xl sm:pb-36 lg:px-xl lg:py-xl max-w-[1440px] w-full mx-auto space-y-lg lg:space-y-xl relative z-10 min-w-0">
           <Outlet context={{ selectedMonthRange } satisfies LayoutContext} />
         </div>
       </main>
+
+      <MobileFloatingNav />
 
       <NewTransactionModal 
         isOpen={isNewTransactionModalOpen} 

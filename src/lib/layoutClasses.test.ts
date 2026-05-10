@@ -299,4 +299,20 @@ describe('layout width classes', () => {
     expect(header).toContain('after:absolute');
     expect(header).toContain('after:backdrop-blur-lg');
   });
+
+  it('replaces the mobile hamburger drawer with a futuristic bottom nav', () => {
+    const layout = readFileSync(join(process.cwd(), 'src/components/layout/Layout.tsx'), 'utf8');
+    const header = readFileSync(join(process.cwd(), 'src/components/layout/DashboardHeader.tsx'), 'utf8');
+    const mobileNav = readFileSync(join(process.cwd(), 'src/components/layout/MobileFloatingNav.tsx'), 'utf8');
+
+    expect(layout).toContain('MobileFloatingNav');
+    expect(layout).not.toContain('isMobileMenuOpen');
+    expect(layout).toContain('hidden lg:block');
+    expect(header).not.toContain('Menu');
+    expect(mobileNav).toContain('fixed bottom-4');
+    expect(mobileNav).toContain('backdrop-blur');
+    expect(mobileNav).toContain('shadow-[0_0_28px');
+    expect(mobileNav).toContain('Mais');
+    expect(mobileNav).toContain('lg:hidden');
+  });
 });

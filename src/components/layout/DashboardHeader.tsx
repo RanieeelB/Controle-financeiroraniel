@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, LogOut, Building2, Menu, FileDown, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, Building2, FileDown, Plus } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface DashboardHeaderProps {
@@ -8,7 +8,6 @@ interface DashboardHeaderProps {
   onNextMonth: () => void;
   onOpenNewTransaction: () => void;
   onOpenPjTaxes: () => void;
-  onToggleMobileMenu?: () => void;
 }
 
 export function DashboardHeader({ 
@@ -18,7 +17,6 @@ export function DashboardHeader({
   onNextMonth,
   onOpenNewTransaction,
   onOpenPjTaxes,
-  onToggleMobileMenu
 }: DashboardHeaderProps) {
   const { signOut } = useAuth();
 
@@ -27,15 +25,6 @@ export function DashboardHeader({
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 min-w-0">
         <div className="order-1 flex items-start sm:items-center justify-between gap-md min-w-0">
           <div className="flex items-center gap-3 min-w-0">
-            {onToggleMobileMenu && (
-              <button
-                onClick={onToggleMobileMenu}
-                className="lg:hidden -ml-2 text-on-surface hover:bg-surface-variant rounded-full transition-colors min-h-11 min-w-11 flex items-center justify-center border border-outline-variant/50 bg-surface-container-low/80"
-                aria-label="Abrir menu"
-              >
-                <Menu size={24} />
-              </button>
-            )}
             <div className="min-w-0">
               <p className="hidden sm:block text-[11px] uppercase tracking-wider text-on-surface-variant font-label-md">Saldo Real</p>
               <h2 className="font-h1 text-[22px] sm:text-[24px] md:text-[30px] font-semibold text-on-background leading-tight truncate">{title}</h2>
