@@ -46,7 +46,7 @@ export function Layout() {
   };
 
   return (
-    <div className="bg-background text-on-background font-body-md min-h-[100dvh] flex selection:bg-primary-container selection:text-on-primary-container relative overflow-x-hidden">
+    <div className="bg-background text-on-background font-body-md min-h-[100dvh] flex selection:bg-primary-container selection:text-on-primary-container relative overflow-x-clip">
       {/* Mobile Sidebar Overlay */}
       {isMobileMenuOpen && (
         <div 

@@ -289,10 +289,13 @@ describe('layout width classes', () => {
     const sidebar = readFileSync(join(process.cwd(), 'src/components/layout/AppSidebar.tsx'), 'utf8');
     const header = readFileSync(join(process.cwd(), 'src/components/layout/DashboardHeader.tsx'), 'utf8');
 
+    expect(layout).toContain('overflow-x-clip');
+    expect(layout).not.toContain('overflow-x-hidden');
     expect(layout).toContain('lg:sticky');
     expect(layout).toContain('lg:top-0');
     expect(layout).toContain('lg:z-30');
     expect(sidebar).toContain('lg:h-[100dvh]');
+    expect(header).toContain('sticky top-0');
     expect(header).toContain('after:absolute');
     expect(header).toContain('after:backdrop-blur-lg');
   });
