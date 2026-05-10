@@ -1,4 +1,5 @@
 import {
+  FileDown,
   ArrowDown,
   ArrowUp,
   CreditCard,
@@ -10,19 +11,23 @@ import {
   Wallet,
 } from 'lucide-react';
 import type { ElementType } from 'react';
+import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 import { useFixedBills } from '../hooks/useFixedBills';
 import { useInvestments } from '../hooks/useInvestments';
 import { useTransactions } from '../hooks/useTransactions';
+import { generateMonthlyFinancialReportPdf } from '../services/reportPdfService';
+import { formatMonthLabel } from '../lib/monthSelection';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function Reports() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
+  const [isExporting, setIsExporting] = useState(false);
   const { transactions: allTx, isLoading: transactionsLoading } = useTransactions(undefined, selectedMonthRange);
   const { invoiceItems, cards, isLoading: cardsLoading } = useCreditCards(selectedMonthRange);
-  const { bills, isLoading: billsLoading, totals: billTotals } = useFixedBills();
+  const { bills, isLoading: billsLoading, totals: billTotals } = useFixedBills(selectedMonthRange);
   const { investments, isLoading: investmentsLoading, totalCurrentValue } = useInvestments();
   const { goals, isLoading: goalsLoading, totalTarget, totalSaved, overallProgress } = useFinancialGoals();
 
@@ -33,7 +38,27 @@ export function Reports() {
 
   const income = allTx.filter(t => t.type === 'entrada').reduce((s, t) => s + t.amount, 0);
   const expense = allTx.filter(t => t.type === 'gasto').reduce((s, t) => s + t.amount, 0);
-  const openInvoices = invoiceItems.reduce((s, item) => s + item.amount, 0);
+  const openInvoiceItems = invoiceItems.filter((item) => {
+    const linkedTx = allTx.find(t => t.notes === `invoice_item:${item.id}`);
+    if (linkedTx) {
+      return linkedTx.status !== 'pago';
+    }
+    
+    const signature = `${(item.description || '').trim().toLocaleLowerCase('pt-BR')}|${Number(item.amount).toFixed(2)}|${item.date}`;
+    const fallbackTx = allTx.find(t => {
+      if (t.payment_method !== undefined && t.payment_method !== 'credito') return false;
+      if (!t.description || typeof t.amount !== 'number' || !t.date) return false;
+      const tSig = `${t.description.trim().toLocaleLowerCase('pt-BR')}|${t.amount.toFixed(2)}|${t.date}`;
+      return tSig === signature;
+    });
+    
+    if (fallbackTx) {
+      return fallbackTx.status !== 'pago';
+    }
+    return true;
+  });
+
+  const openInvoices = openInvoiceItems.reduce((s, item) => s + item.amount, 0);
   const operationalBalance = income - expense;
   const analyzedItems = allTx.length + invoiceItems.length + bills.length + investments.length + goals.length;
 
@@ -45,26 +70,80 @@ export function Reports() {
   const topExpenses = [...catMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
   const maxExpense = topExpenses.length > 0 ? topExpenses[0][1] : 1;
 
+  const handleExportPdf = async () => {
+    try {
+      setIsExporting(true);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const monthKey = selectedMonthRange.monthKey;
+      const monthLabel = formatMonthLabel(monthKey);
+      
+      generateMonthlyFinancialReportPdf({
+        monthLabel,
+        income,
+        expense,
+        openInvoices,
+        fixedBillsTotal: billTotals.total,
+        unpaidFixedBills: billTotals.pending,
+        investmentsTotal: totalCurrentValue,
+        operationalBalance,
+        transactions: allTx,
+        invoiceItems: openInvoiceItems,
+        cards,
+        bills,
+        investments,
+        goals
+      });
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      alert('Ocorreu um erro ao gerar o PDF. Tente novamente.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const renderHeader = () => (
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-md min-w-0">
+      <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
+        <button className="px-lg py-sm rounded-md font-label-md text-[14px] font-semibold bg-primary/10 text-primary border border-primary/20 shadow-sm">Resumo Geral</button>
+      </div>
+      <div className="flex items-center gap-sm min-w-0">
+        <div className="flex items-center gap-sm text-on-surface-variant text-[15px] sm:text-[16px]">
+          <Info size={16} /><span>{analyzedItems} itens</span>
+        </div>
+        <button 
+          onClick={handleExportPdf}
+          disabled={isExporting}
+          className="justify-center px-lg py-sm rounded-md font-label-md text-[14px] font-semibold bg-primary text-on-primary hover:bg-primary-fixed transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm min-h-10 sm:min-h-11"
+        >
+          {isExporting ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary"></div>
+          ) : (
+            <FileDown size={18} />
+          )}
+          <span className="hidden sm:inline">{isExporting ? 'Gerando...' : 'Exportar PDF'}</span>
+          <span className="sm:hidden">{isExporting ? '...' : 'PDF'}</span>
+        </button>
+      </div>
+    </div>
+  );
+
   if (analyzedItems === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
-        <div className="bg-surface-variant p-lg rounded-full"><Flame size={48} className="text-primary" /></div>
-        <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Sem dados para relatório</h2>
-        <p className="font-body-md text-[16px] max-w-[28rem] text-center">Cadastre lançamentos, cartões, contas, investimentos ou metas para visualizar seu resumo financeiro.</p>
+      <div className="space-y-lg lg:space-y-xl min-w-0">
+        {renderHeader()}
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
+          <div className="bg-surface-variant p-lg rounded-full"><Flame size={48} className="text-primary" /></div>
+          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Sem dados para relatório</h2>
+          <p className="font-body-md text-[16px] max-w-[28rem] text-center">Cadastre lançamentos, cartões, contas, investimentos ou metas para visualizar seu resumo financeiro.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-lg lg:space-y-xl min-w-0">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-md min-w-0">
-        <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
-          <button className="px-lg py-sm rounded-md font-label-md text-[14px] font-semibold bg-primary/10 text-primary border border-primary/20 shadow-sm">Resumo Geral</button>
-        </div>
-        <div className="flex items-center gap-sm text-on-surface-variant text-[15px] sm:text-[16px] min-w-0">
-          <Info size={16} /><span>{analyzedItems} itens analisados</span>
-        </div>
-      </div>
+      {renderHeader()}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-sm sm:gap-lg">
         <KpiCard title="Receita Total" value={`R$ ${fmt(income)}`} icon={ArrowUp} tone="primary" />
@@ -106,7 +185,7 @@ export function Reports() {
           <div className="flex items-center gap-sm mb-lg"><CreditCard className="text-secondary" size={24} /><h3 className="font-h2 text-[24px] font-semibold text-on-surface">Cartões</h3></div>
           <div className="space-y-md">
             {cards.map(card => {
-              const total = invoiceItems.filter(item => item.card_id === card.id).reduce((sum, item) => sum + item.amount, 0);
+              const total = openInvoiceItems.filter(item => item.card_id === card.id).reduce((sum, item) => sum + item.amount, 0);
               return (
                 <div key={card.id} className="flex justify-between items-center gap-md border-b border-outline-variant/50 pb-sm last:border-0 min-w-0">
                   <div className="min-w-0">
