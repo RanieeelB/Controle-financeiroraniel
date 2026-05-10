@@ -287,7 +287,6 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                   <select
                     value={categoryId}
                     onChange={event => setCategoryId(event.target.value)}
-                    aria-label="Categoria"
                     className="w-full bg-surface border border-outline-variant rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none"
                   >
                     <option value="">Sem categoria</option>
