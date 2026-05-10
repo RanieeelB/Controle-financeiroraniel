@@ -284,6 +284,18 @@ describe('layout width classes', () => {
     expect(invoices).not.toContain('aria-pressed');
   });
 
+  it('opens a per-card invoice modal from each invoice card', () => {
+    const invoices = readFileSync(join(process.cwd(), 'src/pages/Invoices.tsx'), 'utf8');
+
+    expect(invoices).toContain('selectedInvoiceCardId');
+    expect(invoices).toContain('Ver fatura');
+    expect(invoices).toContain('selectedInvoiceCard &&');
+    expect(invoices).toContain('Fatura de {selectedInvoiceCard.name}');
+    expect(invoices).toContain('max-h-[90dvh]');
+    expect(invoices).toContain('overflow-y-auto');
+    expect(invoices).toContain('cardItems.map(item =>');
+  });
+
   it('lets desktop sidebar follow the scroll while header casts a blur below it', () => {
     const layout = readFileSync(join(process.cwd(), 'src/components/layout/Layout.tsx'), 'utf8');
     const sidebar = readFileSync(join(process.cwd(), 'src/components/layout/AppSidebar.tsx'), 'utf8');

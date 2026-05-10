@@ -1,6 +1,7 @@
-import { CreditCard, Plus, ShoppingBag, Filter, Inbox } from 'lucide-react';
+import { CreditCard, Plus, ShoppingBag, Filter, Inbox, Eye, X } from 'lucide-react';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useOutletContext } from 'react-router-dom';
 import { InvoicePurchaseModal } from '../components/finance/FinanceModals';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
@@ -13,6 +14,7 @@ export function Invoices() {
   const { cards, invoiceItems, creditTransactions, isLoading, refetch } = useCreditCards(selectedMonthRange);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [payingCardId, setPayingCardId] = useState<string | null>(null);
+  const [selectedInvoiceCardId, setSelectedInvoiceCardId] = useState<string | null>(null);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
 
@@ -24,6 +26,8 @@ export function Invoices() {
     acc[dateKey].push(item);
     return acc;
   }, {} as Record<string, typeof invoiceItems>);
+  const selectedInvoiceCard = cards.find(card => card.id === selectedInvoiceCardId);
+  const selectedInvoiceState = selectedInvoiceCard ? getCardInvoiceState(selectedInvoiceCard.id) : null;
 
   function getCardInvoiceState(cardId: string) {
     const cardItems = invoiceItems.filter(item => item.card_id === cardId);
@@ -113,14 +117,24 @@ export function Invoices() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => handleToggleInvoicePayment(card.id)}
-                disabled={invoiceAction.disabled}
-                className="px-md py-sm rounded-lg border border-primary/30 text-primary text-[13px] font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-11 w-full md:w-auto"
-              >
-                {invoiceAction.label}
-              </button>
+              <div className="flex flex-col gap-xs w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvoiceCardId(card.id)}
+                  className="px-md py-sm rounded-lg border border-outline-variant bg-surface-container-low text-on-surface text-[13px] font-semibold hover:bg-surface-container-high transition-colors min-h-11 w-full md:w-auto flex items-center justify-center gap-xs"
+                >
+                  <Eye size={16} />
+                  Ver fatura
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleInvoicePayment(card.id)}
+                  disabled={invoiceAction.disabled}
+                  className="px-md py-sm rounded-lg border border-primary/30 text-primary text-[13px] font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-11 w-full md:w-auto"
+                >
+                  {invoiceAction.label}
+                </button>
+              </div>
             </article>
           );
         })}
@@ -188,6 +202,74 @@ export function Invoices() {
           defaultCardId={cards[0]?.id}
           onClose={() => setIsPurchaseModalOpen(false)}
         />
+      )}
+
+      {selectedInvoiceCard && selectedInvoiceState && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-md sm:p-lg">
+          <div className="bg-surface-container border border-outline-variant rounded-2xl shadow-2xl w-full sm:max-w-[680px] max-h-[80dvh] sm:max-h-[90dvh] overflow-y-auto">
+            <div className="sticky top-0 z-10 bg-surface-container/95 backdrop-blur border-b border-outline-variant p-md sm:p-lg flex items-start justify-between gap-md">
+              <div className="min-w-0">
+                <p className="text-[12px] uppercase tracking-wider text-on-surface-variant">Fatura de {selectedInvoiceCard.name}</p>
+                <h3 className="font-h2 text-[22px] font-semibold text-on-surface truncate">R$ {fmt(selectedInvoiceState.cardTotal)}</h3>
+                <p className="text-[13px] text-on-surface-variant">Vence dia {selectedInvoiceCard.due_day} • {selectedInvoiceState.cardItems.length} compra(s)</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedInvoiceCardId(null)}
+                className="rounded-full border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors min-h-10 min-w-10 flex items-center justify-center shrink-0"
+                aria-label="Fechar fatura"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-md sm:p-lg space-y-md">
+              <div className="rounded-2xl border border-outline-variant bg-surface p-md flex items-center justify-between gap-md">
+                <div className="flex items-center gap-sm min-w-0">
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border border-outline-variant" style={{ backgroundColor: `${selectedInvoiceCard.color}25`, color: selectedInvoiceCard.color }}>
+                    <CreditCard size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-on-surface truncate">{selectedInvoiceCard.brand} final {selectedInvoiceCard.last_digits}</p>
+                    <p className="text-[12px] text-on-surface-variant truncate">Limite R$ {fmt(selectedInvoiceCard.credit_limit)}</p>
+                  </div>
+                </div>
+                <span className={`inline-flex text-[10px] font-semibold px-sm py-[2px] rounded-full uppercase border shrink-0 ${
+                  selectedInvoiceState.invoiceStatus === 'paid'
+                    ? 'bg-primary/10 text-primary border-primary/30'
+                    : 'bg-tertiary-container/20 text-tertiary-container border-tertiary-container/30'
+                }`}>
+                  {selectedInvoiceState.invoiceStatus === 'paid' ? 'Paga' : 'Aberta'}
+                </span>
+              </div>
+
+              {selectedInvoiceState.cardItems.length === 0 ? (
+                <div className="flex flex-col items-center py-xl text-on-surface-variant gap-md text-center">
+                  <Inbox size={44} className="text-outline-variant" />
+                  <p>Nenhuma compra registrada nesta fatura.</p>
+                </div>
+              ) : (
+                <div className="space-y-sm">
+                  {selectedInvoiceState.cardItems.map(item => (
+                    <div key={item.id} className="rounded-xl border border-outline-variant/60 bg-surface p-md min-w-0">
+                      <div className="flex items-start justify-between gap-md min-w-0">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-on-surface truncate">{item.description}</p>
+                          <p className="text-[13px] text-on-surface-variant mt-1">
+                            {item.category?.name || 'Sem categoria'} • {new Date(item.date).toLocaleDateString('pt-BR')}
+                            {item.total_installments > 1 && ` • ${item.current_installment}/${item.total_installments}`}
+                          </p>
+                        </div>
+                        <p className="font-numeral-lg text-[16px] text-on-surface shrink-0">R$ {fmt(item.amount)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
