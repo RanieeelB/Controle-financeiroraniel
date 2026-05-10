@@ -338,7 +338,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                         onClick={() => setNewCategoryColor(color)}
                         className={`w-7 h-7 rounded-full border transition-transform ${newCategoryColor === color ? 'border-on-surface scale-110' : 'border-outline-variant'}`}
                         style={{ backgroundColor: color }}
-                        aria-label={`Cor ${color}`}
+                        aria-label={`Selecionar cor ${color}`}
                       />
                     ))}
                   </div>
