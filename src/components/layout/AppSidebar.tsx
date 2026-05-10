@@ -19,10 +19,7 @@ export function AppSidebar({ onCloseMobile }: AppSidebarProps) {
   return (
     <nav className="bg-surface dark:bg-surface font-body-md text-body-md h-[100dvh] lg:h-[100dvh] w-[min(18rem,85vw)] lg:w-64 border-r border-outline-variant dark:border-outline-variant flex flex-col py-lg px-md z-50">
       <div className="mb-xl px-sm">
-        <h1 className="font-display-lg text-h1 font-bold text-primary dark:text-primary leading-none">
-          Saldo Real
-        </h1>
-        <p className="text-on-surface-variant text-sm mt-xs">Wealth Management</p>
+        <img src="/logo-principal.png" alt="Saldo Real" className="h-12 w-auto object-contain" />
       </div>
 
       <div className="flex-1 space-y-xs overflow-y-auto">
@@ -68,3 +65,4 @@ export function AppSidebar({ onCloseMobile }: AppSidebarProps) {
     </nav>
   );
 }
+
