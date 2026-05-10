@@ -70,7 +70,7 @@ export function Cards() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-lg xl:gap-xl w-full min-w-0">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-md sm:gap-lg xl:gap-xl w-full min-w-0">
         {cards.map(card => {
           const cardTotal = getCardTotal(card.id);
           const items = getCardItems(card.id);
@@ -95,7 +95,7 @@ export function Cards() {
               </div>
             
               {/* Credit Card Visual */}
-              <div className="relative w-full h-48 sm:h-56 rounded-xl p-md sm:p-lg flex flex-col justify-between border overflow-hidden"
+              <div className="relative w-full h-44 sm:h-56 rounded-xl p-md sm:p-lg flex flex-col justify-between border overflow-hidden"
                 style={{ 
                   background: `linear-gradient(135deg, ${card.color}40, ${card.color}90)`,
                   borderColor: `${card.color}50`,
@@ -104,6 +104,10 @@ export function Cards() {
                 <div className="relative z-10 flex justify-between items-start">
                   <Nfc className="text-white/80" size={32} />
                   <span className="font-label-md text-[13px] sm:text-[14px] font-semibold text-white/90 uppercase tracking-widest">{card.brand}</span>
+                </div>
+                <div className="md:hidden relative z-10 rounded-2xl border border-white/15 bg-black/15 px-md py-sm backdrop-blur-sm">
+                  <p className="text-[11px] uppercase tracking-wider text-white/70">Fatura atual</p>
+                  <p className="font-numeral-lg text-[24px] font-bold text-white leading-tight">R$ {fmt(cardTotal)}</p>
                 </div>
                 <div className="relative z-10">
                   <p className="font-numeral-lg text-[18px] sm:text-[24px] font-medium text-white/90 tracking-[0.12em] sm:tracking-[0.2em] mb-xs whitespace-nowrap">•••• •••• •••• {card.last_digits}</p>
@@ -115,10 +119,10 @@ export function Cards() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-sm sm:gap-md">
+              <div className="hidden md:grid grid-cols-1 min-[390px]:grid-cols-2 gap-sm sm:gap-md">
                 <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group min-w-0" style={{ borderTopColor: card.color }}>
                   <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: card.color }}></div>
-                  <p className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-xs">Gasto atual</p>
+                  <p className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-xs">Fatura atual</p>
                   <p className="font-numeral-lg text-[20px] sm:text-[24px] font-medium text-on-surface break-words">R$ {fmt(cardTotal)}</p>
                 </div>
                 <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group hover:border-primary transition-colors min-w-0">
@@ -129,7 +133,7 @@ export function Cards() {
               </div>
 
               {/* Recent Transactions */}
-              <div className="bg-surface-container-low border border-outline-variant rounded-xl p-md sm:p-lg mt-sm min-w-0">
+              <div className="hidden md:block bg-surface-container-low border border-outline-variant rounded-xl p-md sm:p-lg mt-sm min-w-0">
                 <h4 className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-md uppercase tracking-wider">Lançamentos Recentes</h4>
                 {recentItems.length === 0 ? (
                   <p className="text-on-surface-variant text-center py-md">Nenhum lançamento neste cartão.</p>

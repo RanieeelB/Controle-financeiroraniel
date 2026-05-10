@@ -11,38 +11,41 @@ import type { LayoutContext } from '../components/layout/Layout';
 export function Invoices() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const { cards, invoiceItems, creditTransactions, isLoading, refetch } = useCreditCards(selectedMonthRange);
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-  const [isPayingInvoice, setIsPayingInvoice] = useState(false);
+  const [payingCardId, setPayingCardId] = useState<string | null>(null);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-  const activeCard = selectedCardId ? cards.find(c => c.id === selectedCardId) : cards[0];
-  const filteredItems = activeCard ? invoiceItems.filter(i => i.card_id === activeCard.id) : invoiceItems;
-  const cardTotal = filteredItems.reduce((s, i) => s + i.amount, 0);
-  const available = activeCard ? activeCard.credit_limit - cardTotal : 0;
-  const invoiceStatus = getInvoicePaymentStatus(filteredItems, creditTransactions);
-  const payableTransactionIds = getPayableInvoiceTransactionIds(filteredItems, creditTransactions);
-  const paidTransactionIds = getPaidInvoiceTransactionIds(filteredItems, creditTransactions);
-  const invoiceAction = getInvoiceActionState({
-    invoiceStatus,
-    payableTransactionIds,
-    paidTransactionIds,
-    isPayingInvoice,
-  });
 
-  const grouped = filteredItems.reduce((acc, item) => {
+  const grouped = invoiceItems.reduce((acc, item) => {
     const dateKey = new Date(item.date).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
     if (!acc[dateKey]) acc[dateKey] = [];
     acc[dateKey].push(item);
     return acc;
-  }, {} as Record<string, typeof filteredItems>);
+  }, {} as Record<string, typeof invoiceItems>);
 
-  async function handleToggleInvoicePayment() {
+  function getCardInvoiceState(cardId: string) {
+    const cardItems = invoiceItems.filter(item => item.card_id === cardId);
+    const invoiceStatus = getInvoicePaymentStatus(cardItems, creditTransactions);
+    const payableTransactionIds = getPayableInvoiceTransactionIds(cardItems, creditTransactions);
+    const paidTransactionIds = getPaidInvoiceTransactionIds(cardItems, creditTransactions);
+    const invoiceAction = getInvoiceActionState({
+      invoiceStatus,
+      payableTransactionIds,
+      paidTransactionIds,
+      isPayingInvoice: payingCardId === cardId,
+    });
+    const cardTotal = cardItems.reduce((sum, item) => sum + item.amount, 0);
+
+    return { cardItems, invoiceStatus, payableTransactionIds, paidTransactionIds, invoiceAction, cardTotal };
+  }
+
+  async function handleToggleInvoicePayment(cardId: string) {
+    const { invoiceAction, payableTransactionIds, paidTransactionIds } = getCardInvoiceState(cardId);
     if (invoiceAction.action === 'none') return;
 
-    setIsPayingInvoice(true);
+    setPayingCardId(cardId);
     try {
       if (invoiceAction.action === 'reopen') {
         await reopenCreditInvoiceTransactions(paidTransactionIds);
@@ -56,22 +59,16 @@ export function Invoices() {
         ? 'Não foi possível reabrir a fatura.'
         : 'Não foi possível marcar a fatura como paga.');
     } finally {
-      setIsPayingInvoice(false);
+      setPayingCardId(null);
     }
   }
 
   return (
     <div className="space-y-lg lg:space-y-xl min-w-0">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
-        <div className="flex gap-sm sm:gap-md bg-surface-container rounded-lg p-1 border border-outline-variant overflow-x-auto max-w-full w-full sm:w-auto">
-          {cards.map(card => (
-            <button key={card.id} onClick={() => setSelectedCardId(card.id)}
-              className={`px-md sm:px-lg py-sm rounded-md font-label-md text-[14px] font-semibold flex items-center gap-sm transition-colors shrink-0 ${activeCard?.id === card.id ? 'border shadow-sm' : 'text-on-surface-variant'}`}
-              style={activeCard?.id === card.id ? { backgroundColor: `${card.color}30`, color: card.color, borderColor: `${card.color}50` } : {}}>
-              <CreditCard size={16} /> {card.name}
-            </button>
-          ))}
-          {cards.length === 0 && <span className="px-lg py-sm text-on-surface-variant text-sm">Nenhum cartão</span>}
+        <div className="min-w-0">
+          <h2 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface">Faturas por cartão</h2>
+          <p className="text-[14px] text-on-surface-variant">Cartão | Fatura e vencimento | Ação</p>
         </div>
         <button
           onClick={() => setIsPurchaseModalOpen(true)}
@@ -81,41 +78,58 @@ export function Invoices() {
         </button>
       </div>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-sm sm:gap-lg">
-        <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden min-w-0 sm:col-span-2 lg:col-span-1">
-          <div className="absolute top-0 left-0 w-full h-[2px]" style={{ backgroundColor: activeCard?.color }}></div>
-          <div className="flex justify-between items-start mb-md">
-            <span className="text-on-surface-variant">Fatura Atual</span>
-            <span className={`inline-flex text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase border ${
-              invoiceStatus === 'paid'
-                ? 'bg-primary/10 text-primary border-primary/30'
-                : 'bg-tertiary-container/20 text-tertiary-container border-tertiary-container/30'
-            }`}>
-              {invoiceStatus === 'paid' ? 'Paga' : 'Aberta'}
-            </span>
+      <section className="space-y-sm">
+        {cards.map(card => {
+          const { cardItems, invoiceStatus, invoiceAction, cardTotal } = getCardInvoiceState(card.id);
+          const limitUsed = card.credit_limit > 0 ? Math.min(100, Math.round((cardTotal / card.credit_limit) * 100)) : 0;
+
+          return (
+            <article key={card.id} className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] gap-sm md:items-center bg-surface-container border border-outline-variant rounded-xl p-md min-w-0 overflow-hidden">
+              <div className="flex items-center gap-sm min-w-0">
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border border-outline-variant" style={{ backgroundColor: `${card.color}25`, color: card.color }}>
+                  <CreditCard size={18} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-on-surface truncate">{card.name}</p>
+                  <p className="text-[12px] text-on-surface-variant truncate">{card.brand} final {card.last_digits}</p>
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wider text-on-surface-variant">Fatura e vencimento</p>
+                <div className="flex items-end justify-between gap-md mt-xs">
+                  <p className="font-numeral-lg text-[22px] sm:text-[24px] font-semibold text-on-surface break-words">R$ {fmt(cardTotal)}</p>
+                  <span className={`inline-flex text-[10px] font-semibold px-sm py-[2px] rounded-full uppercase border shrink-0 ${
+                    invoiceStatus === 'paid'
+                      ? 'bg-primary/10 text-primary border-primary/30'
+                      : 'bg-tertiary-container/20 text-tertiary-container border-tertiary-container/30'
+                  }`}>
+                    {invoiceStatus === 'paid' ? 'Paga' : 'Aberta'}
+                  </span>
+                </div>
+                <p className="text-[12px] text-on-surface-variant mt-xs">Vence dia {card.due_day} • {cardItems.length} compra(s)</p>
+                <div className="w-full bg-surface-variant rounded-full h-1.5 mt-sm overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${limitUsed}%`, backgroundColor: card.color }}></div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleToggleInvoicePayment(card.id)}
+                disabled={invoiceAction.disabled}
+                className="px-md py-sm rounded-lg border border-primary/30 text-primary text-[13px] font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-11 w-full md:w-auto"
+              >
+                {invoiceAction.label}
+              </button>
+            </article>
+          );
+        })}
+
+        {cards.length === 0 && (
+          <div className="bg-surface-container border border-outline-variant rounded-xl p-lg text-center text-on-surface-variant">
+            Nenhum cartão cadastrado.
           </div>
-          <span className="font-numeral-lg text-[30px] sm:text-[36px] font-bold text-on-surface break-words">R$ {fmt(cardTotal)}</span>
-          {activeCard && <p className="text-[13px] text-on-surface-variant mt-sm">Vence todo dia {activeCard.due_day}</p>}
-          <button
-            type="button"
-            onClick={handleToggleInvoicePayment}
-            disabled={invoiceAction.disabled}
-            className="mt-md px-md py-sm rounded-lg border border-primary/30 text-primary text-[13px] font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-11 w-full sm:w-auto"
-          >
-            {invoiceAction.label}
-          </button>
-        </div>
-        <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden hover:border-primary/50 transition-colors min-w-0">
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/30"></div>
-          <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Limite Disponível</span><CreditCard className="text-primary" size={24} /></div>
-          <span className="font-numeral-lg text-[24px] min-[390px]:text-[28px] sm:text-[32px] text-on-surface break-words">R$ {fmt(available)}</span>
-          {activeCard && <div className="w-full bg-surface-variant rounded-full h-1.5 mt-md overflow-hidden"><div className="h-full rounded-full" style={{ width: `${activeCard.credit_limit > 0 ? Math.round((cardTotal / activeCard.credit_limit) * 100) : 0}%`, backgroundColor: activeCard.color }}></div></div>}
-        </div>
-        <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg min-w-0">
-          <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Itens na fatura</span><ShoppingBag className="text-tertiary-container" size={24} /></div>
-          <span className="font-numeral-lg text-[32px] text-on-surface">{filteredItems.length}</span>
-          <p className="text-[14px] text-on-surface-variant mt-sm">{filteredItems.filter(i => i.total_installments > 1).length} parcelados</p>
-        </div>
+        )}
       </section>
 
       <section className="bg-surface-container border border-outline-variant rounded-xl overflow-hidden">
@@ -124,7 +138,7 @@ export function Invoices() {
           <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button></div>
         </div>
         <div className="p-md sm:p-lg">
-          {filteredItems.length === 0 ? (
+          {invoiceItems.length === 0 ? (
             <div className="flex flex-col items-center py-xl text-on-surface-variant gap-md"><Inbox size={48} className="text-outline-variant" /><p>Nenhuma compra registrada.</p></div>
           ) : (
             <div className="space-y-md">
@@ -171,7 +185,7 @@ export function Invoices() {
 
       {isPurchaseModalOpen && (
         <InvoicePurchaseModal
-          defaultCardId={activeCard?.id}
+          defaultCardId={cards[0]?.id}
           onClose={() => setIsPurchaseModalOpen(false)}
         />
       )}

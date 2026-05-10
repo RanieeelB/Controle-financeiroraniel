@@ -6,6 +6,7 @@
 - Use Conventional Commits in English.
 - Make small semantic commits after each logical change.
 - Run available validation scripts before committing.
+- Run `npm run android:sync` after each feature that changes the web app so the Android project stays current.
 - Review `git status` and `git diff` before every commit.
 - Do not commit secrets, build artifacts, cache files, `.env`, `node_modules`, `.next`, or `dist`.
 

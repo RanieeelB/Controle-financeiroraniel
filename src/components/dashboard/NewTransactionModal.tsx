@@ -164,7 +164,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-md overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-start sm:items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-md overflow-y-auto">
       <div
         className="w-full max-w-[42rem] max-h-[90dvh] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl overflow-hidden flex flex-col relative"
         style={{ boxShadow: '0 0 40px rgba(117, 255, 158, 0.05)' }}
@@ -287,7 +287,6 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                   <select
                     value={categoryId}
                     onChange={event => setCategoryId(event.target.value)}
-                    aria-label="Categoria"
                     className="w-full bg-surface border border-outline-variant rounded-lg pl-md pr-xl py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none outline-none"
                   >
                     <option value="">Sem categoria</option>
@@ -339,7 +338,7 @@ export function NewTransactionModal({ isOpen, onClose }: NewTransactionModalProp
                         onClick={() => setNewCategoryColor(color)}
                         className={`w-7 h-7 rounded-full border transition-transform ${newCategoryColor === color ? 'border-on-surface scale-110' : 'border-outline-variant'}`}
                         style={{ backgroundColor: color }}
-                        aria-label={`Cor ${color}`}
+                        aria-label={`Selecionar cor ${color}`}
                       />
                     ))}
                   </div>
