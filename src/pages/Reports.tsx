@@ -1,4 +1,5 @@
 import {
+  FileDown,
   ArrowDown,
   ArrowUp,
   CreditCard,
@@ -10,16 +11,20 @@ import {
   Wallet,
 } from 'lucide-react';
 import type { ElementType } from 'react';
+import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useCreditCards } from '../hooks/useCreditCards';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 import { useFixedBills } from '../hooks/useFixedBills';
 import { useInvestments } from '../hooks/useInvestments';
 import { useTransactions } from '../hooks/useTransactions';
+import { generateMonthlyFinancialReportPdf } from '../services/reportPdfService';
+import { formatMonthLabel } from '../lib/monthSelection';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function Reports() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
+  const [isExporting, setIsExporting] = useState(false);
   const { transactions: allTx, isLoading: transactionsLoading } = useTransactions(undefined, selectedMonthRange);
   const { invoiceItems, cards, isLoading: cardsLoading } = useCreditCards(selectedMonthRange);
   const { bills, isLoading: billsLoading, totals: billTotals } = useFixedBills();
@@ -45,26 +50,79 @@ export function Reports() {
   const topExpenses = [...catMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
   const maxExpense = topExpenses.length > 0 ? topExpenses[0][1] : 1;
 
+  const handleExportPdf = async () => {
+    try {
+      setIsExporting(true);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const monthKey = selectedMonthRange.monthKey;
+      const monthLabel = formatMonthLabel(monthKey);
+      
+      generateMonthlyFinancialReportPdf({
+        monthLabel,
+        income,
+        expense,
+        openInvoices,
+        fixedBillsTotal: billTotals.total,
+        investmentsTotal: totalCurrentValue,
+        operationalBalance,
+        transactions: allTx,
+        invoiceItems,
+        cards,
+        bills,
+        investments,
+        goals
+      });
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      alert('Ocorreu um erro ao gerar o PDF. Tente novamente.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const renderHeader = () => (
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-md min-w-0">
+      <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
+        <button className="px-lg py-sm rounded-md font-label-md text-[14px] font-semibold bg-primary/10 text-primary border border-primary/20 shadow-sm">Resumo Geral</button>
+      </div>
+      <div className="flex items-center gap-sm min-w-0">
+        <div className="flex items-center gap-sm text-on-surface-variant text-[15px] sm:text-[16px]">
+          <Info size={16} /><span>{analyzedItems} itens</span>
+        </div>
+        <button 
+          onClick={handleExportPdf}
+          disabled={isExporting}
+          className="justify-center px-lg py-sm rounded-md font-label-md text-[14px] font-semibold bg-primary text-on-primary hover:bg-primary-fixed transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm min-h-10 sm:min-h-11"
+        >
+          {isExporting ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary"></div>
+          ) : (
+            <FileDown size={18} />
+          )}
+          <span className="hidden sm:inline">{isExporting ? 'Gerando...' : 'Exportar PDF'}</span>
+          <span className="sm:hidden">{isExporting ? '...' : 'PDF'}</span>
+        </button>
+      </div>
+    </div>
+  );
+
   if (analyzedItems === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
-        <div className="bg-surface-variant p-lg rounded-full"><Flame size={48} className="text-primary" /></div>
-        <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Sem dados para relatório</h2>
-        <p className="font-body-md text-[16px] max-w-[28rem] text-center">Cadastre lançamentos, cartões, contas, investimentos ou metas para visualizar seu resumo financeiro.</p>
+      <div className="space-y-lg lg:space-y-xl min-w-0">
+        {renderHeader()}
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
+          <div className="bg-surface-variant p-lg rounded-full"><Flame size={48} className="text-primary" /></div>
+          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Sem dados para relatório</h2>
+          <p className="font-body-md text-[16px] max-w-[28rem] text-center">Cadastre lançamentos, cartões, contas, investimentos ou metas para visualizar seu resumo financeiro.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-lg lg:space-y-xl min-w-0">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-md min-w-0">
-        <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
-          <button className="px-lg py-sm rounded-md font-label-md text-[14px] font-semibold bg-primary/10 text-primary border border-primary/20 shadow-sm">Resumo Geral</button>
-        </div>
-        <div className="flex items-center gap-sm text-on-surface-variant text-[15px] sm:text-[16px] min-w-0">
-          <Info size={16} /><span>{analyzedItems} itens analisados</span>
-        </div>
-      </div>
+      {renderHeader()}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-sm sm:gap-lg">
         <KpiCard title="Receita Total" value={`R$ ${fmt(income)}`} icon={ArrowUp} tone="primary" />

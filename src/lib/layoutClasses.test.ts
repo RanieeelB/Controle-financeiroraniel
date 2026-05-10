@@ -200,9 +200,7 @@ describe('layout width classes', () => {
 
     expect(header).toContain('backdrop-blur-xl');
     expect(header).toContain('rounded-full border border-outline-variant');
-    expect(header).toContain('FileDown');
     expect(header).toContain('Plus');
-    expect(header).toContain('aria-label="Exportar PDF"');
   });
 
   it('places mobile header actions above the month selector', () => {

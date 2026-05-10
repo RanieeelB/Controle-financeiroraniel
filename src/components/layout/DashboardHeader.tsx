@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, LogOut, Building2, FileDown, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, Building2, Plus } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 interface DashboardHeaderProps {
@@ -51,11 +51,6 @@ export function DashboardHeader({
             <Building2 size={16} />
             <span className="hidden sm:inline">Impostos PJ</span>
             <span className="sm:hidden">PJ</span>
-          </button>
-          <button className="justify-center shrink-0 px-sm sm:px-md py-xs sm:py-sm rounded-2xl lg:rounded-full border border-outline-variant bg-surface-container-low/60 text-on-surface-variant font-label-md text-[12px] min-[390px]:text-[13px] sm:text-[14px] font-semibold hover:bg-surface-container-high hover:text-on-surface transition-all min-h-10 sm:min-h-11 flex items-center gap-2" aria-label="Exportar PDF">
-            <FileDown size={16} />
-            <span className="hidden sm:inline">Exportar PDF</span>
-            <span className="sm:hidden">PDF</span>
           </button>
           <button
             onClick={onOpenNewTransaction}
