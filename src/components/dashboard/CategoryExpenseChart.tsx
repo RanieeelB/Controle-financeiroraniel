@@ -13,14 +13,14 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
     <div className="glass-card rounded-xl p-md sm:p-lg flex flex-col overflow-hidden min-w-0">
       <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-background mb-md">Gastos por categoria</h3>
       
-      <div className="relative flex items-center justify-center" style={{ height: 180 }}>
+      <div className="relative flex items-center justify-center h-[150px] min-[390px]:h-[170px] sm:h-[180px]">
         {hasData ? (
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
-                innerRadius={55}
-                outerRadius={75}
+                innerRadius="52%"
+                outerRadius="72%"
                 paddingAngle={5}
                 dataKey="value"
                 stroke="none"

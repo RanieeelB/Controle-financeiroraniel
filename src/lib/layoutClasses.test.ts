@@ -94,4 +94,16 @@ describe('layout width classes', () => {
       expect(contents, file).toContain('min-w-0');
     }
   });
+
+  it('uses mobile-first dashboard surfaces instead of forcing desktop tables first', () => {
+    const dashboard = readFileSync(join(process.cwd(), 'src/pages/Dashboard.tsx'), 'utf8');
+    const summaryCards = readFileSync(join(process.cwd(), 'src/components/dashboard/SummaryCardsGrid.tsx'), 'utf8');
+    const upcomingBills = readFileSync(join(process.cwd(), 'src/components/dashboard/UpcomingBills.tsx'), 'utf8');
+
+    expect(dashboard).toContain('gap-lg lg:gap-xl');
+    expect(summaryCards).toContain('sm:grid-cols-2');
+    expect(summaryCards).toContain('lg:col-span-1');
+    expect(upcomingBills).toContain('md:hidden');
+    expect(upcomingBills).toContain('hidden md:block');
+  });
 });
