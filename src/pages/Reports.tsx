@@ -27,7 +27,7 @@ export function Reports() {
   const [isExporting, setIsExporting] = useState(false);
   const { transactions: allTx, isLoading: transactionsLoading } = useTransactions(undefined, selectedMonthRange);
   const { invoiceItems, cards, isLoading: cardsLoading } = useCreditCards(selectedMonthRange);
-  const { bills, isLoading: billsLoading, totals: billTotals } = useFixedBills();
+  const { bills, isLoading: billsLoading, totals: billTotals } = useFixedBills(selectedMonthRange);
   const { investments, isLoading: investmentsLoading, totalCurrentValue } = useInvestments();
   const { goals, isLoading: goalsLoading, totalTarget, totalSaved, overallProgress } = useFinancialGoals();
 
@@ -84,6 +84,7 @@ export function Reports() {
         expense,
         openInvoices,
         fixedBillsTotal: billTotals.total,
+        unpaidFixedBills: billTotals.pending,
         investmentsTotal: totalCurrentValue,
         operationalBalance,
         transactions: allTx,
