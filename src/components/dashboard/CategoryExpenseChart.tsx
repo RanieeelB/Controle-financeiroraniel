@@ -10,12 +10,12 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
   const hasData = data.length > 0;
 
   return (
-    <div className="glass-card rounded-xl p-lg flex flex-col overflow-hidden">
-      <h3 className="font-h2 text-[24px] font-semibold text-on-background mb-md">Gastos por categoria</h3>
+    <div className="glass-card rounded-xl p-md sm:p-lg flex flex-col overflow-hidden min-w-0">
+      <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-background mb-md">Gastos por categoria</h3>
       
       <div className="relative flex items-center justify-center" style={{ height: 180 }}>
         {hasData ? (
-          <ResponsiveContainer width={180} height={180}>
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
                 data={data}
@@ -38,7 +38,7 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
             </PieChart>
           </ResponsiveContainer>
         ) : (
-          <div className="w-[150px] h-[150px] rounded-full border-4 border-dashed border-outline-variant flex items-center justify-center">
+          <div className="w-[140px] h-[140px] sm:w-[150px] sm:h-[150px] rounded-full border-4 border-dashed border-outline-variant flex items-center justify-center">
             <PieChartIcon className="text-outline-variant" size={32} />
           </div>
         )}
@@ -52,9 +52,9 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
 
       <div className="flex gap-sm mt-md w-full justify-center text-[12px] flex-wrap">
         {data.length > 0 ? data.map((item) => (
-          <div key={item.name} className="flex items-center gap-xs">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-            {item.name}
+          <div key={item.name} className="flex items-center gap-xs min-w-0">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }}></div>
+            <span className="truncate">{item.name}</span>
           </div>
         )) : (
           <span className="text-on-surface-variant">Sem dados de gastos</span>

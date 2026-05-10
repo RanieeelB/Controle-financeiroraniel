@@ -84,7 +84,7 @@ export function Investments() {
         </div>
         <button
           onClick={() => setIsInvestmentModalOpen(true)}
-          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center justify-center gap-sm min-h-11 w-full md:w-auto"
         >
           <Plus size={18} />Novo investimento
         </button>
@@ -105,21 +105,21 @@ export function Investments() {
           const color = catColors[investment.category];
 
           return (
-            <article key={investment.id} className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden">
+            <article key={investment.id} className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden min-w-0">
               <div className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: color }}></div>
-              <div className="flex justify-between gap-md items-start mb-lg">
-                <div className="flex items-start gap-md">
-                  <div className="w-12 h-12 rounded-lg border border-outline-variant flex items-center justify-center" style={{ backgroundColor: `${color}20`, color }}>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-md sm:items-start mb-lg min-w-0">
+                <div className="flex items-start gap-md min-w-0">
+                  <div className="w-12 h-12 rounded-lg border border-outline-variant flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}20`, color }}>
                     <Icon size={22} />
                   </div>
-                  <div>
-                    <h3 className="font-h2 text-[24px] font-semibold text-on-surface">{investment.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface truncate">{investment.name}</h3>
                     <p className="text-[14px] text-on-surface-variant">{catLabels[investment.category]}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setDepositInvestment(investment)}
-                  className="shrink-0 font-label-md text-[13px] font-semibold bg-primary text-on-primary px-md py-sm rounded-lg hover:bg-primary-fixed transition-all flex items-center gap-xs"
+                  className="shrink-0 font-label-md text-[13px] font-semibold bg-primary text-on-primary px-md py-sm rounded-lg hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs min-h-11 w-full sm:w-auto"
                 >
                   <Plus size={16} />Adicionar valor
                 </button>
@@ -135,7 +135,7 @@ export function Investments() {
                 <div className="flex justify-between items-center mb-md">
                   <h4 className="font-label-md text-[13px] font-semibold text-on-surface-variant uppercase tracking-wider">Histórico de aportes</h4>
                   {lastDeposit && (
-                    <span className="text-[12px] text-on-surface-variant">
+                    <span className="text-[12px] text-on-surface-variant shrink-0">
                       Último: {new Date(`${lastDeposit.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                     </span>
                   )}
@@ -145,14 +145,14 @@ export function Investments() {
                 ) : (
                   <ul className="space-y-sm">
                     {investmentDeposits.slice(0, 4).map(deposit => (
-                      <li key={deposit.id} className="flex justify-between items-center border-b border-outline-variant/40 pb-sm last:border-0 last:pb-0">
-                        <div>
+                      <li key={deposit.id} className="flex justify-between items-center gap-md border-b border-outline-variant/40 pb-sm last:border-0 last:pb-0 min-w-0">
+                        <div className="min-w-0">
                           <p className="text-on-surface">R$ {fmt(deposit.amount)}</p>
                           <p className="text-[12px] text-on-surface-variant">
                             {new Date(`${deposit.date}T00:00:00`).toLocaleDateString('pt-BR')}
                           </p>
                         </div>
-                        <div className="flex items-center gap-sm">
+                        <div className="flex items-center gap-sm shrink-0">
                           <span className="text-primary font-label-md text-[13px] font-semibold">Guardado</span>
                           <RecordActionsMenu
                             label={`aporte de ${investment.name}`}

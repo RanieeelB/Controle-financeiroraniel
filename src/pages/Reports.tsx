@@ -57,11 +57,11 @@ export function Reports() {
 
   return (
     <div className="space-y-xl">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-md min-w-0">
         <div className="flex bg-surface-container rounded-lg p-1 border border-outline-variant">
           <button className="px-lg py-sm rounded-md font-label-md text-[14px] font-semibold bg-primary/10 text-primary border border-primary/20 shadow-sm">Resumo Geral</button>
         </div>
-        <div className="flex items-center gap-sm text-on-surface-variant text-[16px]">
+        <div className="flex items-center gap-sm text-on-surface-variant text-[15px] sm:text-[16px] min-w-0">
           <Info size={16} /><span>{analyzedItems} itens analisados</span>
         </div>
       </div>
@@ -91,8 +91,8 @@ export function Reports() {
           <div className="space-y-md">
             {topExpenses.map(([name, amount]) => (
               <div key={name} className="group">
-                <div className="flex justify-between items-center mb-xs">
-                  <span className="text-on-surface">{name}</span>
+                <div className="flex justify-between items-center gap-md mb-xs min-w-0">
+                  <span className="text-on-surface truncate min-w-0">{name}</span>
                   <span className="font-numeral-lg text-[16px] text-on-surface">R$ {fmt(amount)}</span>
                 </div>
                 <div className="w-full bg-surface-variant h-1.5 rounded-full overflow-hidden"><div className="bg-tertiary-container h-full" style={{ width: `${(amount / maxExpense) * 100}%` }}></div></div>
@@ -108,12 +108,12 @@ export function Reports() {
             {cards.map(card => {
               const total = invoiceItems.filter(item => item.card_id === card.id).reduce((sum, item) => sum + item.amount, 0);
               return (
-                <div key={card.id} className="flex justify-between items-center border-b border-outline-variant/50 pb-sm last:border-0">
-                  <div>
-                    <p className="text-on-surface">{card.name}</p>
+                <div key={card.id} className="flex justify-between items-center gap-md border-b border-outline-variant/50 pb-sm last:border-0 min-w-0">
+                  <div className="min-w-0">
+                    <p className="text-on-surface truncate">{card.name}</p>
                     <p className="text-[12px] text-on-surface-variant">{card.brand} final {card.last_digits}</p>
                   </div>
-                  <span className="font-numeral-lg text-[16px] text-on-surface">R$ {fmt(total)}</span>
+                  <span className="font-numeral-lg text-[16px] text-on-surface shrink-0">R$ {fmt(total)}</span>
                 </div>
               );
             })}

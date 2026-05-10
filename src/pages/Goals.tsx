@@ -50,7 +50,7 @@ export function Goals() {
         </div>
         <div className="bg-surface-container border border-outline-variant rounded-xl p-lg">
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Metas Ativas</span></div>
-          <span className="font-numeral-lg text-[48px] font-bold text-on-surface">{goals.length}</span>
+          <span className="font-numeral-lg text-[36px] sm:text-[48px] font-bold text-on-surface">{goals.length}</span>
         </div>
         <div className="bg-surface-container border border-outline-variant rounded-xl p-lg">
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Falta para completar</span></div>

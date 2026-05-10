@@ -63,10 +63,10 @@ export function Invoices() {
   return (
     <div className="space-y-xl">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
-        <div className="flex gap-md bg-surface-container rounded-lg p-1 border border-outline-variant">
+        <div className="flex gap-sm sm:gap-md bg-surface-container rounded-lg p-1 border border-outline-variant overflow-x-auto max-w-full">
           {cards.map(card => (
             <button key={card.id} onClick={() => setSelectedCardId(card.id)}
-              className={`px-lg py-sm rounded-md font-label-md text-[14px] font-semibold flex items-center gap-sm transition-colors ${activeCard?.id === card.id ? 'border shadow-sm' : 'text-on-surface-variant'}`}
+              className={`px-md sm:px-lg py-sm rounded-md font-label-md text-[14px] font-semibold flex items-center gap-sm transition-colors shrink-0 ${activeCard?.id === card.id ? 'border shadow-sm' : 'text-on-surface-variant'}`}
               style={activeCard?.id === card.id ? { backgroundColor: `${card.color}30`, color: card.color, borderColor: `${card.color}50` } : {}}>
               <CreditCard size={16} /> {card.name}
             </button>
@@ -75,7 +75,7 @@ export function Invoices() {
         </div>
         <button
           onClick={() => setIsPurchaseModalOpen(true)}
-          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all shadow-[0_0_15px_rgba(117,255,158,0.2)] flex items-center gap-sm"
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all shadow-[0_0_15px_rgba(117,255,158,0.2)] flex items-center justify-center gap-sm min-h-11 w-full sm:w-auto"
         >
           <Plus size={18} />Nova Compra
         </button>
@@ -94,7 +94,7 @@ export function Invoices() {
               {invoiceStatus === 'paid' ? 'Paga' : 'Aberta'}
             </span>
           </div>
-          <span className="font-numeral-lg text-[36px] font-bold text-on-surface">R$ {fmt(cardTotal)}</span>
+          <span className="font-numeral-lg text-[30px] sm:text-[36px] font-bold text-on-surface break-words">R$ {fmt(cardTotal)}</span>
           {activeCard && <p className="text-[13px] text-on-surface-variant mt-sm">Vence todo dia {activeCard.due_day}</p>}
           <button
             type="button"
@@ -123,30 +123,30 @@ export function Invoices() {
           <h3 className="font-h2 text-[20px] font-semibold text-on-surface">Lançamentos</h3>
           <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button></div>
         </div>
-        <div className="p-lg">
+        <div className="p-md sm:p-lg">
           {filteredItems.length === 0 ? (
             <div className="flex flex-col items-center py-xl text-on-surface-variant gap-md"><Inbox size={48} className="text-outline-variant" /><p>Nenhuma compra registrada.</p></div>
           ) : (
             <div className="space-y-md">
               {Object.entries(grouped).map(([dateLabel, items]) => (
-                <div key={dateLabel} className="relative pl-xl">
+                <div key={dateLabel} className="relative pl-lg sm:pl-xl">
                   <div className="absolute left-[11px] top-8 bottom-0 w-px bg-outline-variant/50"></div>
                   <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-surface border border-outline-variant flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-primary"></div></div>
                   <h4 className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-md uppercase tracking-wider">{dateLabel}</h4>
                   {items.map(item => (
-                    <div key={item.id} className="bg-surface border border-outline-variant/50 rounded-lg p-md hover:bg-surface-variant/30 transition-colors mb-sm">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-md">
-                          <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant"><ShoppingBag size={18} className="text-on-surface-variant" /></div>
-                          <div>
-                            <div className="flex items-center gap-sm">
-                              <p className="text-[16px] font-medium text-on-surface">{item.description}</p>
+                    <div key={item.id} className="bg-surface border border-outline-variant/50 rounded-lg p-md hover:bg-surface-variant/30 transition-colors mb-sm min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-md min-w-0">
+                        <div className="flex items-center gap-md min-w-0">
+                          <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant shrink-0"><ShoppingBag size={18} className="text-on-surface-variant" /></div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-sm min-w-0">
+                              <p className="text-[16px] font-medium text-on-surface truncate">{item.description}</p>
                               {item.total_installments > 1 && <span className="bg-secondary/10 text-secondary border border-secondary/30 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase">Parcelado</span>}
                             </div>
                             <p className="text-[13px] text-on-surface-variant mt-0.5">{item.category?.name || 'Sem categoria'}{item.total_installments > 1 && ` • ${item.current_installment}/${item.total_installments}`}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-md">
+                        <div className="flex items-center justify-between sm:justify-end gap-md">
                           <div className="text-right">
                             <p className="font-numeral-lg text-[16px] text-on-surface">R$ {fmt(item.amount)}</p>
                             {item.total_installments > 1 && <p className="text-[12px] text-on-surface-variant mt-0.5">de R$ {fmt(item.amount * item.total_installments)}</p>}

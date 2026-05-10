@@ -60,22 +60,22 @@ export function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-xl">
-      <section className="bg-surface-container-low border border-outline-variant rounded-xl p-xl">
-        <div className="flex items-start gap-md mb-lg">
-          <div className="bg-surface-variant p-lg rounded-full">
+    <div className="flex flex-col gap-xl min-w-0">
+      <section className="bg-surface-container-low border border-outline-variant rounded-xl p-md sm:p-lg lg:p-xl min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-md mb-lg">
+          <div className="bg-surface-variant p-lg rounded-full w-fit">
             <SettingsIcon size={32} className="text-primary" />
           </div>
-          <div>
-            <h2 className="font-h1 text-[32px] font-semibold text-on-surface mb-sm">Configurações</h2>
-            <p className="font-body-md text-[16px] text-on-surface-variant max-w-[44rem]">
+          <div className="min-w-0">
+            <h2 className="font-h1 text-[24px] sm:text-[32px] font-semibold text-on-surface mb-sm">Configurações</h2>
+            <p className="font-body-md text-[15px] sm:text-[16px] text-on-surface-variant max-w-[44rem]">
               Defina o salário principal da conta para o app criar automaticamente uma entrada pendente todo mês e melhorar o planejamento financeiro do dashboard.
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,32rem)_1fr] gap-lg">
-          <form onSubmit={handleSubmit} className="bg-surface border border-outline-variant rounded-xl p-lg space-y-md">
+          <form onSubmit={handleSubmit} className="bg-surface border border-outline-variant rounded-xl p-md sm:p-lg space-y-md min-w-0">
             <div className="flex items-center gap-sm">
               <Wallet size={20} className="text-primary" />
               <h3 className="font-h2 text-[22px] font-semibold text-on-surface">Salário principal</h3>
@@ -122,7 +122,7 @@ export function Settings() {
               <button
                 type="submit"
                 disabled={isLoading || isSaving}
-                className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-primary rounded-lg hover:bg-primary-fixed transition-all flex items-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-primary rounded-lg hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed min-h-11 w-full sm:w-auto"
               >
                 <CheckCircle size={18} />
                 <span>{isSaving ? 'Salvando...' : salarySetting ? 'Atualizar salário' : 'Salvar salário'}</span>
@@ -130,7 +130,7 @@ export function Settings() {
             </div>
           </form>
 
-          <div className="bg-surface border border-outline-variant rounded-xl p-lg space-y-md">
+          <div className="bg-surface border border-outline-variant rounded-xl p-md sm:p-lg space-y-md min-w-0">
             <h3 className="font-h2 text-[22px] font-semibold text-on-surface">Como isso funciona</h3>
             <div className="space-y-sm text-[15px] text-on-surface-variant">
               <p>O app cria uma entrada pendente automática para o mês visualizado com o valor do seu salário principal.</p>

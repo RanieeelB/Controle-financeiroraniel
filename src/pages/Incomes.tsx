@@ -33,7 +33,7 @@ export function Incomes() {
           </div>
           <div className="flex items-baseline gap-sm">
             <span className="font-h2 text-body-md text-on-surface-variant">R$</span>
-            <span className="font-display-lg text-[48px] font-bold text-on-surface tracking-tight">{fmt(totals.paid)}</span>
+          <span className="font-display-lg text-[34px] sm:text-[48px] font-bold text-on-surface tracking-tight break-words">{fmt(totals.paid)}</span>
           </div>
         </div>
 

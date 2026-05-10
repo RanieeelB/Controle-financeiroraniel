@@ -64,7 +64,7 @@ export function Cards() {
       <div className="flex justify-end">
         <button
           onClick={openCreateModal}
-          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+          className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center justify-center gap-sm min-h-11 w-full sm:w-auto"
         >
           <Plus size={18} />Adicionar cartão
         </button>
@@ -77,10 +77,10 @@ export function Cards() {
           const recentItems = items.slice(0, 3);
 
           return (
-            <section key={card.id} className="flex flex-col gap-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-h2 text-[24px] font-semibold text-on-surface flex items-center gap-sm">
+            <section key={card.id} className="flex flex-col gap-lg min-w-0">
+              <div className="flex items-center justify-between gap-md min-w-0">
+                <div className="min-w-0">
+                  <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface flex items-center gap-sm min-w-0">
                     <span className="w-3 h-3 rounded-full" style={{ backgroundColor: card.color }}></span> {card.name}
                   </h3>
                   <p className="text-[13px] text-on-surface-variant mt-1">Vence todo dia {card.due_day}</p>
@@ -95,7 +95,7 @@ export function Cards() {
               </div>
             
               {/* Credit Card Visual */}
-              <div className="relative w-full h-56 rounded-xl p-lg flex flex-col justify-between border overflow-hidden"
+              <div className="relative w-full h-48 sm:h-56 rounded-xl p-md sm:p-lg flex flex-col justify-between border overflow-hidden"
                 style={{ 
                   background: `linear-gradient(135deg, ${card.color}40, ${card.color}90)`,
                   borderColor: `${card.color}50`,
@@ -103,12 +103,12 @@ export function Cards() {
                 }}>
                 <div className="relative z-10 flex justify-between items-start">
                   <Nfc className="text-white/80" size={32} />
-                  <span className="font-label-md text-[14px] font-semibold text-white/90 uppercase tracking-widest">{card.brand}</span>
+                  <span className="font-label-md text-[13px] sm:text-[14px] font-semibold text-white/90 uppercase tracking-widest">{card.brand}</span>
                 </div>
                 <div className="relative z-10">
-                  <p className="font-numeral-lg text-[24px] font-medium text-white/90 tracking-[0.2em] mb-xs">•••• •••• •••• {card.last_digits}</p>
-                  <div className="flex justify-between items-end">
-                    <p className="font-label-md text-[14px] font-semibold text-white/70">{card.name}</p>
+                  <p className="font-numeral-lg text-[18px] sm:text-[24px] font-medium text-white/90 tracking-[0.12em] sm:tracking-[0.2em] mb-xs whitespace-nowrap">•••• •••• •••• {card.last_digits}</p>
+                  <div className="flex justify-between items-end gap-md min-w-0">
+                    <p className="font-label-md text-[14px] font-semibold text-white/70 truncate min-w-0">{card.name}</p>
                     <CreditCardIcon className="text-white/80" size={32} />
                   </div>
                 </div>
@@ -136,20 +136,20 @@ export function Cards() {
                 ) : (
                   <ul className="flex flex-col gap-sm">
                     {recentItems.map(item => (
-                      <li key={item.id} className="flex justify-between items-center py-xs border-b border-outline-variant/50 last:border-0">
-                        <div className="flex items-center gap-md">
-                          <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant">
+                      <li key={item.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-sm py-xs border-b border-outline-variant/50 last:border-0 min-w-0">
+                        <div className="flex items-center gap-md min-w-0">
+                          <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center text-on-surface-variant shrink-0">
                             <ShoppingBag size={18} />
                           </div>
-                          <div>
-                            <p className="font-body-md text-[16px] text-on-surface">{item.description}</p>
-                            <p className="font-label-md text-[14px] font-semibold text-on-surface-variant">
+                          <div className="min-w-0">
+                            <p className="font-body-md text-[16px] text-on-surface truncate">{item.description}</p>
+                            <p className="font-label-md text-[13px] sm:text-[14px] font-semibold text-on-surface-variant break-words">
                               {item.category?.name || 'Sem categoria'} • {new Date(item.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                               {item.total_installments > 1 && ` • ${item.current_installment}/${item.total_installments}`}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-sm">
+                        <div className="flex items-center justify-end gap-sm">
                           <span className="font-numeral-lg text-[16px] font-medium text-on-surface">R$ {fmt(item.amount)}</span>
                           <RecordActionsMenu
                             label={item.description}

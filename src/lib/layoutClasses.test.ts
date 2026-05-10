@@ -64,4 +64,34 @@ describe('layout width classes', () => {
       expect(contents, file).toMatch(/<table className="[^"]*min-w-\[/);
     }
   });
+
+  it('scales oversized financial typography on mobile cards', () => {
+    const files = [
+      'src/components/dashboard/SummaryCardsGrid.tsx',
+      'src/pages/Incomes.tsx',
+      'src/pages/Expenses.tsx',
+      'src/pages/Goals.tsx',
+    ];
+
+    for (const file of files) {
+      const contents = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(contents, file).not.toMatch(/(?:^|\s)text-\[48px\]/);
+    }
+  });
+
+  it('allows compact dashboard list content to shrink instead of overflowing', () => {
+    const files = [
+      'src/components/dashboard/CreditCardInvoices.tsx',
+      'src/components/dashboard/FinancialGoalCard.tsx',
+      'src/pages/Cards.tsx',
+      'src/pages/Invoices.tsx',
+      'src/pages/Investments.tsx',
+      'src/pages/Reports.tsx',
+    ];
+
+    for (const file of files) {
+      const contents = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(contents, file).toContain('min-w-0');
+    }
+  });
 });
