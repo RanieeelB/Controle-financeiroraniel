@@ -23,6 +23,9 @@ export function MobileFloatingNav() {
 
   return (
     <div className="lg:hidden">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 h-32 bg-gradient-to-t from-background via-background/85 to-transparent" />
+      <div className="pointer-events-none fixed left-8 right-8 bottom-2 z-40 h-20 rounded-full bg-primary/15 blur-2xl" />
+
       {isMoreOpen && (
         <button
           aria-label="Fechar menu de navegação"
