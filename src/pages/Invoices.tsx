@@ -61,9 +61,9 @@ export function Invoices() {
   }
 
   return (
-    <div className="space-y-xl">
+    <div className="space-y-lg lg:space-y-xl min-w-0">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
-        <div className="flex gap-sm sm:gap-md bg-surface-container rounded-lg p-1 border border-outline-variant overflow-x-auto max-w-full">
+        <div className="flex gap-sm sm:gap-md bg-surface-container rounded-lg p-1 border border-outline-variant overflow-x-auto max-w-full w-full sm:w-auto">
           {cards.map(card => (
             <button key={card.id} onClick={() => setSelectedCardId(card.id)}
               className={`px-md sm:px-lg py-sm rounded-md font-label-md text-[14px] font-semibold flex items-center gap-sm transition-colors shrink-0 ${activeCard?.id === card.id ? 'border shadow-sm' : 'text-on-surface-variant'}`}
@@ -81,8 +81,8 @@ export function Invoices() {
         </button>
       </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-        <div className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-sm sm:gap-lg">
+        <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden min-w-0 sm:col-span-2 lg:col-span-1">
           <div className="absolute top-0 left-0 w-full h-[2px]" style={{ backgroundColor: activeCard?.color }}></div>
           <div className="flex justify-between items-start mb-md">
             <span className="text-on-surface-variant">Fatura Atual</span>
@@ -100,18 +100,18 @@ export function Invoices() {
             type="button"
             onClick={handleToggleInvoicePayment}
             disabled={invoiceAction.disabled}
-            className="mt-md px-md py-sm rounded-lg border border-primary/30 text-primary text-[13px] font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-md px-md py-sm rounded-lg border border-primary/30 text-primary text-[13px] font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-11 w-full sm:w-auto"
           >
             {invoiceAction.label}
           </button>
         </div>
-        <div className="bg-surface-container border border-outline-variant rounded-xl p-lg relative overflow-hidden hover:border-primary/50 transition-colors">
+        <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden hover:border-primary/50 transition-colors min-w-0">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/30"></div>
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Limite Disponível</span><CreditCard className="text-primary" size={24} /></div>
-          <span className="font-numeral-lg text-[32px] text-on-surface">R$ {fmt(available)}</span>
+          <span className="font-numeral-lg text-[24px] min-[390px]:text-[28px] sm:text-[32px] text-on-surface break-words">R$ {fmt(available)}</span>
           {activeCard && <div className="w-full bg-surface-variant rounded-full h-1.5 mt-md overflow-hidden"><div className="h-full rounded-full" style={{ width: `${activeCard.credit_limit > 0 ? Math.round((cardTotal / activeCard.credit_limit) * 100) : 0}%`, backgroundColor: activeCard.color }}></div></div>}
         </div>
-        <div className="bg-surface-container border border-outline-variant rounded-xl p-lg">
+        <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg min-w-0">
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Itens na fatura</span><ShoppingBag className="text-tertiary-container" size={24} /></div>
           <span className="font-numeral-lg text-[32px] text-on-surface">{filteredItems.length}</span>
           <p className="text-[14px] text-on-surface-variant mt-sm">{filteredItems.filter(i => i.total_installments > 1).length} parcelados</p>
@@ -119,7 +119,7 @@ export function Invoices() {
       </section>
 
       <section className="bg-surface-container border border-outline-variant rounded-xl overflow-hidden">
-        <div className="p-lg border-b border-outline-variant flex justify-between items-center">
+        <div className="p-md sm:p-lg border-b border-outline-variant flex justify-between items-center">
           <h3 className="font-h2 text-[20px] font-semibold text-on-surface">Lançamentos</h3>
           <div className="flex gap-sm"><button className="p-xs text-on-surface-variant hover:text-on-surface"><Filter size={20} /></button></div>
         </div>
@@ -132,7 +132,7 @@ export function Invoices() {
                 <div key={dateLabel} className="relative pl-lg sm:pl-xl">
                   <div className="absolute left-[11px] top-8 bottom-0 w-px bg-outline-variant/50"></div>
                   <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-surface border border-outline-variant flex items-center justify-center"><div className="w-2 h-2 rounded-full bg-primary"></div></div>
-                  <h4 className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-md uppercase tracking-wider">{dateLabel}</h4>
+                  <h4 className="font-label-md text-[12px] sm:text-[14px] font-semibold text-on-surface-variant mb-md uppercase tracking-wider">{dateLabel}</h4>
                   {items.map(item => (
                     <div key={item.id} className="bg-surface border border-outline-variant/50 rounded-lg p-md hover:bg-surface-variant/30 transition-colors mb-sm min-w-0">
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-md min-w-0">

@@ -121,4 +121,20 @@ describe('layout width classes', () => {
       expect(contents, file).toContain('hidden md:block');
     }
   });
+
+  it('keeps primary actions reachable as full-width mobile buttons on feature pages', () => {
+    const files = [
+      'src/pages/Cards.tsx',
+      'src/pages/Invoices.tsx',
+      'src/pages/Investments.tsx',
+      'src/pages/Goals.tsx',
+      'src/pages/FixedBills.tsx',
+    ];
+
+    for (const file of files) {
+      const contents = readFileSync(join(process.cwd(), file), 'utf8');
+      expect(contents, file).toContain('min-h-11');
+      expect(contents, file).toContain('w-full');
+    }
+  });
 });

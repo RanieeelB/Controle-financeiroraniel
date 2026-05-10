@@ -37,13 +37,13 @@ export function Cards() {
   if (cards.length === 0) {
     return (
       <>
-        <div className="flex flex-col items-center justify-center min-h-[400px] text-on-surface-variant gap-md">
+        <div className="flex flex-col items-center justify-center min-h-[360px] sm:min-h-[400px] text-on-surface-variant gap-md px-4 text-center">
           <div className="bg-surface-variant p-lg rounded-full"><CreditCardIcon size={48} className="text-primary" /></div>
-          <h2 className="font-h1 text-[32px] font-semibold text-on-surface">Nenhum cartão cadastrado</h2>
+          <h2 className="font-h1 text-[24px] sm:text-[32px] font-semibold text-on-surface">Nenhum cartão cadastrado</h2>
           <p className="font-body-md text-[16px] max-w-[28rem] text-center">Adicione seu primeiro cartão para começar a gerenciar suas faturas.</p>
           <button
             onClick={openCreateModal}
-            className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center gap-sm"
+            className="font-label-md text-[14px] font-semibold bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-primary-container transition-all flex items-center justify-center gap-sm min-h-11 w-full sm:w-auto"
           >
             <Plus size={18} />Adicionar cartão
           </button>
@@ -60,7 +60,7 @@ export function Cards() {
   }
 
   return (
-    <div className="space-y-lg">
+    <div className="space-y-lg min-w-0">
       <div className="flex justify-end">
         <button
           onClick={openCreateModal}
@@ -70,7 +70,7 @@ export function Cards() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-xl w-full">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-lg xl:gap-xl w-full min-w-0">
         {cards.map(card => {
           const cardTotal = getCardTotal(card.id);
           const items = getCardItems(card.id);
@@ -115,13 +115,13 @@ export function Cards() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-md">
-                <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group" style={{ borderTopColor: card.color }}>
+              <div className="grid grid-cols-1 min-[390px]:grid-cols-2 gap-sm sm:gap-md">
+                <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group min-w-0" style={{ borderTopColor: card.color }}>
                   <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: card.color }}></div>
                   <p className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-xs">Gasto atual</p>
-                  <p className="font-numeral-lg text-[24px] font-medium text-on-surface">R$ {fmt(cardTotal)}</p>
+                  <p className="font-numeral-lg text-[20px] sm:text-[24px] font-medium text-on-surface break-words">R$ {fmt(cardTotal)}</p>
                 </div>
-                <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group hover:border-primary transition-colors">
+                <div className="bg-surface-container-low border border-outline-variant p-md rounded-lg relative overflow-hidden group hover:border-primary transition-colors min-w-0">
                   <div className="absolute top-0 left-0 w-full h-1 bg-primary"></div>
                   <p className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-xs">Compras</p>
                   <p className="font-numeral-lg text-[24px] font-medium text-primary">{items.length}</p>
@@ -129,7 +129,7 @@ export function Cards() {
               </div>
 
               {/* Recent Transactions */}
-              <div className="bg-surface-container-low border border-outline-variant rounded-xl p-lg mt-sm">
+              <div className="bg-surface-container-low border border-outline-variant rounded-xl p-md sm:p-lg mt-sm min-w-0">
                 <h4 className="font-label-md text-[14px] font-semibold text-on-surface-variant mb-md uppercase tracking-wider">Lançamentos Recentes</h4>
                 {recentItems.length === 0 ? (
                   <p className="text-on-surface-variant text-center py-md">Nenhum lançamento neste cartão.</p>
