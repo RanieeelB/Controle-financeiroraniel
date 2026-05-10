@@ -160,4 +160,49 @@ describe('layout width classes', () => {
     expect(header).toContain('Plus');
     expect(header).toContain('aria-label="Exportar PDF"');
   });
+
+  it('places mobile header actions above the month selector', () => {
+    const header = readFileSync(join(process.cwd(), 'src/components/layout/DashboardHeader.tsx'), 'utf8');
+
+    expect(header).toContain('order-2 lg:order-3');
+    expect(header).toContain('order-3 lg:order-2');
+    expect(header).toContain('grid grid-cols-3');
+    expect(header).toContain('lg:hidden');
+  });
+
+  it('shows category expense percentages on the dashboard pie chart', () => {
+    const chart = readFileSync(join(process.cwd(), 'src/components/dashboard/CategoryExpenseChart.tsx'), 'utf8');
+
+    expect(chart).toContain('LabelList');
+    expect(chart).toContain('percentage');
+    expect(chart).toContain('totalValue');
+  });
+
+  it('keeps card and invoice mobile views focused and touch friendly', () => {
+    const cards = readFileSync(join(process.cwd(), 'src/pages/Cards.tsx'), 'utf8');
+    const invoices = readFileSync(join(process.cwd(), 'src/pages/Invoices.tsx'), 'utf8');
+    const modals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
+
+    expect(cards).toContain('md:hidden');
+    expect(cards).toContain('Fatura atual');
+    expect(cards).toContain('hidden md:grid');
+    expect(cards).toContain('hidden md:block');
+    expect(invoices).toContain('grid grid-cols-2 sm:flex');
+    expect(invoices).toContain('aria-pressed');
+    expect(modals).toContain('grid grid-cols-2 md:grid-cols-3');
+    expect(modals).toContain('sticky bottom-0');
+  });
+
+  it('uses compact two-column mobile summaries for investments and reports', () => {
+    const investments = readFileSync(join(process.cwd(), 'src/pages/Investments.tsx'), 'utf8');
+    const reports = readFileSync(join(process.cwd(), 'src/pages/Reports.tsx'), 'utf8');
+    const modals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
+
+    expect(investments).toContain('grid grid-cols-2 xl:grid-cols-4');
+    expect(investments).toContain('grid grid-cols-1 xl:grid-cols-2');
+    expect(investments).toContain('Saldo guardado');
+    expect(investments).toContain('Histórico de aportes');
+    expect(reports).toContain('grid grid-cols-2 lg:grid-cols-3');
+    expect(modals).toContain('Dados principais');
+  });
 });

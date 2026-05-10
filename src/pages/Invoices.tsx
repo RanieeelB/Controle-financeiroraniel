@@ -63,12 +63,14 @@ export function Invoices() {
   return (
     <div className="space-y-lg lg:space-y-xl min-w-0">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
-        <div className="flex gap-sm sm:gap-md bg-surface-container rounded-lg p-1 border border-outline-variant overflow-x-auto max-w-full w-full sm:w-auto">
+        <div className="grid grid-cols-2 sm:flex gap-sm bg-surface-container rounded-2xl p-1.5 border border-outline-variant max-w-full w-full sm:w-auto">
           {cards.map(card => (
             <button key={card.id} onClick={() => setSelectedCardId(card.id)}
-              className={`px-md sm:px-lg py-sm rounded-md font-label-md text-[14px] font-semibold flex items-center gap-sm transition-colors shrink-0 ${activeCard?.id === card.id ? 'border shadow-sm' : 'text-on-surface-variant'}`}
+              aria-pressed={activeCard?.id === card.id}
+              className={`px-sm sm:px-lg py-sm rounded-xl font-label-md text-[12px] min-[390px]:text-[13px] sm:text-[14px] font-semibold flex items-center justify-center gap-sm transition-colors min-h-11 min-w-0 ${activeCard?.id === card.id ? 'border shadow-sm' : 'text-on-surface-variant hover:bg-surface-variant/50'}`}
               style={activeCard?.id === card.id ? { backgroundColor: `${card.color}30`, color: card.color, borderColor: `${card.color}50` } : {}}>
-              <CreditCard size={16} /> {card.name}
+              <CreditCard size={16} className="shrink-0" />
+              <span className="truncate">{card.name}</span>
             </button>
           ))}
           {cards.length === 0 && <span className="px-lg py-sm text-on-surface-variant text-sm">Nenhum cartão</span>}

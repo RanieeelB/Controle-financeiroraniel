@@ -1,4 +1,4 @@
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, LabelList } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';
 import type { CategoryExpenseData } from '../../types/financial';
 
@@ -8,6 +8,11 @@ interface CategoryExpenseChartProps {
 
 export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
   const hasData = data.length > 0;
+  const totalValue = data.reduce((sum, item) => sum + item.value, 0);
+  const chartData = data.map(item => ({
+    ...item,
+    percentage: totalValue > 0 ? Math.round((item.value / totalValue) * 100) : 0,
+  }));
 
   return (
     <div className="glass-card rounded-xl p-md sm:p-lg flex flex-col overflow-hidden min-w-0">
@@ -18,14 +23,23 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={chartData}
                 innerRadius="52%"
                 outerRadius="72%"
                 paddingAngle={5}
                 dataKey="value"
                 stroke="none"
               >
-                {data.map((entry, index) => (
+                <LabelList
+                  dataKey="percentage"
+                  position="outside"
+                  className="fill-on-surface text-[11px] font-semibold"
+                  formatter={(value) => {
+                    const percentage = Number(value);
+                    return percentage >= 8 ? `${percentage}%` : '';
+                  }}
+                />
+                {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -51,10 +65,10 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
       </div>
 
       <div className="flex gap-sm mt-md w-full justify-center text-[12px] flex-wrap">
-        {data.length > 0 ? data.map((item) => (
+        {chartData.length > 0 ? chartData.map((item) => (
           <div key={item.name} className="flex items-center gap-xs min-w-0">
             <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }}></div>
-            <span className="truncate">{item.name}</span>
+            <span className="truncate">{item.name} {item.percentage}%</span>
           </div>
         )) : (
           <span className="text-on-surface-variant">Sem dados de gastos</span>

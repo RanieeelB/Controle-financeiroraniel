@@ -14,7 +14,7 @@ import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
 import type { CreditCard, Investment, InvestmentCategory } from '../../types/financial';
 
-const inputClass = 'w-full bg-background border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none placeholder:text-outline';
+const inputClass = 'w-full min-h-11 bg-background border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none placeholder:text-outline';
 const selectClass = `${inputClass} appearance-none pr-xl`;
 const labelClass = 'block font-label-md text-[13px] font-semibold text-on-surface-variant mb-xs uppercase tracking-wider';
 
@@ -204,7 +204,7 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
 
   return (
     <ModalShell title="Nova fatura" subtitle="Monte a fatura com vários lançamentos antes de salvar." onClose={onClose}>
-      <form onSubmit={handleAddToBatch} className="p-lg space-y-md">
+      <form onSubmit={handleAddToBatch} className="p-md sm:p-lg space-y-md">
         <label>
           <span className={labelClass}>Cartão</span>
           <div className="relative">
@@ -261,8 +261,8 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
           </label>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-md bg-surface border border-outline-variant rounded-lg p-md">
-          <div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-md bg-surface border border-outline-variant rounded-xl p-md">
+          <div className="col-span-2 md:col-span-1">
             <span className={labelClass}>Valor da parcela</span>
             <p className="font-numeral-lg text-[22px] text-on-surface">R$ {fmt(installmentAmount)}</p>
           </div>
@@ -295,7 +295,7 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
           ) : (
             <div className="space-y-sm max-h-60 overflow-y-auto pr-1">
               {batchItems.map((item, index) => (
-                <div key={`${item.description}-${item.date}-${index}`} className="flex items-start justify-between gap-md rounded-lg border border-outline-variant/60 bg-background px-md py-sm">
+                <div key={`${item.description}-${item.date}-${index}`} className="flex flex-col min-[430px]:flex-row min-[430px]:items-start min-[430px]:justify-between gap-md rounded-lg border border-outline-variant/60 bg-background px-md py-sm">
                   <div className="min-w-0">
                     <p className="text-[15px] font-medium text-on-surface">{item.description}</p>
                     <p className="text-[13px] text-on-surface-variant">
@@ -304,7 +304,7 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
                       {item.totalInstallments > 1 ? ` • ${item.currentInstallment}/${item.totalInstallments}` : ' • À vista'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-sm shrink-0">
+                  <div className="flex items-center justify-between min-[430px]:justify-end gap-sm shrink-0">
                     <span className="font-numeral-lg text-[15px] text-on-surface">R$ {fmt(item.amount)}</span>
                     <button
                       type="button"
@@ -320,17 +320,17 @@ export function InvoicePurchaseModal({ onClose, defaultCardId }: InvoicePurchase
           )}
         </div>
 
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-md pt-md border-t border-outline-variant">
+        <div className="sticky bottom-0 -mx-md sm:-mx-lg px-md sm:px-lg py-md bg-surface-container-low/95 backdrop-blur border-t border-outline-variant flex flex-col-reverse sm:flex-row sm:justify-between gap-md">
           <button
             type="submit"
-            className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-secondary rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-xs"
+            className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-secondary rounded-lg hover:opacity-90 transition-all flex items-center justify-center gap-xs min-h-11"
           >
             <CheckCircle size={18} />
             <span>Adicionar ao lote</span>
           </button>
 
-          <div className="flex justify-end gap-md">
-            <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
+          <div className="flex flex-col min-[390px]:flex-row justify-end gap-md">
+            <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors min-h-11">Cancelar</button>
             <SubmitButton isSaving={isSaving} type="button" onClick={handleSubmitBatch}>Salvar fatura</SubmitButton>
           </div>
         </div>
@@ -387,7 +387,7 @@ export function CreditCardModal({ card, onClose }: CreditCardModalProps) {
 
   return (
     <ModalShell title={card ? 'Editar cartão' : 'Adicionar cartão'} subtitle="Cadastre bandeira, banco, vencimento e últimos dígitos." onClose={onClose}>
-      <form onSubmit={handleSubmit} className="p-lg space-y-md">
+      <form onSubmit={handleSubmit} className="p-md sm:p-lg space-y-md">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
           <label>
             <span className={labelClass}>Banco</span>
@@ -484,7 +484,7 @@ export function FixedBillModal({ onClose }: { onClose: () => void }) {
             <input value={amount} onChange={event => setAmount(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
           </label>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-md">
           <label>
             <span className={labelClass}>Vencimento</span>
             <input type="number" min="1" max="31" value={dueDay} onChange={event => setDueDay(Number(event.target.value))} className={`${inputClass} text-center`} />
@@ -500,7 +500,7 @@ export function FixedBillModal({ onClose }: { onClose: () => void }) {
               <SelectChevron />
             </div>
           </label>
-          <label>
+          <label className="col-span-2 md:col-span-1">
             <span className={labelClass}>Categoria</span>
             <div className="relative">
               <select value={categoryId} onChange={event => setCategoryId(event.target.value)} className={selectClass}>
@@ -516,8 +516,8 @@ export function FixedBillModal({ onClose }: { onClose: () => void }) {
 
         <ErrorMessage error={error} />
 
-        <div className="flex justify-end gap-md pt-md border-t border-outline-variant">
-          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
+        <div className="sticky bottom-0 -mx-md sm:-mx-lg px-md sm:px-lg py-md bg-surface-container-low/95 backdrop-blur border-t border-outline-variant flex flex-col min-[390px]:flex-row justify-end gap-md">
+          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors min-h-11">Cancelar</button>
           <SubmitButton isSaving={isSaving}>Salvar conta</SubmitButton>
         </div>
       </form>
@@ -572,49 +572,56 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
 
   return (
     <ModalShell title="Novo investimento" subtitle="Cadastre investimentos, caixinhas e patrimônio." onClose={onClose}>
-      <form onSubmit={handleSubmit} className="p-lg space-y-md">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-          <label>
-            <span className={labelClass}>Nome</span>
-            <input value={name} onChange={event => setName(event.target.value)} className={inputClass} placeholder="Ex: Caixinha reserva" />
-          </label>
-          <label>
-            <span className={labelClass}>Ticker</span>
-            <input value={ticker} onChange={event => setTicker(event.target.value)} className={inputClass} placeholder="Opcional" />
-          </label>
-        </div>
-        <label>
-          <span className={labelClass}>Categoria</span>
-          <div className="relative">
-            <select value={category} onChange={event => setCategory(event.target.value as InvestmentCategory)} className={selectClass}>
-              <option value="renda_fixa">Renda fixa / Caixinha</option>
-              <option value="acoes">Ações</option>
-              <option value="fiis">FIIs</option>
-              <option value="cripto">Cripto</option>
-            </select>
-            <SelectChevron />
+      <form onSubmit={handleSubmit} className="p-md sm:p-lg space-y-md">
+        <div className="rounded-xl border border-outline-variant bg-surface/60 p-md">
+          <h3 className="font-label-md text-[13px] font-semibold text-on-surface uppercase tracking-wider mb-md">Dados principais</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+            <label>
+              <span className={labelClass}>Nome</span>
+              <input value={name} onChange={event => setName(event.target.value)} className={inputClass} placeholder="Ex: Caixinha reserva" />
+            </label>
+            <label>
+              <span className={labelClass}>Ticker</span>
+              <input value={ticker} onChange={event => setTicker(event.target.value)} className={inputClass} placeholder="Opcional" />
+            </label>
           </div>
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+        </div>
+
+        <div className="rounded-xl border border-outline-variant bg-surface/60 p-md space-y-md">
           <label>
-            <span className={labelClass}>Valor aplicado</span>
-            <input value={amountInvested} onChange={event => setAmountInvested(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+            <span className={labelClass}>Categoria</span>
+            <div className="relative">
+              <select value={category} onChange={event => setCategory(event.target.value as InvestmentCategory)} className={selectClass}>
+                <option value="renda_fixa">Renda fixa / Caixinha</option>
+                <option value="acoes">Ações</option>
+                <option value="fiis">FIIs</option>
+                <option value="cripto">Cripto</option>
+              </select>
+              <SelectChevron />
+            </div>
           </label>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+            <label>
+              <span className={labelClass}>Valor aplicado</span>
+              <input value={amountInvested} onChange={event => setAmountInvested(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+            </label>
+            <label>
+              <span className={labelClass}>Valor atual</span>
+              <input value={currentValue} onChange={event => setCurrentValue(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+            </label>
+          </div>
+
           <label>
-            <span className={labelClass}>Valor atual</span>
-            <input value={currentValue} onChange={event => setCurrentValue(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+            <span className={labelClass}>Aporte mensal automático (Todo dia 1)</span>
+            <input value={monthlyContribution} onChange={event => setMonthlyContribution(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
           </label>
         </div>
-        
-        <label>
-          <span className={labelClass}>Aporte mensal automático (Todo dia 1)</span>
-          <input value={monthlyContribution} onChange={event => setMonthlyContribution(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
-        </label>
 
         <ErrorMessage error={error} />
 
-        <div className="flex justify-end gap-md pt-md border-t border-outline-variant">
-          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
+        <div className="sticky bottom-0 -mx-md sm:-mx-lg px-md sm:px-lg py-md bg-surface-container-low/95 backdrop-blur border-t border-outline-variant flex flex-col min-[390px]:flex-row justify-end gap-md">
+          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors min-h-11">Cancelar</button>
           <SubmitButton isSaving={isSaving}>Salvar investimento</SubmitButton>
         </div>
       </form>

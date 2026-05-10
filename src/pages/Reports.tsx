@@ -66,7 +66,7 @@ export function Reports() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-sm sm:gap-lg">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-sm sm:gap-lg">
         <KpiCard title="Receita Total" value={`R$ ${fmt(income)}`} icon={ArrowUp} tone="primary" />
         <KpiCard title="Gastos Lançados" value={`R$ ${fmt(expense)}`} icon={ArrowDown} tone="tertiary" />
         <KpiCard title="Saldo Operacional" value={`R$ ${fmt(operationalBalance)}`} icon={Landmark} tone={operationalBalance >= 0 ? 'primary' : 'error'} />
@@ -179,12 +179,12 @@ function KpiCard({ title, value, icon: Icon, tone }: KpiCardProps) {
   };
 
   return (
-    <div className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden group hover:border-primary/50 transition-colors min-w-0">
-      <div className="flex justify-between items-start mb-md">
-        <p className="font-label-md text-[14px] font-semibold text-on-surface-variant uppercase">{title}</p>
+    <div className="bg-surface-container border border-outline-variant rounded-xl p-sm min-[390px]:p-md sm:p-lg relative overflow-hidden group hover:border-primary/50 transition-colors min-w-0">
+      <div className="flex justify-between items-start gap-sm mb-sm sm:mb-md">
+        <p className="font-label-md text-[10px] min-[390px]:text-[11px] sm:text-[14px] font-semibold text-on-surface-variant uppercase leading-tight">{title}</p>
         <div className={`p-sm rounded-md border ${tones[tone]}`}><Icon size={20} /></div>
       </div>
-      <h3 className="font-numeral-lg text-[20px] sm:text-[24px] font-medium text-on-surface mb-xs break-words">{value}</h3>
+      <h3 className="font-numeral-lg text-[18px] min-[390px]:text-[20px] sm:text-[24px] font-medium text-on-surface mb-xs break-words">{value}</h3>
     </div>
   );
 }

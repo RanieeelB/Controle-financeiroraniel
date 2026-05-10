@@ -90,14 +90,14 @@ export function Investments() {
         </button>
       </div>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-sm sm:gap-lg">
+      <section className="grid grid-cols-2 xl:grid-cols-4 gap-sm sm:gap-lg">
         <SummaryCard title="Saldo guardado" value={`R$ ${fmt(totalCurrentValue)}`} icon={Wallet} tone="primary" />
         <SummaryCard title="Total aportado" value={`R$ ${fmt(totalInvested)}`} icon={ArrowDownToLine} tone="secondary" />
         <SummaryCard title="Retorno" value={`${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`} icon={LineChart} tone={totalReturn >= 0 ? 'primary' : 'error'} />
         <SummaryCard title="Aportes" value={String(deposits.length)} icon={CircleDollarSign} tone="tertiary" />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-lg">
+      <section className="grid grid-cols-1 xl:grid-cols-2 gap-md sm:gap-lg">
         {investments.map(investment => {
           const investmentDeposits = getInvestmentDeposits(investment.id);
           const lastDeposit = getLastDeposit(investment.id);
@@ -107,31 +107,30 @@ export function Investments() {
           return (
             <article key={investment.id} className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden min-w-0">
               <div className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: color }}></div>
-              <div className="flex flex-col sm:flex-row sm:justify-between gap-md sm:items-start mb-lg min-w-0">
+              <div className="flex items-start justify-between gap-md mb-md min-w-0">
                 <div className="flex items-start gap-md min-w-0">
-                  <div className="w-12 h-12 rounded-lg border border-outline-variant flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}20`, color }}>
-                    <Icon size={22} />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-outline-variant flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}20`, color }}>
+                    <Icon size={20} />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface truncate">{investment.name}</h3>
-                    <p className="text-[14px] text-on-surface-variant">{catLabels[investment.category]}</p>
+                    <h3 className="font-h2 text-[18px] sm:text-[22px] font-semibold text-on-surface truncate">{investment.name}</h3>
+                    <p className="text-[12px] sm:text-[14px] text-on-surface-variant truncate">{catLabels[investment.category]}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setDepositInvestment(investment)}
-                  className="shrink-0 font-label-md text-[13px] font-semibold bg-primary text-on-primary px-md py-sm rounded-lg hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs min-h-11 w-full sm:w-auto"
+                  className="shrink-0 font-label-md text-[12px] sm:text-[13px] font-semibold bg-primary text-on-primary px-sm sm:px-md py-sm rounded-lg hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs min-h-11"
                 >
-                  <Plus size={16} />Adicionar valor
+                  <Plus size={16} />
+                  <span className="hidden min-[390px]:inline">Adicionar valor</span>
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-md mb-lg">
+              <div className="mb-md">
                 <Metric label="Saldo guardado" value={`R$ ${fmt(investment.current_value)}`} />
-                <Metric label="Total aportado" value={`R$ ${fmt(investment.amount_invested)}`} />
-                <Metric label="Retorno" value={`${investment.return_percentage >= 0 ? '+' : ''}${investment.return_percentage.toFixed(2)}%`} highlight={investment.return_percentage >= 0} />
               </div>
 
-              <div className="bg-background/50 border border-outline-variant rounded-lg p-md">
+              <div className="bg-background/50 border border-outline-variant rounded-lg p-sm sm:p-md">
                 <div className="flex flex-col min-[390px]:flex-row min-[390px]:justify-between min-[390px]:items-center gap-xs mb-md">
                   <h4 className="font-label-md text-[13px] font-semibold text-on-surface-variant uppercase tracking-wider">Histórico de aportes</h4>
                   {lastDeposit && (
@@ -200,7 +199,7 @@ function SummaryCard({ title, value, icon: Icon, tone }: { title: string; value:
         <span className="text-on-surface-variant">{title}</span>
         <div className={`p-sm rounded-md border ${tones[tone]}`}><Icon size={20} /></div>
       </div>
-      <p className="font-numeral-lg text-[22px] sm:text-[28px] font-semibold text-on-surface break-words">{value}</p>
+      <p className="font-numeral-lg text-[18px] min-[390px]:text-[20px] sm:text-[28px] font-semibold text-on-surface break-words">{value}</p>
     </div>
   );
 }
@@ -209,7 +208,7 @@ function Metric({ label, value, highlight = false }: { label: string; value: str
   return (
     <div className="bg-background/50 border border-outline-variant rounded-lg p-md min-w-0">
       <p className="text-[12px] text-on-surface-variant mb-xs uppercase tracking-wider">{label}</p>
-      <p className={`font-numeral-lg text-[16px] sm:text-[18px] font-semibold break-words ${highlight ? 'text-primary' : 'text-on-surface'}`}>{value}</p>
+      <p className={`font-numeral-lg text-[20px] sm:text-[22px] font-semibold break-words ${highlight ? 'text-primary' : 'text-on-surface'}`}>{value}</p>
     </div>
   );
 }
