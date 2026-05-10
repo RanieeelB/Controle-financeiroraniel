@@ -33,7 +33,7 @@ export function calculateSummaryCards(input: SummaryCardsInput): SummaryCards {
 
   return {
     currentBalance: roundCurrency(receivedIncome - paidExpense),
-    projectedBalance: roundCurrency(totalIncome - (totalExpense + input.unpaidFixedBills)),
+    projectedBalance: roundCurrency(totalIncome - (totalExpense + input.unpaidFixedBills + input.openInvoices)),
     totalIncome: roundCurrency(totalIncome),
     totalExpense: roundCurrency(totalExpense),
     savedAmount: roundCurrency(input.savedAmount),
