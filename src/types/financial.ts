@@ -139,6 +139,18 @@ export interface SalarySetting {
   updated_at: string;
 }
 
+export interface TelegramConnection {
+  id: string;
+  user_id: string;
+  link_token_hash: string | null;
+  token_generated_at: string | null;
+  telegram_user_id: string | null;
+  telegram_chat_id: string | null;
+  linked_at: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // === TIPOS DE APRESENTAÇÃO (UI) ===
 export interface SummaryCards {
   currentBalance: number;

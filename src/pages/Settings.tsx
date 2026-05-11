@@ -1,19 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { CheckCircle, Settings as SettingsIcon, Wallet } from 'lucide-react';
+import { CheckCircle, Settings as SettingsIcon, Wallet, MessageCircle, ShieldCheck, Link2 } from 'lucide-react';
 import { upsertSalarySetting } from '../lib/financialActions';
 import { parseCurrencyValue } from '../lib/financialPayloads';
 import { useSalarySettings } from '../hooks/useSalarySettings';
+import { useTelegramConnection } from '../hooks/useTelegramConnection';
+import { supabase } from '../lib/supabase';
 
 const inputClass = 'w-full bg-background border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none placeholder:text-outline';
 const labelClass = 'block font-label-md text-[13px] font-semibold text-on-surface-variant mb-xs uppercase tracking-wider';
 
 export function Settings() {
   const { salarySetting, isLoading } = useSalarySettings();
+  const { connection, isLoading: isLoadingTelegram, refetch: refetchTelegramConnection } = useTelegramConnection();
   const [salaryAmount, setSalaryAmount] = useState('');
   const [salaryDay, setSalaryDay] = useState(5);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [telegramError, setTelegramError] = useState('');
+  const [telegramSuccess, setTelegramSuccess] = useState('');
+  const [generatedTelegramToken, setGeneratedTelegramToken] = useState('');
+  const [isGeneratingTelegramToken, setIsGeneratingTelegramToken] = useState(false);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -58,6 +65,56 @@ export function Settings() {
       setIsSaving(false);
     }
   }
+
+  async function handleGenerateTelegramToken() {
+    setTelegramError('');
+    setTelegramSuccess('');
+    setGeneratedTelegramToken('');
+    setIsGeneratingTelegramToken(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('Sua sessão expirou. Entre novamente para gerar o token do Telegram.');
+      }
+
+      const response = await fetch('/api/telegram/link-token', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const rawResponse = await response.text();
+      let payload: { ok?: boolean; token?: string; error?: string } = {};
+
+      if (rawResponse.trim()) {
+        try {
+          payload = JSON.parse(rawResponse) as { ok?: boolean; token?: string; error?: string };
+        } catch {
+          throw new Error('A rota do Telegram não retornou JSON válido. Verifique o deploy e a configuração da Vercel.');
+        }
+      }
+
+      if (!response.ok || !payload.ok || !payload.token) {
+        throw new Error(payload.error || 'Não foi possível gerar o token do Telegram.');
+      }
+
+      setGeneratedTelegramToken(payload.token);
+      setTelegramSuccess('Esse token aparece apenas uma vez. Copie agora e envie ao bot no Telegram.');
+      await refetchTelegramConnection();
+    } catch (submitError) {
+      setTelegramError(submitError instanceof Error ? submitError.message : 'Não foi possível gerar o token do Telegram.');
+    } finally {
+      setIsGeneratingTelegramToken(false);
+    }
+  }
+
+  const isTelegramLinked = Boolean(connection?.telegram_user_id && connection?.linked_at);
+  const hasGeneratedTelegramToken = Boolean(connection?.token_generated_at && !isTelegramLinked);
+  const canGenerateTelegramToken = !isTelegramLinked && !hasGeneratedTelegramToken && !isLoadingTelegram;
 
   return (
     <div className="flex flex-col gap-xl min-w-0">
@@ -147,6 +204,79 @@ export function Settings() {
                 </div>
               ) : (
                 <p className="text-on-surface-variant">Nenhum salário principal configurado ainda.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,32rem)_1fr] gap-lg mt-lg">
+          <div className="bg-surface border border-outline-variant rounded-xl p-md sm:p-lg space-y-md min-w-0">
+            <div className="flex items-center gap-sm">
+              <MessageCircle size={20} className="text-primary" />
+              <h3 className="font-h2 text-[22px] font-semibold text-on-surface">Telegram</h3>
+            </div>
+
+            <p className="text-[15px] text-on-surface-variant">
+              Gere um token único para vincular seu Telegram ao app. Depois da conexão, o bot reconhecerá sua conta automaticamente.
+            </p>
+
+            {telegramError && (
+              <div className="rounded-lg border border-error/40 bg-error-container/20 px-md py-sm text-on-error-container text-[14px]">
+                {telegramError}
+              </div>
+            )}
+
+            {telegramSuccess && (
+              <div className="rounded-lg border border-primary/30 bg-primary/10 px-md py-sm text-[14px] text-on-surface">
+                {telegramSuccess}
+              </div>
+            )}
+
+            {generatedTelegramToken && (
+              <div className="rounded-lg border border-primary/30 bg-background px-md py-md">
+                <p className="text-[13px] uppercase tracking-wider text-on-surface-variant mb-xs">Token gerado</p>
+                <p className="font-mono text-[14px] break-all text-on-surface">{generatedTelegramToken}</p>
+                <p className="text-[13px] text-on-surface-variant mt-sm">Esse token aparece apenas uma vez.</p>
+              </div>
+            )}
+
+            {canGenerateTelegramToken && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => void handleGenerateTelegramToken()}
+                  disabled={isGeneratingTelegramToken}
+                  className="px-lg py-sm font-label-md text-[14px] font-semibold text-background bg-primary rounded-lg hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed min-h-11 w-full sm:w-auto"
+                >
+                  <ShieldCheck size={18} />
+                  <span>{isGeneratingTelegramToken ? 'Gerando...' : 'Gerar token de acesso'}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-surface border border-outline-variant rounded-xl p-md sm:p-lg space-y-md min-w-0">
+            <div className="flex items-center gap-sm">
+              <Link2 size={20} className="text-primary" />
+              <h3 className="font-h2 text-[22px] font-semibold text-on-surface">Status da conexão</h3>
+            </div>
+
+            <div className="rounded-lg border border-outline-variant bg-background px-md py-md">
+              {isTelegramLinked ? (
+                <div className="space-y-xs">
+                  <p className="text-on-surface"><strong>Telegram conectado</strong></p>
+                  <p className="text-on-surface-variant text-[14px]">Seu bot já está vinculado a esta conta e não precisa mais pedir token.</p>
+                </div>
+              ) : hasGeneratedTelegramToken ? (
+                <div className="space-y-xs">
+                  <p className="text-on-surface"><strong>Token gerado aguardando vinculação</strong></p>
+                  <p className="text-on-surface-variant text-[14px]">Abra o bot no Telegram, envie `/start` e depois informe o token gerado nesta conta.</p>
+                </div>
+              ) : (
+                <div className="space-y-xs">
+                  <p className="text-on-surface"><strong>Telegram ainda não conectado</strong></p>
+                  <p className="text-on-surface-variant text-[14px]">Gere seu token de acesso para iniciar a vinculação com o bot.</p>
+                </div>
               )}
             </div>
           </div>
