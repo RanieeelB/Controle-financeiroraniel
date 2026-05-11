@@ -133,8 +133,8 @@ function getUtf8ByteLength(value: string) {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function toHeaderRecord(headers: IncomingHttpHeaders) {
-  return Object.fromEntries(Object.entries(headers));
+function toHeaderRecord(headers: IncomingHttpHeaders): Record<string, string | string[] | undefined> {
+  return Object.fromEntries(Object.entries(headers)) as Record<string, string | string[] | undefined>;
 }
 
 function sendJson(res: ServerlessResponse, statusCode: number, payload: unknown) {
