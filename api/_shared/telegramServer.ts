@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
-import { createTelegramLinkService, type TelegramConnectionRecord } from '../../src/services/telegram/telegramLinkService';
-import type { FixedBill, Transaction } from '../../src/types/financial';
+import { createTelegramLinkService, type TelegramConnectionRecord } from '../../src/services/telegram/telegramLinkService.js';
+import type { FixedBill, Transaction } from '../../src/types/financial.js';
 
 export function getServerEnv() {
   const supabaseUrl = process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim() || '';

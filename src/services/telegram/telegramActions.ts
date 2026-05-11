@@ -1,10 +1,10 @@
-import { buildMonthRange } from '../../lib/monthSelection';
-import { defaultCategories } from '../../lib/defaultCategories';
-import { buildTransactionPayload, roundCurrency } from '../../lib/financialPayloads';
-import { calculateSummaryCards } from '../../lib/financialPlanning';
-import { resolveDynamicFixedBills } from '../../lib/fixedBillPayments';
-import type { Category, FixedBill, Transaction } from '../../types/financial';
-import type { TelegramParsedMessage } from './telegramParser';
+import { buildMonthRange } from '../../lib/monthSelection.js';
+import { defaultCategories } from '../../lib/defaultCategories.js';
+import { buildTransactionPayload, roundCurrency } from '../../lib/financialPayloads.js';
+import { calculateSummaryCards } from '../../lib/financialPlanning.js';
+import { resolveDynamicFixedBills } from '../../lib/fixedBillPayments.js';
+import type { Category, FixedBill, Transaction } from '../../types/financial.js';
+import type { TelegramParsedMessage } from './telegramParser.js';
 
 type TransactionType = Transaction['type'];
 

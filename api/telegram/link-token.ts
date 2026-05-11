@@ -1,5 +1,5 @@
 import type { IncomingHttpHeaders, IncomingMessage, ServerResponse } from 'node:http';
-import { createTelegramLinkTokenService, resolveSessionUserFromHeaders } from '../_shared/telegramServer';
+import { createTelegramLinkTokenService, resolveSessionUserFromHeaders } from '../_shared/telegramServer.js';
 
 type ServerlessRequest = IncomingMessage & {
   method?: string;

@@ -3,10 +3,10 @@ import {
   createSupabaseAdminClient,
   createTelegramWebhookRepository,
   getTelegramWebhookEnv,
-} from '../_shared/telegramServer';
-import { createTelegramActions } from '../../src/services/telegram/telegramActions';
-import { createTelegramService } from '../../src/services/telegram/telegramService';
-import { createTelegramLinkService } from '../../src/services/telegram/telegramLinkService';
+} from '../_shared/telegramServer.js';
+import { createTelegramActions } from '../../src/services/telegram/telegramActions.js';
+import { createTelegramService } from '../../src/services/telegram/telegramService.js';
+import { createTelegramLinkService } from '../../src/services/telegram/telegramLinkService.js';
 
 type ServerlessRequest = IncomingMessage & {
   body?: unknown;

@@ -1,5 +1,5 @@
-import { parseTelegramMessage, sanitizeTelegramText } from './telegramParser';
-import type { TelegramParsedMessage } from './telegramParser';
+import { parseTelegramMessage, sanitizeTelegramText } from './telegramParser.js';
+import type { TelegramParsedMessage } from './telegramParser.js';
 
 export interface TelegramUpdateMessage {
   message_id?: number;
