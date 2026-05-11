@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS public.investment_deposits CASCADE;
 DROP TABLE IF EXISTS public.investments CASCADE;
 DROP TABLE IF EXISTS public.financial_goals CASCADE;
 DROP TABLE IF EXISTS public.salary_settings CASCADE;
+DROP TABLE IF EXISTS public.telegram_connections CASCADE;
 DROP TABLE IF EXISTS public.fixed_bills CASCADE;
 DROP TABLE IF EXISTS public.invoice_items CASCADE;
 DROP TABLE IF EXISTS public.credit_cards CASCADE;
@@ -136,6 +137,19 @@ CREATE TABLE public.salary_settings (
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+-- 7.5 VÍNCULO TELEGRAM
+CREATE TABLE public.telegram_connections (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+    link_token_hash TEXT,
+    token_generated_at TIMESTAMPTZ,
+    telegram_user_id TEXT UNIQUE,
+    telegram_chat_id TEXT,
+    linked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 -- 8. INVESTIMENTOS
 CREATE TABLE public.investments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -170,6 +184,7 @@ ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fixed_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.salary_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.telegram_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investment_deposits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -211,6 +226,10 @@ CREATE POLICY "Users can view own salary_settings" ON public.salary_settings FOR
 CREATE POLICY "Users can insert own salary_settings" ON public.salary_settings FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own salary_settings" ON public.salary_settings FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own salary_settings" ON public.salary_settings FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own telegram_connections" ON public.telegram_connections FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own telegram_connections" ON public.telegram_connections FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own telegram_connections" ON public.telegram_connections FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can view own investments" ON public.investments FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own investments" ON public.investments FOR INSERT WITH CHECK (auth.uid() = user_id);
