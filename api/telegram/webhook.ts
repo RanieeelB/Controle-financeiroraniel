@@ -1,4 +1,5 @@
 import type { IncomingHttpHeaders, IncomingMessage, ServerResponse } from 'node:http';
+import { Buffer } from 'node:buffer';
 import {
   createSupabaseAdminClient,
   createTelegramWebhookRepository,
@@ -86,7 +87,7 @@ async function readJsonBody(req: ServerlessRequest, maxBytes: number) {
     const textChunk = typeof chunk === 'string'
       ? chunk
       : chunk instanceof Uint8Array
-        ? new TextDecoder().decode(chunk)
+        ? Buffer.from(chunk).toString('utf-8')
         : String(chunk);
     totalBytes += getUtf8ByteLength(textChunk);
     if (totalBytes > maxBytes) {
@@ -118,7 +119,7 @@ function normalizeBody(body: unknown, maxBytes: number) {
     if (body.byteLength > maxBytes) {
       throw new PayloadTooLargeError('Payload maior que o permitido.');
     }
-    return normalizeBody(new TextDecoder().decode(body), maxBytes);
+    return normalizeBody(Buffer.from(body).toString('utf-8'), maxBytes);
   }
 
   if (!body || typeof body !== 'object') {
@@ -132,8 +133,8 @@ function getUtf8ByteLength(value: string) {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function toHeaderRecord(headers: IncomingHttpHeaders) {
-  return Object.fromEntries(Object.entries(headers));
+function toHeaderRecord(headers: IncomingHttpHeaders): Record<string, string | string[] | undefined> {
+  return Object.fromEntries(Object.entries(headers)) as Record<string, string | string[] | undefined>;
 }
 
 function sendJson(res: ServerlessResponse, statusCode: number, payload: unknown) {

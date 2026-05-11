@@ -33,8 +33,8 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
   }
 }
 
-function toHeaderRecord(headers: IncomingHttpHeaders) {
-  return Object.fromEntries(Object.entries(headers));
+function toHeaderRecord(headers: IncomingHttpHeaders): Record<string, string | string[] | undefined> {
+  return Object.fromEntries(Object.entries(headers)) as Record<string, string | string[] | undefined>;
 }
 
 function sendJson(res: ServerlessResponse, statusCode: number, payload: unknown) {
