@@ -1,4 +1,4 @@
-import type { DynamicFixedBill, FixedBill, Transaction } from '../types/financial';
+import type { DynamicFixedBill, FixedBill, Transaction } from '../types/financial.js';
 
 type FixedBillPaymentTransaction = Pick<Transaction, 'id' | 'notes' | 'status'>;
 

@@ -1,4 +1,4 @@
-import type { InvestmentCategory, Transaction } from '../types/financial';
+import type { InvestmentCategory, Transaction } from '../types/financial.js';
 
 export interface TransactionPayloadInput {
   type: Transaction['type'];

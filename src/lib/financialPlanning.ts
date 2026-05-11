@@ -3,8 +3,8 @@ import {
   buildSalaryTransactionNote,
   buildSalaryTransactionPayload,
   roundCurrency,
-} from './financialPayloads';
-import type { SummaryCards, Transaction } from '../types/financial';
+} from './financialPayloads.js';
+import type { SummaryCards, Transaction } from '../types/financial.js';
 
 interface SummaryCardsInput {
   transactions: Array<Pick<Transaction, 'type' | 'amount' | 'status'>>;

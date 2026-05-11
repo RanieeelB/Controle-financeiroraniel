@@ -3,10 +3,10 @@ import {
   createSupabaseAdminClient,
   createTelegramWebhookRepository,
   getTelegramWebhookEnv,
-} from '../_shared/telegramServer';
-import { createTelegramActions } from '../../src/services/telegram/telegramActions';
-import { createTelegramService } from '../../src/services/telegram/telegramService';
-import { createTelegramLinkService } from '../../src/services/telegram/telegramLinkService';
+} from '../_shared/telegramServer.js';
+import { createTelegramActions } from '../../src/services/telegram/telegramActions.js';
+import { createTelegramService } from '../../src/services/telegram/telegramService.js';
+import { createTelegramLinkService } from '../../src/services/telegram/telegramLinkService.js';
 
 type ServerlessRequest = IncomingMessage & {
   body?: unknown;
@@ -79,27 +79,31 @@ async function readJsonBody(req: ServerlessRequest, maxBytes: number) {
     return normalizeBody(req.body, maxBytes);
   }
 
-  const chunks: Buffer[] = [];
+  const chunks: string[] = [];
   let totalBytes = 0;
 
   for await (const chunk of req) {
-    const bufferChunk = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
-    totalBytes += bufferChunk.byteLength;
+    const textChunk = typeof chunk === 'string'
+      ? chunk
+      : chunk instanceof Uint8Array
+        ? new TextDecoder().decode(chunk)
+        : String(chunk);
+    totalBytes += getUtf8ByteLength(textChunk);
     if (totalBytes > maxBytes) {
       throw new PayloadTooLargeError('Payload maior que o permitido.');
     }
-    chunks.push(bufferChunk);
+    chunks.push(textChunk);
   }
 
   if (chunks.length === 0) return {};
 
-  const rawBody = Buffer.concat(chunks).toString('utf8');
+  const rawBody = chunks.join('');
   return normalizeBody(rawBody, maxBytes);
 }
 
 function normalizeBody(body: unknown, maxBytes: number) {
   if (typeof body === 'string') {
-    if (Buffer.byteLength(body, 'utf8') > maxBytes) {
+    if (getUtf8ByteLength(body) > maxBytes) {
       throw new PayloadTooLargeError('Payload maior que o permitido.');
     }
 
@@ -110,11 +114,11 @@ function normalizeBody(body: unknown, maxBytes: number) {
     }
   }
 
-  if (Buffer.isBuffer(body)) {
+  if (body instanceof Uint8Array) {
     if (body.byteLength > maxBytes) {
       throw new PayloadTooLargeError('Payload maior que o permitido.');
     }
-    return normalizeBody(body.toString('utf8'), maxBytes);
+    return normalizeBody(new TextDecoder().decode(body), maxBytes);
   }
 
   if (!body || typeof body !== 'object') {
@@ -122,6 +126,10 @@ function normalizeBody(body: unknown, maxBytes: number) {
   }
 
   return body;
+}
+
+function getUtf8ByteLength(value: string) {
+  return new TextEncoder().encode(value).byteLength;
 }
 
 function toHeaderRecord(headers: IncomingHttpHeaders) {
