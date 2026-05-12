@@ -107,7 +107,8 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     sendJson(res, result.statusCode, result.payload);
   } catch (error) {
     const statusCode = error instanceof PayloadTooLargeError ? 413 : error instanceof InvalidJsonError ? 400 : 500;
-    sendJson(res, statusCode, { ok: false });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    sendJson(res, statusCode, { ok: false, error: message });
   }
 }
 
