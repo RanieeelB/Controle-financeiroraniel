@@ -5,7 +5,6 @@ function buildService() {
   const sendMessage = vi.fn().mockResolvedValue(undefined);
   const answerCallbackQuery = vi.fn().mockResolvedValue(undefined);
   const handleParsedMessageForUser = vi.fn().mockResolvedValue('ok');
-  const handleAdvisorMessageForUser = vi.fn().mockResolvedValue('resposta consultiva');
   const getLinkedAccountByTelegramUserId = vi.fn().mockResolvedValue(null);
   const linkTelegramUser = vi.fn().mockResolvedValue({
     connectionId: 'conn-1',
@@ -18,7 +17,6 @@ function buildService() {
     botToken: 'bot-token',
     webhookSecret: 'secret-token',
     handleParsedMessageForUser,
-    handleAdvisorMessageForUser,
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
     sendMessage,
@@ -30,7 +28,6 @@ function buildService() {
     sendMessage,
     answerCallbackQuery,
     handleParsedMessageForUser,
-    handleAdvisorMessageForUser,
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
   };
@@ -94,7 +91,19 @@ describe('telegramService', () => {
             expect.objectContaining({ text: '💰 Registrar entrada', callback_data: 'guide:income' }),
           ]),
           expect.arrayContaining([
-            expect.objectContaining({ text: '📊 Resumo do mês', callback_data: 'summary:month' }),
+            expect.objectContaining({ text: '📊 Resumo', callback_data: 'summary:month' }),
+            expect.objectContaining({ text: '🧮 Sobra', callback_data: 'balance:month' }),
+          ]),
+          expect.arrayContaining([
+            expect.objectContaining({ text: '💳 Faturas', callback_data: 'list:invoices' }),
+            expect.objectContaining({ text: '💳 Cartões', callback_data: 'list:cards' }),
+          ]),
+          expect.arrayContaining([
+            expect.objectContaining({ text: '🏦 Investimentos', callback_data: 'list:investments' }),
+            expect.objectContaining({ text: '🎯 Metas', callback_data: 'list:goals' }),
+          ]),
+          expect.arrayContaining([
+            expect.objectContaining({ text: '🏠 Fixas', callback_data: 'list:fixed-bills' }),
             expect.objectContaining({ text: '❓ Ajuda', callback_data: 'help:examples' }),
           ]),
         ]),
@@ -249,71 +258,8 @@ describe('telegramService', () => {
     );
   });
 
-  it('uses the AI parser as fallback for linked users when regex parsing is unknown', async () => {
-    const sendMessage = vi.fn().mockResolvedValue(undefined);
-    const handleParsedMessageForUser = vi.fn().mockResolvedValue('registrado');
-    const parseMessageWithAi = vi.fn().mockResolvedValue({
-      intent: 'create_expense',
-      data: {
-        description: 'cinema',
-        amount: 80,
-        category: 'Lazer',
-        date: '2026-05-10',
-        status: 'pago',
-      },
-    });
-
-    const service = createTelegramService({
-      botToken: 'bot-token',
-      webhookSecret: 'secret-token',
-      handleParsedMessageForUser,
-      getLinkedAccountByTelegramUserId: vi.fn().mockResolvedValue({
-        userId: 'user-1',
-        telegramUserId: '12345',
-      }),
-      linkTelegramUser: vi.fn(),
-      sendMessage,
-      parseMessageWithAi,
-      now: new Date('2026-05-10T12:00:00-03:00'),
-    });
-
-    await service.handleRequest({
-      method: 'POST',
-      headers: {
-        'x-telegram-bot-api-secret-token': 'secret-token',
-      },
-      body: {
-        message: {
-          text: 'ontem fui no cinema e paguei oitenta reais',
-          chat: { id: 99 },
-          from: { id: 12345 },
-        },
-      },
-    });
-
-    expect(parseMessageWithAi).toHaveBeenCalledWith(
-      'ontem fui no cinema e paguei oitenta reais',
-      expect.objectContaining({ now: new Date('2026-05-10T12:00:00-03:00') }),
-    );
-    expect(handleParsedMessageForUser).toHaveBeenCalledWith(
-      'user-1',
-      expect.objectContaining({ intent: 'create_expense' }),
-    );
-    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
-      text: 'registrado',
-      parseMode: 'HTML',
-      replyMarkup: expect.objectContaining({
-        inline_keyboard: expect.arrayContaining([
-          expect.arrayContaining([
-            expect.objectContaining({ text: '📊 Ver resumo', callback_data: 'summary:month' }),
-          ]),
-        ]),
-      }),
-    }));
-  });
-
-  it('routes free-form finance questions to the advisor when the parser stays unknown', async () => {
-    const { service, handleAdvisorMessageForUser, handleParsedMessageForUser, getLinkedAccountByTelegramUserId } = buildService();
+  it('routes unknown linked messages to the deterministic handler instead of AI', async () => {
+    const { service, handleParsedMessageForUser, getLinkedAccountByTelegramUserId } = buildService();
     getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
       userId: 'user-1',
       telegramUserId: '12345',
@@ -333,13 +279,10 @@ describe('telegramService', () => {
       },
     });
 
-    expect(handleParsedMessageForUser).not.toHaveBeenCalled();
-    expect(handleAdvisorMessageForUser).toHaveBeenCalledWith(expect.objectContaining({
-      userId: 'user-1',
-      telegramChatId: '99',
-      telegramUserId: '12345',
-      message: 'onde posso economizar esse mês?',
-    }));
+    expect(handleParsedMessageForUser).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ intent: 'unknown' }),
+    );
   });
 
   it('returns ok for updates without text', async () => {

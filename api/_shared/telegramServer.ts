@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { createTelegramLinkService, type TelegramConnectionRecord } from '../../src/services/telegram/telegramLinkService.js';
-import type { FinancialGoal, FixedBill, Investment, SalarySetting, Transaction } from '../../src/types/financial.js';
+import type { CreditCard, FinancialGoal, FixedBill, Investment, SalarySetting, Transaction } from '../../src/types/financial.js';
 
 export function getServerEnv() {
   const supabaseUrl = process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim() || '';
@@ -23,8 +23,6 @@ export function getTelegramWebhookEnv() {
   const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? '';
   const telegramWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? '';
   const telegramLinkTokenSecret = process.env.TELEGRAM_LINK_TOKEN_SECRET?.trim() ?? '';
-  const geminiApiKey = process.env.GEMINI_API_KEY?.trim() ?? '';
-  const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash-lite';
 
   if (!telegramBotToken || !telegramWebhookSecret || !telegramLinkTokenSecret) {
     throw new Error('Configuração do servidor incompleta para o webhook do Telegram.');
@@ -34,8 +32,6 @@ export function getTelegramWebhookEnv() {
     telegramBotToken,
     telegramWebhookSecret,
     telegramLinkTokenSecret,
-    geminiApiKey,
-    geminiModel,
     supabaseUrl,
     supabaseAnonKey,
     supabaseServiceRoleKey,
@@ -235,7 +231,7 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
     async listMonthTransactions(input: { userId: string; startDate: string; endDate: string }) {
       const { data, error } = await supabase
         .from('transactions')
-        .select('id, type, amount, status, notes, description, date, payment_method')
+        .select('id, type, amount, status, notes, description, date, payment_method, category:categories(name, color)')
         .eq('user_id', input.userId)
         .gte('date', input.startDate)
         .lt('date', input.endDate);
@@ -250,12 +246,13 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
         description: typeof transaction.description === 'string' ? transaction.description : undefined,
         date: typeof transaction.date === 'string' ? transaction.date : undefined,
         payment_method: transaction.payment_method as Transaction['payment_method'] | undefined,
+        category: normalizeJoinedCategory(transaction.category),
       }));
     },
     async listMonthInvoiceItems(input: { userId: string; startDate: string; endDate: string }) {
       const { data, error } = await supabase
         .from('invoice_items')
-        .select('id, amount, description, date')
+        .select('id, card_id, amount, description, date, credit_card:credit_cards(id, name, last_digits, brand)')
         .eq('user_id', input.userId)
         .gte('date', input.startDate)
         .lt('date', input.endDate);
@@ -263,10 +260,34 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
       if (error) throw error;
       return ((data ?? []) as Array<Record<string, unknown>>).map(item => ({
         id: String(item.id),
+        card_id: typeof item.card_id === 'string' ? item.card_id : undefined,
         amount: Number(item.amount),
         description: String(item.description ?? ''),
         date: String(item.date ?? ''),
+        credit_card: normalizeJoinedCreditCard(item.credit_card),
       }));
+    },
+    async listCreditCards(userId: string) {
+      const { data, error } = await supabase
+        .from('credit_cards')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return ((data ?? []) as Array<Record<string, unknown>>).map(card => ({
+        id: String(card.id),
+        user_id: typeof card.user_id === 'string' ? card.user_id : null,
+        name: String(card.name ?? ''),
+        last_digits: String(card.last_digits ?? ''),
+        brand: String(card.brand ?? ''),
+        card_holder: String(card.card_holder ?? ''),
+        credit_limit: Number(card.credit_limit),
+        due_day: Number(card.due_day),
+        closing_day: Number(card.closing_day),
+        color: String(card.color ?? ''),
+        created_at: String(card.created_at ?? ''),
+      })) as CreditCard[];
     },
     async listFixedBills(userId: string) {
       const { data, error } = await supabase
@@ -452,3 +473,27 @@ export async function resolveSessionUserFromHeaders(headers: Record<string, stri
 }
 
 export type AuthenticatedUser = User;
+
+function normalizeJoinedCategory(value: unknown) {
+  if (!value || typeof value !== 'object') return undefined;
+  const category = Array.isArray(value) ? value[0] : value;
+  if (!category || typeof category !== 'object') return undefined;
+  const record = category as Record<string, unknown>;
+  return {
+    name: String(record.name ?? ''),
+    color: typeof record.color === 'string' ? record.color : undefined,
+  };
+}
+
+function normalizeJoinedCreditCard(value: unknown) {
+  if (!value || typeof value !== 'object') return undefined;
+  const card = Array.isArray(value) ? value[0] : value;
+  if (!card || typeof card !== 'object') return undefined;
+  const record = card as Record<string, unknown>;
+  return {
+    id: String(record.id ?? ''),
+    name: String(record.name ?? ''),
+    last_digits: String(record.last_digits ?? ''),
+    brand: String(record.brand ?? ''),
+  };
+}

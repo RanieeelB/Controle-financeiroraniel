@@ -6,8 +6,6 @@ import {
   getTelegramWebhookEnv,
 } from '../_shared/telegramServer.js';
 import { createTelegramActions } from '../../src/services/telegram/telegramActions.js';
-import { createTelegramAdvisor } from '../../src/services/telegram/telegramAdvisor.js';
-import { createGeminiTelegramParser } from '../../src/services/telegram/telegramGeminiParser.js';
 import { createTelegramService } from '../../src/services/telegram/telegramService.js';
 import { createTelegramLinkService } from '../../src/services/telegram/telegramLinkService.js';
 
@@ -31,31 +29,12 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     const telegramActions = createTelegramActions({
       repo,
     });
-    const geminiParser = env.geminiApiKey
-      ? createGeminiTelegramParser({
-          apiKey: env.geminiApiKey,
-          model: env.geminiModel,
-        })
-      : null;
-    const telegramAdvisor = env.geminiApiKey
-      ? createTelegramAdvisor({
-          apiKey: env.geminiApiKey,
-          model: env.geminiModel,
-          repo,
-        })
-      : null;
 
     const telegramService = createTelegramService({
       botToken: env.telegramBotToken,
       webhookSecret: env.telegramWebhookSecret,
       maxPayloadBytes: MAX_PAYLOAD_BYTES,
       handleParsedMessageForUser: telegramActions.handleParsedMessageForUser,
-      handleAdvisorMessageForUser: telegramAdvisor
-        ? (input) => telegramAdvisor.reply(input)
-        : undefined,
-      parseMessageWithAi: geminiParser
-        ? (text, options) => geminiParser.parse(text, options)
-        : undefined,
       getLinkedAccountByTelegramUserId: async (telegramUserId) => {
         const linked = await repo.getLinkedConnectionByTelegramUserId(telegramUserId);
         return linked ? { userId: linked.user_id, telegramUserId: linked.telegram_user_id ?? telegramUserId } : null;
