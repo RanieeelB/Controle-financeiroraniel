@@ -4,6 +4,7 @@ import { createTelegramService } from './telegramService';
 function buildService() {
   const sendMessage = vi.fn().mockResolvedValue(undefined);
   const answerCallbackQuery = vi.fn().mockResolvedValue(undefined);
+  const deleteMessage = vi.fn().mockResolvedValue(undefined);
   const handleParsedMessageForUser = vi.fn().mockResolvedValue('ok');
   const getLinkedAccountByTelegramUserId = vi.fn().mockResolvedValue(null);
   const linkTelegramUser = vi.fn().mockResolvedValue({
@@ -21,12 +22,14 @@ function buildService() {
     linkTelegramUser,
     sendMessage,
     answerCallbackQuery,
+    deleteMessage,
   });
 
   return {
     service,
     sendMessage,
     answerCallbackQuery,
+    deleteMessage,
     handleParsedMessageForUser,
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
@@ -60,7 +63,7 @@ describe('telegramService', () => {
   });
 
   it('responds to /start for already linked users', async () => {
-    const { service, sendMessage, getLinkedAccountByTelegramUserId } = buildService();
+    const { service, sendMessage, deleteMessage, getLinkedAccountByTelegramUserId } = buildService();
     getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
       userId: 'user-1',
       telegramUserId: '12345',
@@ -73,6 +76,7 @@ describe('telegramService', () => {
       },
       body: {
         message: {
+          message_id: 77,
           text: '/start',
           chat: { id: 99 },
           from: { id: 12345 },
@@ -80,6 +84,11 @@ describe('telegramService', () => {
       },
     });
 
+    expect(deleteMessage).toHaveBeenCalledWith({
+      chatId: 99,
+      messageId: 77,
+      botToken: 'bot-token',
+    });
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
       chatId: 99,
       parseMode: 'HTML',
@@ -112,7 +121,7 @@ describe('telegramService', () => {
   });
 
   it('shows an expense guide when the user taps the expense button', async () => {
-    const { service, sendMessage, getLinkedAccountByTelegramUserId } = buildService();
+    const { service, sendMessage, deleteMessage, getLinkedAccountByTelegramUserId } = buildService();
     getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
       userId: 'user-1',
       telegramUserId: '12345',
@@ -128,6 +137,7 @@ describe('telegramService', () => {
           id: 'callback-1',
           data: 'guide:expense',
           message: {
+            message_id: 123,
             chat: { id: 99 },
           },
           from: { id: 12345 },
@@ -135,6 +145,11 @@ describe('telegramService', () => {
       },
     });
 
+    expect(deleteMessage).toHaveBeenCalledWith({
+      chatId: 99,
+      messageId: 123,
+      botToken: 'bot-token',
+    });
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
       chatId: 99,
       parseMode: 'HTML',
@@ -230,7 +245,7 @@ describe('telegramService', () => {
   });
 
   it('routes parsed financial messages only after the telegram user is linked', async () => {
-    const { service, handleParsedMessageForUser, getLinkedAccountByTelegramUserId } = buildService();
+    const { service, deleteMessage, handleParsedMessageForUser, getLinkedAccountByTelegramUserId } = buildService();
     getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
       userId: 'user-1',
       telegramUserId: '12345',
@@ -243,6 +258,7 @@ describe('telegramService', () => {
       },
       body: {
         message: {
+          message_id: 55,
           text: 'gastei 25 no almoço',
           chat: { id: 99 },
           from: { id: 12345 },
@@ -250,12 +266,52 @@ describe('telegramService', () => {
       },
     });
 
+    expect(deleteMessage).toHaveBeenCalledWith({
+      chatId: 99,
+      messageId: 55,
+      botToken: 'bot-token',
+    });
     expect(handleParsedMessageForUser).toHaveBeenCalledWith(
       'user-1',
       expect.objectContaining({
         intent: 'create_expense',
       }),
     );
+  });
+
+  it('continues responding when Telegram refuses to delete a message', async () => {
+    const { service, sendMessage, deleteMessage, getLinkedAccountByTelegramUserId } = buildService();
+    deleteMessage.mockRejectedValueOnce(new Error('message cannot be deleted'));
+    getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
+      userId: 'user-1',
+      telegramUserId: '12345',
+    });
+
+    const result = await service.handleRequest({
+      method: 'POST',
+      headers: {
+        'x-telegram-bot-api-secret-token': 'secret-token',
+      },
+      body: {
+        message: {
+          message_id: 88,
+          text: '/help',
+          chat: { id: 99 },
+          from: { id: 12345 },
+        },
+      },
+    });
+
+    expect(result.statusCode).toBe(200);
+    expect(deleteMessage).toHaveBeenCalledWith({
+      chatId: 99,
+      messageId: 88,
+      botToken: 'bot-token',
+    });
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      chatId: 99,
+      text: expect.stringContaining('<b>Como usar</b>'),
+    }));
   });
 
   it('routes unknown linked messages to the deterministic handler instead of AI', async () => {
