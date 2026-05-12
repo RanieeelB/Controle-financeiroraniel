@@ -1,6 +1,7 @@
 export type TelegramIntent =
   | 'create_expense'
   | 'create_income'
+  | 'create_investment_deposit'
   | 'get_monthly_summary'
   | 'unknown';
 
@@ -24,6 +25,7 @@ interface ParseTelegramMessageOptions {
 
 const expensePattern = /^(gastei|paguei|comprei)\s+([0-9][0-9.,]*)\s+(?:no|na|em|de|do|da)?\s*(.+)$/i;
 const incomePattern = /^recebi\s+([0-9][0-9.,]*)\s+(.+)$/i;
+const investmentDepositPattern = /^(adicione|adicionar|aporte|aportar|investi)\s+([0-9][0-9.,]*)\s+(?:no|na|em)?\s*(?:investimento|caixinha)?\s*(.+)$/i;
 const summaryPattern = /^resumo\s+do\s+m[eê]s$/i;
 
 export function sanitizeTelegramText(text: string) {
@@ -95,6 +97,25 @@ export function parseTelegramMessage(text: string, options: ParseTelegramMessage
     };
   }
 
+  const investmentMatch = sanitized.match(investmentDepositPattern);
+  if (investmentMatch) {
+    const amount = parseTelegramAmount(investmentMatch[2]);
+    const description = normalizeInvestmentName(investmentMatch[3]);
+    if (!amount || !description) {
+      return buildUnknown(date);
+    }
+
+    return {
+      intent: 'create_investment_deposit',
+      data: {
+        description,
+        amount,
+        date,
+        status: 'pago',
+      },
+    };
+  }
+
   return buildUnknown(date);
 }
 
@@ -129,6 +150,13 @@ function buildUnknown(date: string): TelegramParsedMessage {
 
 function normalizeDescription(value: string) {
   return sanitizeTelegramText(value).replace(/^(no|na|em|de|do|da)\s+/i, '').trim();
+}
+
+function normalizeInvestmentName(value: string) {
+  return sanitizeTelegramText(value)
+    .replace(/^(no|na|em|de|do|da)\s+/i, '')
+    .replace(/^(investimento|caixinha)\s+/i, '')
+    .trim();
 }
 
 function parseTelegramAmount(value: string) {

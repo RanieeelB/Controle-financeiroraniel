@@ -104,6 +104,28 @@ function normalizeGeminiResponse(rawText: string, fallbackDate: string): Telegra
     };
   }
 
+  if (parsed.intent === 'create_investment_deposit') {
+    const description = typeof parsed.description === 'string'
+      ? sanitizeTelegramText(parsed.description)
+      : '';
+    const amount = normalizeAmount(parsed.amount);
+    const date = normalizeDate(parsed.date, fallbackDate);
+
+    if (!description || !amount || !date) {
+      return buildUnknown(fallbackDate);
+    }
+
+    return {
+      intent: 'create_investment_deposit',
+      data: {
+        description,
+        amount,
+        date,
+        status: 'pago',
+      },
+    };
+  }
+
   if (parsed.intent !== 'create_expense' && parsed.intent !== 'create_income') {
     return buildUnknown(fallbackDate);
   }
