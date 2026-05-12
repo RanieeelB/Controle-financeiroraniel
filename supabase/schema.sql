@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS public.investment_deposits CASCADE;
 DROP TABLE IF EXISTS public.investments CASCADE;
 DROP TABLE IF EXISTS public.financial_goals CASCADE;
 DROP TABLE IF EXISTS public.salary_settings CASCADE;
+DROP TABLE IF EXISTS public.telegram_automation_deliveries CASCADE;
 DROP TABLE IF EXISTS public.telegram_connections CASCADE;
 DROP TABLE IF EXISTS public.fixed_bills CASCADE;
 DROP TABLE IF EXISTS public.invoice_items CASCADE;
@@ -162,6 +163,19 @@ CREATE TABLE public.telegram_conversation_messages (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+-- 7.7 CONTROLE DE ENTREGA DAS AUTOMAÇÕES TELEGRAM
+CREATE TABLE public.telegram_automation_deliveries (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    automation_key TEXT NOT NULL,
+    delivered_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    UNIQUE (user_id, automation_key)
+);
+
+CREATE INDEX telegram_automation_deliveries_user_delivered_idx
+    ON public.telegram_automation_deliveries (user_id, delivered_at DESC);
+
 -- 8. INVESTIMENTOS
 CREATE TABLE public.investments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -198,6 +212,7 @@ ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.salary_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.telegram_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.telegram_conversation_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.telegram_automation_deliveries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investment_deposits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -245,6 +260,7 @@ CREATE POLICY "Users can insert own telegram_connections" ON public.telegram_con
 CREATE POLICY "Users can update own telegram_connections" ON public.telegram_connections FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can view own telegram_conversation_messages" ON public.telegram_conversation_messages FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own telegram_conversation_messages" ON public.telegram_conversation_messages FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own telegram_automation_deliveries" ON public.telegram_automation_deliveries FOR SELECT USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can view own investments" ON public.investments FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own investments" ON public.investments FOR INSERT WITH CHECK (auth.uid() = user_id);

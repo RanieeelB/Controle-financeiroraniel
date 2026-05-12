@@ -46,6 +46,7 @@ interface CreateTelegramServiceOptions {
   maxPayloadBytes?: number;
   now?: Date;
   handleParsedMessageForUser(userId: string, parsed: TelegramParsedMessage): Promise<string>;
+  handleAutomationCallbackForUser?(userId: string, callbackData: string): Promise<{ text: string; replyMarkup?: TelegramReplyMarkup } | null>;
   getLinkedAccountByTelegramUserId(telegramUserId: string): Promise<{ userId: string; telegramUserId: string; } | null>;
   linkTelegramUser(input: { rawToken: string; telegramUserId: string; telegramChatId: string; }): Promise<{ userId: string }>;
   sendMessage(input: { chatId: number; text: string; botToken: string; replyMarkup?: TelegramReplyMarkup; parseMode?: TelegramParseMode }): Promise<void>;
@@ -247,6 +248,20 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
     'balance:month': 'quanto sobrou esse mês',
   };
   const callbackMessage = callbackQuery.data ? callbackMessages[callbackQuery.data] : undefined;
+
+  if (callbackQuery.data?.startsWith('auto:')) {
+    const automationResponse = await options.handleAutomationCallbackForUser?.(linkedAccount.userId, callbackQuery.data);
+    if (automationResponse) {
+      await options.sendMessage({
+        chatId,
+        botToken: options.botToken,
+        text: automationResponse.text,
+        replyMarkup: automationResponse.replyMarkup,
+        parseMode: 'HTML',
+      });
+      return { statusCode: 200, payload: { ok: true } };
+    }
+  }
 
   if (callbackMessage) {
     const parsed = parseTelegramMessage(callbackMessage, { now: options.now });

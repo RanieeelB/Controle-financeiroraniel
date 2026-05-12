@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { createTelegramLinkService, type TelegramConnectionRecord } from '../../src/services/telegram/telegramLinkService.js';
+import { buildFixedBillPaymentPayload } from '../../src/services/telegram/telegramAutomations.js';
 import type { CreditCard, FinancialGoal, FixedBill, Investment, SalarySetting, Transaction } from '../../src/types/financial.js';
 
 export function getServerEnv() {
@@ -158,6 +159,41 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
 
       if (error) throw error;
       return data;
+    },
+    async listLinkedConnections() {
+      const { data, error } = await supabase
+        .from('telegram_connections')
+        .select('user_id, telegram_chat_id')
+        .not('linked_at', 'is', null)
+        .not('telegram_chat_id', 'is', null);
+
+      if (error) throw error;
+      return ((data ?? []) as Array<Record<string, unknown>>).map(connection => ({
+        user_id: String(connection.user_id ?? ''),
+        telegram_chat_id: typeof connection.telegram_chat_id === 'string' ? connection.telegram_chat_id : null,
+      }));
+    },
+    async hasDelivery(input: { userId: string; automationKey: string }) {
+      const { data, error } = await supabase
+        .from('telegram_automation_deliveries')
+        .select('id')
+        .eq('user_id', input.userId)
+        .eq('automation_key', input.automationKey)
+        .limit(1);
+
+      if (error) throw error;
+      return Boolean(data?.[0]);
+    },
+    async saveDelivery(input: { userId: string; automationKey: string; deliveredAt: string }) {
+      const { error } = await supabase
+        .from('telegram_automation_deliveries')
+        .upsert({
+          user_id: input.userId,
+          automation_key: input.automationKey,
+          delivered_at: input.deliveredAt,
+        }, { onConflict: 'user_id,automation_key' });
+
+      if (error) throw error;
     },
     async findCategoryByNameOrAliases(input: {
       userId: string;
@@ -449,6 +485,46 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
         });
 
       if (error) throw error;
+    },
+    async updateTransactionsStatus(transactionIds: string[], status: Transaction['status']) {
+      if (transactionIds.length === 0) return;
+
+      const { error } = await supabase
+        .from('transactions')
+        .update({ status })
+        .in('id', transactionIds);
+
+      if (error) throw error;
+    },
+    async insertFixedBillPayment(input: {
+      userId: string;
+      billId: string;
+      monthKey: string;
+      description: string;
+      amount: number;
+      categoryId: string | null;
+      date: string;
+    }) {
+      const paymentPayload = buildFixedBillPaymentPayload({
+        description: input.description,
+        amount: input.amount,
+        categoryId: input.categoryId,
+        date: input.date,
+        billId: input.billId,
+      });
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert({
+          ...paymentPayload,
+          user_id: input.userId,
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      return {
+        id: typeof data?.id === 'string' ? data.id : null,
+      };
     },
   };
 }
