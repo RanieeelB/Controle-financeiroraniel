@@ -12,10 +12,29 @@ export interface TelegramUpdateMessage {
   };
 }
 
+export interface TelegramCallbackQuery {
+  id?: string;
+  data?: string;
+  message?: TelegramUpdateMessage;
+  from?: {
+    id?: number;
+  };
+}
+
 export interface TelegramUpdate {
   update_id?: number;
   message?: TelegramUpdateMessage;
   edited_message?: TelegramUpdateMessage;
+  callback_query?: TelegramCallbackQuery;
+}
+
+export interface TelegramInlineKeyboardButton {
+  text: string;
+  callback_data: string;
+}
+
+export interface TelegramReplyMarkup {
+  inline_keyboard: TelegramInlineKeyboardButton[][];
 }
 
 interface CreateTelegramServiceOptions {
@@ -25,9 +44,11 @@ interface CreateTelegramServiceOptions {
   maxPayloadBytes?: number;
   now?: Date;
   handleParsedMessageForUser(userId: string, parsed: TelegramParsedMessage): Promise<string>;
+  parseMessageWithAi?(text: string, options: { now?: Date }): Promise<TelegramParsedMessage | null>;
   getLinkedAccountByTelegramUserId(telegramUserId: string): Promise<{ userId: string; telegramUserId: string; } | null>;
   linkTelegramUser(input: { rawToken: string; telegramUserId: string; telegramChatId: string; }): Promise<{ userId: string }>;
-  sendMessage(input: { chatId: number; text: string; botToken: string }): Promise<void>;
+  sendMessage(input: { chatId: number; text: string; botToken: string; replyMarkup?: TelegramReplyMarkup }): Promise<void>;
+  answerCallbackQuery?(input: { callbackQueryId: string; botToken: string; text?: string }): Promise<void>;
 }
 
 interface TelegramRequestInput {
@@ -57,6 +78,10 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
       }
 
       const update = normalizeUpdate(request.body);
+      if (update.callback_query) {
+        return handleCallbackQuery(update.callback_query, options);
+      }
+
       const message = update.message ?? update.edited_message;
       if (!message?.text || !message.chat?.id) {
         return { statusCode: 200, payload: { ok: true } };
@@ -90,6 +115,7 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
             chatId: message.chat.id,
             botToken: options.botToken,
             text: linkedAccount ? getStartMessage() : getLinkPromptMessage(),
+            replyMarkup: linkedAccount ? getMainMenuKeyboard() : getLinkKeyboard(),
           });
           return { statusCode: 200, payload: { ok: true } };
         }
@@ -100,6 +126,7 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
             chatId: message.chat.id,
             botToken: options.botToken,
             text: linkedAccount ? getHelpMessage() : getLinkHelpMessage(),
+            replyMarkup: linkedAccount ? getMainMenuKeyboard() : getLinkKeyboard(),
           });
           return { statusCode: 200, payload: { ok: true } };
         }
@@ -117,17 +144,23 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
             chatId: message.chat.id,
             botToken: options.botToken,
             text: getLinkedSuccessMessage(),
+            replyMarkup: getMainMenuKeyboard(),
           });
           return { statusCode: 200, payload: { ok: true } };
         }
 
-        const parsed = parseTelegramMessage(sanitizedText, { now: options.now });
+        let parsed = parseTelegramMessage(sanitizedText, { now: options.now });
+        if (parsed.intent === 'unknown' && options.parseMessageWithAi) {
+          parsed = await options.parseMessageWithAi(sanitizedText, { now: options.now }) ?? parsed;
+        }
+
         const responseText = await options.handleParsedMessageForUser(linkedAccount.userId, parsed);
 
         await options.sendMessage({
           chatId: message.chat.id,
           botToken: options.botToken,
           text: responseText,
+          replyMarkup: getPostActionKeyboard(parsed.intent),
         });
 
         return { statusCode: 200, payload: { ok: true } };
@@ -143,6 +176,63 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
       }
     },
   };
+}
+
+async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options: CreateTelegramServiceOptions) {
+  const callbackQueryId = callbackQuery.id;
+  const chatId = callbackQuery.message?.chat?.id;
+  const fromId = String(callbackQuery.from?.id ?? '');
+
+  if (!callbackQueryId || !chatId || !fromId) {
+    return { statusCode: 200, payload: { ok: true } };
+  }
+
+  await options.answerCallbackQuery?.({
+    callbackQueryId,
+    botToken: options.botToken,
+  });
+
+  const linkedAccount = await options.getLinkedAccountByTelegramUserId(fromId);
+  if (!linkedAccount) {
+    await options.sendMessage({
+      chatId,
+      botToken: options.botToken,
+      text: getLinkPromptMessage(),
+      replyMarkup: getLinkKeyboard(),
+    });
+    return { statusCode: 200, payload: { ok: true } };
+  }
+
+  if (callbackQuery.data === 'summary:month') {
+    const parsed = parseTelegramMessage('resumo do mês', { now: options.now });
+    const responseText = await options.handleParsedMessageForUser(linkedAccount.userId, parsed);
+    await options.sendMessage({
+      chatId,
+      botToken: options.botToken,
+      text: responseText,
+      replyMarkup: getMainMenuKeyboard(),
+    });
+    return { statusCode: 200, payload: { ok: true } };
+  }
+
+  if (callbackQuery.data === 'help:examples') {
+    await options.sendMessage({
+      chatId,
+      botToken: options.botToken,
+      text: getHelpMessage(),
+      replyMarkup: getMainMenuKeyboard(),
+    });
+    return { statusCode: 200, payload: { ok: true } };
+  }
+
+  await options.sendMessage({
+    chatId,
+    botToken: options.botToken,
+    text: getStartMessage(),
+    replyMarkup: getMainMenuKeyboard(),
+  });
+
+  return { statusCode: 200, payload: { ok: true } };
 }
 
 function normalizeUpdate(body: unknown): TelegramUpdate {
@@ -175,8 +265,11 @@ function getStartMessage() {
   return [
     'Bot do controle financeiro ativo.',
     '',
+    'Você pode mandar uma mensagem normal ou usar os botões abaixo.',
+    '',
     'Exemplos:',
     'gastei 25 no almoço',
+    'paguei 100 internet',
     'recebi 6500 salário',
     'resumo do mês',
   ].join('\n');
@@ -222,6 +315,40 @@ function getLinkedSuccessMessage() {
     'recebi 6500 salário',
     'resumo do mês',
   ].join('\n');
+}
+
+function getMainMenuKeyboard(): TelegramReplyMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'Resumo do mês', callback_data: 'summary:month' },
+        { text: 'Ajuda', callback_data: 'help:examples' },
+      ],
+    ],
+  };
+}
+
+function getLinkKeyboard(): TelegramReplyMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: 'Ajuda', callback_data: 'help:examples' }],
+    ],
+  };
+}
+
+function getPostActionKeyboard(intent: TelegramParsedMessage['intent']): TelegramReplyMarkup {
+  if (intent === 'create_expense' || intent === 'create_income') {
+    return {
+      inline_keyboard: [
+        [
+          { text: 'Ver resumo', callback_data: 'summary:month' },
+          { text: 'Ajuda', callback_data: 'help:examples' },
+        ],
+      ],
+    };
+  }
+
+  return getMainMenuKeyboard();
 }
 
 function getInvalidTokenMessage() {
