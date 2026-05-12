@@ -3,6 +3,17 @@ export type TelegramIntent =
   | 'create_income'
   | 'create_investment_deposit'
   | 'get_monthly_summary'
+  | 'list_expenses'
+  | 'list_incomes'
+  | 'get_expense_distribution'
+  | 'list_fixed_bills'
+  | 'list_open_invoices'
+  | 'get_card_invoice'
+  | 'list_cards'
+  | 'list_investments'
+  | 'get_investment_summary'
+  | 'list_goals'
+  | 'get_balance'
   | 'unknown';
 
 export interface TelegramParsedData {
@@ -23,10 +34,16 @@ interface ParseTelegramMessageOptions {
   timeZone?: string;
 }
 
-const expensePattern = /^(gastei|paguei|comprei)\s+([0-9][0-9.,]*)\s+(?:no|na|em|de|do|da)?\s*(.+)$/i;
-const incomePattern = /^recebi\s+([0-9][0-9.,]*)\s+(.+)$/i;
-const investmentDepositPattern = /^(adicione|adicionar|aporte|aportar|investi)\s+([0-9][0-9.,]*)\s+(?:no|na|em)?\s*(?:investimento|caixinha)?\s*(.+)$/i;
-const summaryPattern = /^resumo\s+do\s+m[eê]s$/i;
+const currencyAmount = String.raw`(?:r\$\s*)?([0-9][0-9.,]*)`;
+const expensePatterns = [
+  new RegExp(String.raw`^(?:gastei|paguei|comprei|desembolsei|torrei|foi|saiu)\s+${currencyAmount}\s+(?:com|no|na|em|de|do|da)?\s*(.+)$`, 'i'),
+  new RegExp(String.raw`^(.+?)\s+(?:custou|deu|ficou|foi)\s+${currencyAmount}$`, 'i'),
+] as const;
+const incomePatterns = [
+  new RegExp(String.raw`^(?:recebi|ganhei|entrou|caiu|depositaram)\s+${currencyAmount}\s+(.+)$`, 'i'),
+] as const;
+const investmentDepositPattern = new RegExp(String.raw`^(?:adicione|adicionar|aporte|aportar|investi|guardei|guardar|coloquei|colocar|botei|botar)\s+${currencyAmount}\s+(?:no|na|em|para|pro|pra)?\s*(?:investimento|caixinha)?\s*(.+)$`, 'i');
+const summaryPattern = /^(?:resumo|resumao|resumão|balanço|balanco)(?:\s+do)?\s+m[eê]s$|^como\s+(?:esta|está|ta|tá)\s+(?:meu|o)\s+m[eê]s$/i;
 
 export function sanitizeTelegramText(text: string) {
   return [...text]
@@ -57,10 +74,10 @@ export function parseTelegramMessage(text: string, options: ParseTelegramMessage
     };
   }
 
-  const expenseMatch = sanitized.match(expensePattern);
+  const expenseMatch = matchExpense(sanitized);
   if (expenseMatch) {
-    const amount = parseTelegramAmount(expenseMatch[2]);
-    const description = normalizeDescription(expenseMatch[3]);
+    const amount = parseTelegramAmount(expenseMatch.amount);
+    const description = normalizeDescription(expenseMatch.description);
     if (!amount || !description) {
       return buildUnknown(date);
     }
@@ -77,10 +94,10 @@ export function parseTelegramMessage(text: string, options: ParseTelegramMessage
     };
   }
 
-  const incomeMatch = sanitized.match(incomePattern);
+  const incomeMatch = matchIncome(sanitized);
   if (incomeMatch) {
-    const amount = parseTelegramAmount(incomeMatch[1]);
-    const description = normalizeDescription(incomeMatch[2]);
+    const amount = parseTelegramAmount(incomeMatch.amount);
+    const description = normalizeDescription(incomeMatch.description);
     if (!amount || !description) {
       return buildUnknown(date);
     }
@@ -99,8 +116,8 @@ export function parseTelegramMessage(text: string, options: ParseTelegramMessage
 
   const investmentMatch = sanitized.match(investmentDepositPattern);
   if (investmentMatch) {
-    const amount = parseTelegramAmount(investmentMatch[2]);
-    const description = normalizeInvestmentName(investmentMatch[3]);
+    const amount = parseTelegramAmount(investmentMatch[1]);
+    const description = normalizeInvestmentName(investmentMatch[2]);
     if (!amount || !description) {
       return buildUnknown(date);
     }
@@ -116,7 +133,136 @@ export function parseTelegramMessage(text: string, options: ParseTelegramMessage
     };
   }
 
+  const consultive = parseConsultiveIntent(sanitized, date);
+  if (consultive) return consultive;
+
   return buildUnknown(date);
+}
+
+function matchExpense(text: string) {
+  const leadingVerbMatch = text.match(expensePatterns[0]);
+  if (leadingVerbMatch) {
+    return {
+      amount: leadingVerbMatch[1],
+      description: leadingVerbMatch[2],
+    };
+  }
+
+  const trailingAmountMatch = text.match(expensePatterns[1]);
+  if (trailingAmountMatch) {
+    return {
+      amount: trailingAmountMatch[2],
+      description: trailingAmountMatch[1],
+    };
+  }
+
+  return null;
+}
+
+function matchIncome(text: string) {
+  for (const pattern of incomePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return {
+        amount: match[1],
+        description: match[2],
+      };
+    }
+  }
+
+  return null;
+}
+
+function parseConsultiveIntent(text: string, date: string): TelegramParsedMessage | null {
+  const normalized = normalizeIntentText(text);
+  const specificCard = extractCardInvoiceTarget(text);
+  if (specificCard) {
+    return buildConsultive('get_card_invoice', specificCard, date);
+  }
+
+  const investmentTarget = extractInvestmentTarget(text);
+  if (investmentTarget) {
+    return buildConsultive('get_investment_summary', investmentTarget, date);
+  }
+
+  if (/(quanto sobrou|sobra|saldo do mes|saldo do mês|posso gastar|quanto posso gastar)/.test(normalized)) {
+    return buildConsultive('get_balance', 'Sobra do mês', date);
+  }
+
+  if (/(distribuicao|distribuição|categorias|onde.*gast|gastando mais|gasto mais|maiores gastos|top gastos|ranking gastos)/.test(normalized)) {
+    return buildConsultive('get_expense_distribution', 'Distribuição de gastos', date);
+  }
+
+  if (/(contas fixas|fixas|boletos recorrentes|contas recorrentes)/.test(normalized)) {
+    return buildConsultive('list_fixed_bills', 'Contas fixas', date);
+  }
+
+  if (/(faturas abertas|faturas em aberto|faturas do mes|faturas do mês)/.test(normalized)) {
+    return buildConsultive('list_open_invoices', 'Faturas abertas', date);
+  }
+
+  if (/(cartoes|cartões|meus cartoes|meus cartões)/.test(normalized)) {
+    return buildConsultive('list_cards', 'Cartões', date);
+  }
+
+  if (/(investimentos|caixinhas|patrimonio|patrimônio|saldo guardado)/.test(normalized)) {
+    return buildConsultive('list_investments', 'Investimentos', date);
+  }
+
+  if (/(metas|objetivos)/.test(normalized)) {
+    return buildConsultive('list_goals', 'Metas', date);
+  }
+
+  if (/(entradas|receitas|ganhos|recebimentos)/.test(normalized) && /(lista|listar|mostra|mostrar|ver|quais|quanto)/.test(normalized)) {
+    return buildConsultive('list_incomes', 'Entradas do mês', date);
+  }
+
+  if (/(gastos|despesas|saidas|saídas|compras)/.test(normalized) && /(lista|listar|mostra|mostrar|ver|quais|quanto)/.test(normalized)) {
+    return buildConsultive('list_expenses', 'Gastos do mês', date);
+  }
+
+  return null;
+}
+
+function buildConsultive(intent: TelegramIntent, description: string, date: string): TelegramParsedMessage {
+  return {
+    intent,
+    data: {
+      description,
+      date,
+    },
+  };
+}
+
+function extractCardInvoiceTarget(text: string) {
+  const patterns = [
+    /^ver\s+fatura\s+(?:do|da|de)?\s*(.+)$/i,
+    /^fatura\s+(?:do|da|de)?\s*(.+)$/i,
+    /^(?:quanto|total).*(?:cart[aã]o|fatura)\s+(?:do|da|de)?\s*(.+)$/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const target = match?.[1] ? normalizeDescription(match[1]) : '';
+    if (target && !/^(abertas|em aberto|do mes|do mês)$/i.test(target)) return target;
+  }
+
+  return null;
+}
+
+function extractInvestmentTarget(text: string) {
+  const patterns = [
+    /^quanto\s+(?:tenho|guardei|juntei)\s+(?:no|na|em)?\s*(?:investimento|caixinha)\s+(.+)$/i,
+    /^(?:ver|mostrar|consulta|consultar)\s+(?:investimento|caixinha)\s+(.+)$/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const target = match?.[1] ? normalizeInvestmentName(match[1]) : '';
+    if (target) return target;
+  }
+
+  return null;
 }
 
 export function inferTelegramCategory(description: string, type: 'entrada' | 'gasto') {
@@ -156,6 +302,15 @@ function normalizeInvestmentName(value: string) {
   return sanitizeTelegramText(value)
     .replace(/^(no|na|em|de|do|da)\s+/i, '')
     .replace(/^(investimento|caixinha)\s+/i, '')
+    .trim();
+}
+
+function normalizeIntentText(value: string) {
+  return sanitizeTelegramText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[?!.,;:]/g, '')
     .trim();
 }
 

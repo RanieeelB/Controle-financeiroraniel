@@ -46,13 +46,6 @@ interface CreateTelegramServiceOptions {
   maxPayloadBytes?: number;
   now?: Date;
   handleParsedMessageForUser(userId: string, parsed: TelegramParsedMessage): Promise<string>;
-  handleAdvisorMessageForUser?(input: {
-    userId: string;
-    telegramChatId: string;
-    telegramUserId: string;
-    message: string;
-  }): Promise<string>;
-  parseMessageWithAi?(text: string, options: { now?: Date }): Promise<TelegramParsedMessage | null>;
   getLinkedAccountByTelegramUserId(telegramUserId: string): Promise<{ userId: string; telegramUserId: string; } | null>;
   linkTelegramUser(input: { rawToken: string; telegramUserId: string; telegramChatId: string; }): Promise<{ userId: string }>;
   sendMessage(input: { chatId: number; text: string; botToken: string; replyMarkup?: TelegramReplyMarkup; parseMode?: TelegramParseMode }): Promise<void>;
@@ -161,27 +154,14 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
           return { statusCode: 200, payload: { ok: true } };
         }
 
-        let parsed = parseTelegramMessage(sanitizedText, { now: options.now });
-        if (parsed.intent === 'unknown' && options.parseMessageWithAi) {
-          parsed = await options.parseMessageWithAi(sanitizedText, { now: options.now }) ?? parsed;
-        }
-
-        const advisorHandler = options.handleAdvisorMessageForUser;
-        const isAdvisorResponse = parsed.intent === 'unknown' && !!advisorHandler;
-        const responseText = isAdvisorResponse
-          ? await advisorHandler({
-              userId: linkedAccount.userId,
-              telegramChatId: chatId,
-              telegramUserId: fromId,
-              message: sanitizedText,
-            })
-          : await options.handleParsedMessageForUser(linkedAccount.userId, parsed);
+        const parsed = parseTelegramMessage(sanitizedText, { now: options.now });
+        const responseText = await options.handleParsedMessageForUser(linkedAccount.userId, parsed);
 
         await options.sendMessage({
           chatId: message.chat.id,
           botToken: options.botToken,
-          text: isAdvisorResponse ? escapeTelegramHtml(responseText) : responseText,
-          replyMarkup: getPostActionKeyboard(parsed.intent, isAdvisorResponse),
+          text: responseText,
+          replyMarkup: getPostActionKeyboard(parsed.intent),
           parseMode: 'HTML',
         });
 
@@ -227,8 +207,22 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
     return { statusCode: 200, payload: { ok: true } };
   }
 
-  if (callbackQuery.data === 'summary:month') {
-    const parsed = parseTelegramMessage('resumo do mês', { now: options.now });
+  const callbackMessages: Record<string, string> = {
+    'summary:month': 'resumo do mês',
+    'list:expenses': 'lista meus gastos',
+    'list:incomes': 'listar entradas',
+    'list:distribution': 'onde estou gastando mais',
+    'list:fixed-bills': 'minhas contas fixas',
+    'list:invoices': 'faturas abertas',
+    'list:cards': 'quais cartões eu tenho',
+    'list:investments': 'meus investimentos',
+    'list:goals': 'minhas metas',
+    'balance:month': 'quanto sobrou esse mês',
+  };
+  const callbackMessage = callbackQuery.data ? callbackMessages[callbackQuery.data] : undefined;
+
+  if (callbackMessage) {
+    const parsed = parseTelegramMessage(callbackMessage, { now: options.now });
     const responseText = await options.handleParsedMessageForUser(linkedAccount.userId, parsed);
     await options.sendMessage({
       chatId,
@@ -314,13 +308,15 @@ function getStartMessage() {
   return [
     '🤖 <b>Bot do controle financeiro ativo</b>',
     '',
-    'Me mande uma movimentação em linguagem natural ou use os botões abaixo.',
+    'Me mande uma movimentação, peça uma consulta ou use os botões abaixo.',
     '',
     '✨ <b>Exemplos rápidos</b>',
     '• <code>gastei 25 no almoço</code>',
     '• <code>paguei 100 internet</code>',
     '• <code>recebi 6500 salário</code>',
     '• <code>adicione 500 no investimento ferias</code>',
+    '• <code>ver fatura nubank</code>',
+    '• <code>onde estou gastando mais</code>',
     '• <code>resumo do mês</code>',
   ].join('\n');
 }
@@ -335,13 +331,25 @@ function getHelpMessage() {
     '• <code>gastei 25 no almoço</code>',
     '• <code>paguei 100 internet</code>',
     '• <code>comprei 32,90 ifood</code>',
-    '• <code>adicione 500 no investimento ferias</code>',
     '',
     '💰 <b>Entradas</b>',
     '• <code>recebi 6500 salário</code>',
+    '• <code>entrou 1200 freela</code>',
+    '',
+    '🏦 <b>Investimentos</b>',
+    '• <code>adicione 500 no investimento ferias</code>',
+    '• <code>meus investimentos</code>',
+    '• <code>quanto tenho na caixinha 13</code>',
     '',
     '📊 <b>Consulta</b>',
     '• <code>resumo do mês</code>',
+    '• <code>quanto sobrou esse mês</code>',
+    '• <code>lista meus gastos</code>',
+    '• <code>onde estou gastando mais</code>',
+    '• <code>minhas contas fixas</code>',
+    '• <code>faturas abertas</code>',
+    '• <code>ver fatura nubank</code>',
+    '• <code>minhas metas</code>',
   ].join('\n');
 }
 
@@ -388,7 +396,23 @@ function getMainMenuKeyboard(): TelegramReplyMarkup {
         { text: '💰 Registrar entrada', callback_data: 'guide:income' },
       ],
       [
-        { text: '📊 Resumo do mês', callback_data: 'summary:month' },
+        { text: '📊 Resumo', callback_data: 'summary:month' },
+        { text: '🧮 Sobra', callback_data: 'balance:month' },
+      ],
+      [
+        { text: '💳 Faturas', callback_data: 'list:invoices' },
+        { text: '💳 Cartões', callback_data: 'list:cards' },
+      ],
+      [
+        { text: '🏦 Investimentos', callback_data: 'list:investments' },
+        { text: '🎯 Metas', callback_data: 'list:goals' },
+      ],
+      [
+        { text: '💸 Gastos', callback_data: 'list:expenses' },
+        { text: '🧭 Distribuição', callback_data: 'list:distribution' },
+      ],
+      [
+        { text: '🏠 Fixas', callback_data: 'list:fixed-bills' },
         { text: '❓ Ajuda', callback_data: 'help:examples' },
       ],
     ],
@@ -407,31 +431,31 @@ function getGuideKeyboard(): TelegramReplyMarkup {
   return {
     inline_keyboard: [
       [
-        { text: '📊 Resumo do mês', callback_data: 'summary:month' },
+        { text: '📊 Resumo', callback_data: 'summary:month' },
         { text: '❓ Ajuda', callback_data: 'help:examples' },
       ],
     ],
   };
 }
 
-function getPostActionKeyboard(intent: TelegramParsedMessage['intent'], isAdvisorResponse = false): TelegramReplyMarkup {
-  if (isAdvisorResponse) {
-    return {
-      inline_keyboard: [
-        [
-          { text: '💬 Conversar mais', callback_data: 'help:examples' },
-          { text: '📊 Ver resumo', callback_data: 'summary:month' },
-        ],
-      ],
-    };
-  }
-
+function getPostActionKeyboard(intent: TelegramParsedMessage['intent']): TelegramReplyMarkup {
   if (intent === 'create_expense' || intent === 'create_income') {
     return {
       inline_keyboard: [
         [
           { text: intent === 'create_expense' ? '💸 Novo gasto' : '💰 Nova entrada', callback_data: intent === 'create_expense' ? 'guide:expense' : 'guide:income' },
-          { text: '📊 Ver resumo', callback_data: 'summary:month' },
+          { text: '📊 Resumo', callback_data: 'summary:month' },
+        ],
+      ],
+    };
+  }
+
+  if (intent === 'create_investment_deposit') {
+    return {
+      inline_keyboard: [
+        [
+          { text: '🏦 Investimentos', callback_data: 'list:investments' },
+          { text: '📊 Resumo', callback_data: 'summary:month' },
         ],
       ],
     };
@@ -471,11 +495,4 @@ function getIncomeGuideMessage() {
     '• <code>recebi 6500 salário</code>',
     '• <code>recebi 1200 freela</code>',
   ].join('\n');
-}
-
-function escapeTelegramHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
