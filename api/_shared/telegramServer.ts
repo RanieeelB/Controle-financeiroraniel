@@ -22,6 +22,8 @@ export function getTelegramWebhookEnv() {
   const { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey } = getServerEnv();
   const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? '';
   const telegramWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? '';
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim() ?? '';
+  const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash-lite';
 
   if (!telegramBotToken || !telegramWebhookSecret) {
     throw new Error('Configuração do servidor incompleta para o webhook do Telegram.');
@@ -30,6 +32,8 @@ export function getTelegramWebhookEnv() {
   return {
     telegramBotToken,
     telegramWebhookSecret,
+    geminiApiKey,
+    geminiModel,
     supabaseUrl,
     supabaseAnonKey,
     supabaseServiceRoleKey,

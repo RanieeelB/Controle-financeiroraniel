@@ -3,6 +3,7 @@ import { createTelegramService } from './telegramService';
 
 function buildService() {
   const sendMessage = vi.fn().mockResolvedValue(undefined);
+  const answerCallbackQuery = vi.fn().mockResolvedValue(undefined);
   const handleParsedMessageForUser = vi.fn().mockResolvedValue('ok');
   const getLinkedAccountByTelegramUserId = vi.fn().mockResolvedValue(null);
   const linkTelegramUser = vi.fn().mockResolvedValue({
@@ -19,11 +20,13 @@ function buildService() {
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
     sendMessage,
+    answerCallbackQuery,
   });
 
   return {
     service,
     sendMessage,
+    answerCallbackQuery,
     handleParsedMessageForUser,
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
@@ -79,7 +82,48 @@ describe('telegramService', () => {
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
       chatId: 99,
       text: expect.stringContaining('Bot do controle financeiro ativo.'),
+      replyMarkup: expect.objectContaining({
+        inline_keyboard: expect.arrayContaining([
+          expect.arrayContaining([
+            expect.objectContaining({ text: 'Resumo do mês', callback_data: 'summary:month' }),
+          ]),
+        ]),
+      }),
     }));
+  });
+
+  it('handles summary button callbacks for linked users', async () => {
+    const { service, answerCallbackQuery, handleParsedMessageForUser, getLinkedAccountByTelegramUserId } = buildService();
+    getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
+      userId: 'user-1',
+      telegramUserId: '12345',
+    });
+
+    await service.handleRequest({
+      method: 'POST',
+      headers: {
+        'x-telegram-bot-api-secret-token': 'secret-token',
+      },
+      body: {
+        callback_query: {
+          id: 'callback-1',
+          data: 'summary:month',
+          message: {
+            chat: { id: 99 },
+          },
+          from: { id: 12345 },
+        },
+      },
+    });
+
+    expect(answerCallbackQuery).toHaveBeenCalledWith(expect.objectContaining({
+      callbackQueryId: 'callback-1',
+      botToken: 'bot-token',
+    }));
+    expect(handleParsedMessageForUser).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ intent: 'get_monthly_summary' }),
+    );
   });
 
   it('uses a token message to link an unlinked telegram user', async () => {
@@ -162,6 +206,68 @@ describe('telegramService', () => {
         intent: 'create_expense',
       }),
     );
+  });
+
+  it('uses the AI parser as fallback for linked users when regex parsing is unknown', async () => {
+    const sendMessage = vi.fn().mockResolvedValue(undefined);
+    const handleParsedMessageForUser = vi.fn().mockResolvedValue('registrado');
+    const parseMessageWithAi = vi.fn().mockResolvedValue({
+      intent: 'create_expense',
+      data: {
+        description: 'cinema',
+        amount: 80,
+        category: 'Lazer',
+        date: '2026-05-10',
+        status: 'pago',
+      },
+    });
+
+    const service = createTelegramService({
+      botToken: 'bot-token',
+      webhookSecret: 'secret-token',
+      handleParsedMessageForUser,
+      getLinkedAccountByTelegramUserId: vi.fn().mockResolvedValue({
+        userId: 'user-1',
+        telegramUserId: '12345',
+      }),
+      linkTelegramUser: vi.fn(),
+      sendMessage,
+      parseMessageWithAi,
+      now: new Date('2026-05-10T12:00:00-03:00'),
+    });
+
+    await service.handleRequest({
+      method: 'POST',
+      headers: {
+        'x-telegram-bot-api-secret-token': 'secret-token',
+      },
+      body: {
+        message: {
+          text: 'ontem fui no cinema e paguei oitenta reais',
+          chat: { id: 99 },
+          from: { id: 12345 },
+        },
+      },
+    });
+
+    expect(parseMessageWithAi).toHaveBeenCalledWith(
+      'ontem fui no cinema e paguei oitenta reais',
+      expect.objectContaining({ now: new Date('2026-05-10T12:00:00-03:00') }),
+    );
+    expect(handleParsedMessageForUser).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ intent: 'create_expense' }),
+    );
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'registrado',
+      replyMarkup: expect.objectContaining({
+        inline_keyboard: expect.arrayContaining([
+          expect.arrayContaining([
+            expect.objectContaining({ text: 'Ver resumo', callback_data: 'summary:month' }),
+          ]),
+        ]),
+      }),
+    }));
   });
 
   it('returns ok for updates without text', async () => {
