@@ -6,6 +6,7 @@ function buildService() {
   const answerCallbackQuery = vi.fn().mockResolvedValue(undefined);
   const deleteMessage = vi.fn().mockResolvedValue(undefined);
   const handleParsedMessageForUser = vi.fn().mockResolvedValue('ok');
+  const handleAutomationCallbackForUser = vi.fn().mockResolvedValue(null);
   const getLinkedAccountByTelegramUserId = vi.fn().mockResolvedValue(null);
   const linkTelegramUser = vi.fn().mockResolvedValue({
     connectionId: 'conn-1',
@@ -18,6 +19,7 @@ function buildService() {
     botToken: 'bot-token',
     webhookSecret: 'secret-token',
     handleParsedMessageForUser,
+    handleAutomationCallbackForUser,
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
     sendMessage,
@@ -31,6 +33,7 @@ function buildService() {
     answerCallbackQuery,
     deleteMessage,
     handleParsedMessageForUser,
+    handleAutomationCallbackForUser,
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
   };
@@ -260,6 +263,41 @@ describe('telegramService', () => {
       'user-1',
       expect.objectContaining({ intent: 'get_monthly_summary' }),
     );
+  });
+
+  it('routes automation callbacks before the default menu fallback', async () => {
+    const { service, sendMessage, handleAutomationCallbackForUser, getLinkedAccountByTelegramUserId } = buildService();
+    getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
+      userId: 'user-1',
+      telegramUserId: '12345',
+    });
+    handleAutomationCallbackForUser.mockResolvedValueOnce({
+      text: '✅ <b>Fatura marcada como paga</b>',
+    });
+
+    await service.handleRequest({
+      method: 'POST',
+      headers: {
+        'x-telegram-bot-api-secret-token': 'secret-token',
+      },
+      body: {
+        callback_query: {
+          id: 'callback-1',
+          data: 'auto:payinv:card-1:2026-05',
+          message: {
+            chat: { id: 99 },
+          },
+          from: { id: 12345 },
+        },
+      },
+    });
+
+    expect(handleAutomationCallbackForUser).toHaveBeenCalledWith('user-1', 'auto:payinv:card-1:2026-05');
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      chatId: 99,
+      parseMode: 'HTML',
+      text: '✅ <b>Fatura marcada como paga</b>',
+    }));
   });
 
   it('uses a token message to link an unlinked telegram user', async () => {

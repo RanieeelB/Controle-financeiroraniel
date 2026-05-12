@@ -6,6 +6,7 @@ import {
   getTelegramWebhookEnv,
 } from '../_shared/telegramServer.js';
 import { createTelegramActions } from '../../src/services/telegram/telegramActions.js';
+import { createTelegramAutomationRunner } from '../../src/services/telegram/telegramAutomations.js';
 import { createTelegramService } from '../../src/services/telegram/telegramService.js';
 import { createTelegramLinkService } from '../../src/services/telegram/telegramLinkService.js';
 
@@ -29,34 +30,32 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     const telegramActions = createTelegramActions({
       repo,
     });
+    const automationRunner = createTelegramAutomationRunner({
+      repo,
+      sendMessage: async ({ chatId, text, replyMarkup, parseMode }) => {
+        await sendTelegramMessage({
+          chatId,
+          text,
+          replyMarkup,
+          parseMode,
+          botToken: env.telegramBotToken,
+        });
+      },
+    });
 
     const telegramService = createTelegramService({
       botToken: env.telegramBotToken,
       webhookSecret: env.telegramWebhookSecret,
       maxPayloadBytes: MAX_PAYLOAD_BYTES,
       handleParsedMessageForUser: telegramActions.handleParsedMessageForUser,
+      handleAutomationCallbackForUser: automationRunner.handleAutomationCallback,
       getLinkedAccountByTelegramUserId: async (telegramUserId) => {
         const linked = await repo.getLinkedConnectionByTelegramUserId(telegramUserId);
         return linked ? { userId: linked.user_id, telegramUserId: linked.telegram_user_id ?? telegramUserId } : null;
       },
       linkTelegramUser: async (input) => linkService.linkTelegramUser(input),
       sendMessage: async ({ chatId, text, botToken, replyMarkup, parseMode }) => {
-        const telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text,
-            reply_markup: replyMarkup,
-            parse_mode: parseMode,
-          }),
-        });
-
-        if (!telegramResponse.ok) {
-          throw new Error('Falha ao responder mensagem do Telegram.');
-        }
+        await sendTelegramMessage({ chatId, text, botToken, replyMarkup, parseMode });
       },
       answerCallbackQuery: async ({ callbackQueryId, botToken, text }) => {
         const telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
@@ -104,6 +103,31 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     const statusCode = error instanceof PayloadTooLargeError ? 413 : error instanceof InvalidJsonError ? 400 : 500;
     const message = error instanceof Error ? error.message : 'Unknown error';
     sendJson(res, statusCode, { ok: false, error: message });
+  }
+}
+
+async function sendTelegramMessage(input: {
+  chatId: number;
+  text: string;
+  botToken: string;
+  replyMarkup?: unknown;
+  parseMode?: string;
+}) {
+  const telegramResponse = await fetch(`https://api.telegram.org/bot${input.botToken}/sendMessage`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      chat_id: input.chatId,
+      text: input.text,
+      reply_markup: input.replyMarkup,
+      parse_mode: input.parseMode,
+    }),
+  });
+
+  if (!telegramResponse.ok) {
+    throw new Error('Falha ao responder mensagem do Telegram.');
   }
 }
 

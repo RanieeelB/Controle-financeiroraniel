@@ -21,6 +21,8 @@ O aplicativo conta com módulos abrangentes para cobrir toda a sua vida financei
 - **Metas Financeiras:** Criação de objetivos de poupança com definição de prazos e acompanhamento visual do progresso dos depósitos.
 - **Gestão de Impostos PJ (Exclusivo):** Ferramenta integrada para cálculo e lançamento rápido de impostos (DAS MEI e Simples Nacional) baseados no faturamento dinâmico do mês.
 - **Planejamento de Salário:** Configuração de salário fixo e dia de pagamento para lançamento contínuo da receita principal de forma automatizada.
+- **Telegram Integrado:** Conexão por token em Configurações para registrar gastos, entradas, aportes, consultar saldo, faturas, cartões, contas fixas, metas e investimentos diretamente pelo bot.
+- **Automações no Telegram:** Processo automático no backend envia agenda matinal de vencimentos, resumo das 18h apenas em dias com movimentação, alerta de saldo baixo ou projeção negativa, fechamento semanal e botões para marcar faturas ou contas fixas como pagas.
 - **Bootstrapping de Categorias:** Novos usuários recebem automaticamente um conjunto inteligente de categorias padronizadas (Estudo, Lazer, iFood, Impostos PJ, etc.) logo no primeiro acesso.
 - **Filtros Temporais Globais:** Navegue entre os meses com facilidade. Todos os relatórios, dashboards, investimentos e faturas se adaptam instantaneamente ao mês selecionado.
 - **Autenticação Segura:** Login, cadastro e gestão de sessão gerenciados nativamente via Supabase Auth.
@@ -38,6 +40,7 @@ O projeto adota uma abordagem robusta de segurança focada no banco de dados:
 - **Front-end:** React 18, Vite, React Router DOM, TypeScript.
 - **Estilização:** Tailwind CSS v4, Lucide Icons, UI inspirada em Glassmorphism e Design Tokens.
 - **Back-end/BaaS:** Supabase (PostgreSQL, Auth, RLS).
+- **Automações:** Vercel Cron chamando `/api/telegram/automations` uma vez por dia às `21:00 UTC` (`18:00` em `America/Fortaleza`), compatível com contas Hobby; o backend decide os envios válidos e consolida vencimentos, resumo diário, alertas e fechamento semanal.
 - **Data Viz:** Recharts.
 
 ## 🚀 Como Executar Localmente
@@ -58,6 +61,17 @@ Crie um arquivo `.env.local` na raiz do projeto contendo as chaves do seu Supaba
 ```env
 VITE_SUPABASE_URL=sua_url_aqui
 VITE_SUPABASE_ANON_KEY=sua_anon_key_aqui
+```
+
+Para usar o backend do Telegram em produção, configure também as variáveis do servidor:
+```env
+SUPABASE_URL=sua_url_aqui
+SUPABASE_ANON_KEY=sua_anon_key_aqui
+SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
+TELEGRAM_BOT_TOKEN=token_do_bot
+TELEGRAM_WEBHOOK_SECRET=segredo_do_webhook
+TELEGRAM_LINK_TOKEN_SECRET=segredo_para_tokens_de_vinculo
+TELEGRAM_AUTOMATION_SECRET=segredo_opcional_para_execucao_manual_do_cron
 ```
 
 ### 3. Configurando o Banco de Dados
