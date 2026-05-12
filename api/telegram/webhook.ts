@@ -50,7 +50,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
         return linked ? { userId: linked.user_id, telegramUserId: linked.telegram_user_id ?? telegramUserId } : null;
       },
       linkTelegramUser: async (input) => linkService.linkTelegramUser(input),
-      sendMessage: async ({ chatId, text, botToken, replyMarkup }) => {
+      sendMessage: async ({ chatId, text, botToken, replyMarkup, parseMode }) => {
         const telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: {
@@ -60,6 +60,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
             chat_id: chatId,
             text,
             reply_markup: replyMarkup,
+            parse_mode: parseMode,
           }),
         });
 

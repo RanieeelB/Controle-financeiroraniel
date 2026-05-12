@@ -57,9 +57,9 @@ describe('telegramActions', () => {
       status: 'pago',
       paymentMethod: 'pix',
     }));
-    expect(response).toContain('Gasto registrado com sucesso.');
-    expect(response).toContain('Categoria: Alimentação');
-    expect(response).toContain('Valor: R$ 25,00');
+    expect(response).toContain('✅ <b>Gasto registrado</b>');
+    expect(response).toContain('<b>Categoria:</b> Alimentação');
+    expect(response).toContain('<b>Valor:</b> R$ 25,00');
   });
 
   it('returns the monthly summary based on real repository data', async () => {
@@ -73,12 +73,12 @@ describe('telegramActions', () => {
       },
     });
 
-    expect(response).toContain('Resumo de maio/2026');
-    expect(response).toContain('Entradas: R$ 6.500,00');
-    expect(response).toContain('Gastos: R$ 620,00');
-    expect(response).toContain('Contas fixas: R$ 270,00');
-    expect(response).toContain('Faturas abertas: R$ 300,00');
-    expect(response).toContain('Sobra prevista: R$ 5.430,00');
+    expect(response).toContain('📊 <b>Resumo de maio/2026</b>');
+    expect(response).toContain('💰 <b>Entradas:</b> R$ 6.500,00');
+    expect(response).toContain('💸 <b>Gastos:</b> R$ 620,00');
+    expect(response).toContain('🏠 <b>Contas fixas:</b> R$ 270,00');
+    expect(response).toContain('💳 <b>Faturas abertas:</b> R$ 300,00');
+    expect(response).toContain('🧮 <b>Sobra prevista:</b> R$ 5.430,00');
   });
 
   it('fails safely when the user id is missing', async () => {
