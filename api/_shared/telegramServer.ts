@@ -310,6 +310,56 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
         created_at: String(investment.created_at ?? ''),
       }));
     },
+    async insertInvestmentDeposit(input: {
+      userId: string;
+      investmentId: string;
+      amount: number;
+      date: string;
+      notes: string | null;
+    }) {
+      const { data, error } = await supabase
+        .from('investment_deposits')
+        .insert({
+          user_id: input.userId,
+          investment_id: input.investmentId,
+          amount: input.amount,
+          date: input.date,
+          notes: input.notes,
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        const isMissingTable = error.code === '42P01'
+          || error.message?.includes('investment_deposits') === true
+          || error.message?.includes('Could not find the table') === true;
+        if (isMissingTable) {
+          return { id: null };
+        }
+        throw error;
+      }
+
+      return {
+        id: typeof data?.id === 'string' ? data.id : null,
+      };
+    },
+    async updateInvestmentTotals(input: {
+      investmentId: string;
+      amountInvested: number;
+      currentValue: number;
+      returnPercentage: number;
+    }) {
+      const { error } = await supabase
+        .from('investments')
+        .update({
+          amount_invested: input.amountInvested,
+          current_value: input.currentValue,
+          return_percentage: input.returnPercentage,
+        })
+        .eq('id', input.investmentId);
+
+      if (error) throw error;
+    },
     async listFinancialGoals(userId: string) {
       const { data, error } = await supabase
         .from('financial_goals')

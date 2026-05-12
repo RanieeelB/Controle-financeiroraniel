@@ -320,6 +320,7 @@ function getStartMessage() {
     '• <code>gastei 25 no almoço</code>',
     '• <code>paguei 100 internet</code>',
     '• <code>recebi 6500 salário</code>',
+    '• <code>adicione 500 no investimento ferias</code>',
     '• <code>resumo do mês</code>',
   ].join('\n');
 }
@@ -334,6 +335,7 @@ function getHelpMessage() {
     '• <code>gastei 25 no almoço</code>',
     '• <code>paguei 100 internet</code>',
     '• <code>comprei 32,90 ifood</code>',
+    '• <code>adicione 500 no investimento ferias</code>',
     '',
     '💰 <b>Entradas</b>',
     '• <code>recebi 6500 salário</code>',
@@ -360,6 +362,7 @@ function getLinkHelpMessage() {
     'Depois da conexão, você poderá enviar:',
     '• <code>gastei 25 no almoço</code>',
     '• <code>recebi 6500 salário</code>',
+    '• <code>adicione 500 no investimento ferias</code>',
     '• <code>resumo do mês</code>',
   ].join('\n');
 }
@@ -372,6 +375,7 @@ function getLinkedSuccessMessage() {
     '',
     '• <code>gastei 25 no almoço</code>',
     '• <code>recebi 6500 salário</code>',
+    '• <code>adicione 500 no investimento ferias</code>',
     '• <code>resumo do mês</code>',
   ].join('\n');
 }

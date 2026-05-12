@@ -46,6 +46,20 @@ describe('telegramParser', () => {
     });
   });
 
+  it('parses an investment deposit message by investment name', () => {
+    const parsed = parseTelegramMessage('adicione 500 no investimento ferias', { now: referenceDate });
+
+    expect(parsed).toEqual({
+      intent: 'create_investment_deposit',
+      data: {
+        description: 'ferias',
+        amount: 500,
+        date: '2026-05-10',
+        status: 'pago',
+      },
+    });
+  });
+
   it('sanitizes control characters and repeated whitespace', () => {
     expect(sanitizeTelegramText('  gastei\u0000   32,90   ifood \n')).toBe('gastei 32,90 ifood');
   });

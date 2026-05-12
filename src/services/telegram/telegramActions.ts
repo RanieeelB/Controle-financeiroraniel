@@ -1,9 +1,15 @@
 import { buildMonthRange } from '../../lib/monthSelection.js';
 import { defaultCategories } from '../../lib/defaultCategories.js';
-import { buildTransactionPayload, roundCurrency } from '../../lib/financialPayloads.js';
+import {
+  buildInvestmentDepositTransactionPayload,
+  buildLinkedRecordNote,
+  buildTransactionPayload,
+  getInvestmentTotalsAfterDeposit,
+  roundCurrency,
+} from '../../lib/financialPayloads.js';
 import { calculateSummaryCards } from '../../lib/financialPlanning.js';
 import { resolveDynamicFixedBills } from '../../lib/fixedBillPayments.js';
-import type { Category, FixedBill, Transaction } from '../../types/financial.js';
+import type { Category, FixedBill, Investment, Transaction } from '../../types/financial.js';
 import type { TelegramParsedMessage } from './telegramParser.js';
 
 type TransactionType = Transaction['type'];
@@ -60,6 +66,20 @@ export interface TelegramActionsRepository {
   listMonthTransactions(input: { userId: string; startDate: string; endDate: string }): Promise<TelegramTransactionRecord[]>;
   listMonthInvoiceItems(input: { userId: string; startDate: string; endDate: string }): Promise<TelegramInvoiceItemRecord[]>;
   listFixedBills(userId: string): Promise<FixedBill[]>;
+  listInvestments(userId: string): Promise<Investment[]>;
+  insertInvestmentDeposit(input: {
+    userId: string;
+    investmentId: string;
+    amount: number;
+    date: string;
+    notes: string | null;
+  }): Promise<{ id: string | null }>;
+  updateInvestmentTotals(input: {
+    investmentId: string;
+    amountInvested: number;
+    currentValue: number;
+    returnPercentage: number;
+  }): Promise<void>;
 }
 
 interface CreateTelegramActionsOptions {
@@ -147,11 +167,104 @@ export function createTelegramActions(options: CreateTelegramActionsOptions) {
           return createTransactionMessage(userId, parsed, 'entrada', options);
         case 'get_monthly_summary':
           return createMonthlySummaryMessage(userId, options, now);
+        case 'create_investment_deposit':
+          return createInvestmentDepositMessage(userId, parsed, options);
         default:
           return getUnknownMessage();
       }
     },
   };
+}
+
+async function createInvestmentDepositMessage(
+  userId: string,
+  parsed: TelegramParsedMessage,
+  options: CreateTelegramActionsOptions,
+) {
+  validateUserId(userId);
+  const data = parsed.data;
+
+  validateTransactionInput({
+    amount: data.amount,
+    description: data.description,
+    date: data.date,
+    status: data.status,
+    type: 'gasto',
+  });
+
+  const investments = await options.repo.listInvestments(userId);
+  const matched = findMatchingInvestments(investments, data.description);
+
+  if (matched.length === 0) {
+    return [
+      '🤔 <b>Não encontrei esse investimento com segurança.</b>',
+      '',
+      'Tente algo como:',
+      '• <code>adicione 500 no investimento ferias</code>',
+      '• <code>aportar 300 na caixinha 13</code>',
+    ].join('\n');
+  }
+
+  if (matched.length > 1) {
+    return [
+      '🤔 <b>Encontrei mais de um investimento parecido.</b>',
+      '',
+      `Matches: ${matched.map(investment => escapeTelegramHtml(investment.name)).join(', ')}`,
+      '',
+      'Tente mencionar o nome completo da caixinha.',
+    ].join('\n');
+  }
+
+  const investment = matched[0];
+  const deposit = await options.repo.insertInvestmentDeposit({
+    userId,
+    investmentId: investment.id,
+    amount: data.amount!,
+    date: data.date,
+    notes: null,
+  });
+
+  const updatedTotals = getInvestmentTotalsAfterDeposit({
+    amountInvested: investment.amount_invested,
+    currentValue: investment.current_value,
+    depositAmount: data.amount!,
+  });
+
+  await options.repo.updateInvestmentTotals({
+    investmentId: investment.id,
+    amountInvested: updatedTotals.amount_invested,
+    currentValue: updatedTotals.current_value,
+    returnPercentage: updatedTotals.return_percentage,
+  });
+
+  const transactionPayload = buildInvestmentDepositTransactionPayload({
+    investmentName: investment.name,
+    amount: data.amount!,
+    date: data.date,
+    notes: null,
+  });
+
+  await options.repo.insertTransaction({
+    userId,
+    type: transactionPayload.type,
+    description: transactionPayload.description,
+    amount: transactionPayload.amount,
+    date: transactionPayload.date,
+    status: transactionPayload.status as Transaction['status'],
+    paymentMethod: transactionPayload.payment_method,
+    categoryId: transactionPayload.category_id,
+    notes: deposit.id
+      ? buildLinkedRecordNote('investment_deposit', deposit.id, investment.id)
+      : buildLinkedRecordNote('investment_deposit', investment.id),
+  });
+
+  return [
+    '✅ <b>Aporte registrado</b>',
+    '',
+    `🏦 <b>Investimento:</b> ${escapeTelegramHtml(investment.name)}`,
+    `💰 <b>Valor:</b> ${formatCurrency(data.amount!)}`,
+    `📅 <b>Data:</b> ${formatDate(data.date)}`,
+  ].join('\n');
 }
 
 async function createTransactionMessage(
@@ -366,6 +479,16 @@ function getUnknownMessage() {
   ].join('\n');
 }
 
+function findMatchingInvestments(investments: Investment[], rawName: string) {
+  const normalizedQuery = normalizeSearchText(rawName);
+  if (!normalizedQuery) return [];
+
+  const exactMatches = investments.filter(investment => normalizeSearchText(investment.name) === normalizedQuery);
+  if (exactMatches.length > 0) return exactMatches;
+
+  return investments.filter(investment => normalizeSearchText(investment.name).includes(normalizedQuery));
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -412,4 +535,12 @@ function escapeTelegramHtml(value: string) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }

@@ -24,6 +24,12 @@ function buildActions() {
       { id: 'bill-1', amount: 150, due_day: 5, description: 'Internet', status: 'pendente', icon: 'receipt', user_id: 'user-1', category_id: null, created_at: '2026-05-01T00:00:00Z' },
       { id: 'bill-2', amount: 120, due_day: 10, description: 'Água', status: 'pendente', icon: 'receipt', user_id: 'user-1', category_id: null, created_at: '2026-05-01T00:00:00Z' },
     ]),
+    listInvestments: vi.fn().mockResolvedValue([
+      { id: 'inv-1', user_id: 'user-1', name: 'Ferias', ticker: null, category: 'renda_fixa', amount_invested: 1000, current_value: 1000, return_percentage: 0, monthly_contribution: 0, last_auto_contribution_at: null, created_at: '2026-05-01T00:00:00Z' },
+      { id: 'inv-2', user_id: 'user-1', name: '13', ticker: null, category: 'renda_fixa', amount_invested: 500, current_value: 500, return_percentage: 0, monthly_contribution: 0, last_auto_contribution_at: null, created_at: '2026-05-01T00:00:00Z' },
+    ]),
+    insertInvestmentDeposit: vi.fn().mockResolvedValue({ id: 'deposit-1' }),
+    updateInvestmentTotals: vi.fn().mockResolvedValue(undefined),
   };
 
   const actions = createTelegramActions({
@@ -79,6 +85,63 @@ describe('telegramActions', () => {
     expect(response).toContain('🏠 <b>Contas fixas:</b> R$ 270,00');
     expect(response).toContain('💳 <b>Faturas abertas:</b> R$ 300,00');
     expect(response).toContain('🧮 <b>Sobra prevista:</b> R$ 5.430,00');
+  });
+
+  it('saves an investment deposit matched by investment name and returns a confirmation message', async () => {
+    const { repo, actions } = buildActions();
+
+    const response = await actions.handleParsedMessageForUser('user-1', {
+      intent: 'create_investment_deposit',
+      data: {
+        description: 'fer',
+        amount: 500,
+        date: '2026-05-10',
+        status: 'pago',
+      },
+    });
+
+    expect(repo.insertInvestmentDeposit).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'user-1',
+      investmentId: 'inv-1',
+      amount: 500,
+      date: '2026-05-10',
+    }));
+    expect(repo.updateInvestmentTotals).toHaveBeenCalledWith({
+      investmentId: 'inv-1',
+      amountInvested: 1500,
+      currentValue: 1500,
+      returnPercentage: 0,
+    });
+    expect(repo.insertTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'user-1',
+      description: 'Aporte em Ferias',
+      amount: 500,
+      paymentMethod: 'transferencia',
+    }));
+    expect(response).toContain('✅ <b>Aporte registrado</b>');
+    expect(response).toContain('<b>Investimento:</b> Ferias');
+    expect(response).toContain('<b>Valor:</b> R$ 500,00');
+  });
+
+  it('asks for clarification when more than one investment matches the name', async () => {
+    const { repo, actions } = buildActions();
+    repo.listInvestments.mockResolvedValueOnce([
+      { id: 'inv-1', user_id: 'user-1', name: 'Ferias', ticker: null, category: 'renda_fixa', amount_invested: 1000, current_value: 1000, return_percentage: 0, monthly_contribution: 0, last_auto_contribution_at: null, created_at: '2026-05-01T00:00:00Z' },
+      { id: 'inv-3', user_id: 'user-1', name: 'Ferias Europa', ticker: null, category: 'renda_fixa', amount_invested: 2000, current_value: 2000, return_percentage: 0, monthly_contribution: 0, last_auto_contribution_at: null, created_at: '2026-05-01T00:00:00Z' },
+    ]);
+
+    const response = await actions.handleParsedMessageForUser('user-1', {
+      intent: 'create_investment_deposit',
+      data: {
+        description: 'fer',
+        amount: 500,
+        date: '2026-05-10',
+        status: 'pago',
+      },
+    });
+
+    expect(repo.insertInvestmentDeposit).not.toHaveBeenCalled();
+    expect(response).toContain('Encontrei mais de um investimento parecido');
   });
 
   it('fails safely when the user id is missing', async () => {
