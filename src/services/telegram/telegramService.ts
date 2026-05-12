@@ -37,6 +37,8 @@ export interface TelegramReplyMarkup {
   inline_keyboard: TelegramInlineKeyboardButton[][];
 }
 
+export type TelegramParseMode = 'HTML';
+
 interface CreateTelegramServiceOptions {
   botToken: string;
   webhookSecret: string;
@@ -47,7 +49,7 @@ interface CreateTelegramServiceOptions {
   parseMessageWithAi?(text: string, options: { now?: Date }): Promise<TelegramParsedMessage | null>;
   getLinkedAccountByTelegramUserId(telegramUserId: string): Promise<{ userId: string; telegramUserId: string; } | null>;
   linkTelegramUser(input: { rawToken: string; telegramUserId: string; telegramChatId: string; }): Promise<{ userId: string }>;
-  sendMessage(input: { chatId: number; text: string; botToken: string; replyMarkup?: TelegramReplyMarkup }): Promise<void>;
+  sendMessage(input: { chatId: number; text: string; botToken: string; replyMarkup?: TelegramReplyMarkup; parseMode?: TelegramParseMode }): Promise<void>;
   answerCallbackQuery?(input: { callbackQueryId: string; botToken: string; text?: string }): Promise<void>;
 }
 
@@ -100,7 +102,8 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
         await options.sendMessage({
           chatId: message.chat.id,
           botToken: options.botToken,
-          text: 'Mensagem muito longa. Envie uma mensagem menor.',
+          text: '⚠️ <b>Mensagem muito longa.</b>\n\nEnvie uma mensagem menor.',
+          parseMode: 'HTML',
         });
         return { statusCode: 200, payload: { ok: true } };
       }
@@ -116,6 +119,7 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
             botToken: options.botToken,
             text: linkedAccount ? getStartMessage() : getLinkPromptMessage(),
             replyMarkup: linkedAccount ? getMainMenuKeyboard() : getLinkKeyboard(),
+            parseMode: 'HTML',
           });
           return { statusCode: 200, payload: { ok: true } };
         }
@@ -127,6 +131,7 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
             botToken: options.botToken,
             text: linkedAccount ? getHelpMessage() : getLinkHelpMessage(),
             replyMarkup: linkedAccount ? getMainMenuKeyboard() : getLinkKeyboard(),
+            parseMode: 'HTML',
           });
           return { statusCode: 200, payload: { ok: true } };
         }
@@ -145,6 +150,7 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
             botToken: options.botToken,
             text: getLinkedSuccessMessage(),
             replyMarkup: getMainMenuKeyboard(),
+            parseMode: 'HTML',
           });
           return { statusCode: 200, payload: { ok: true } };
         }
@@ -161,6 +167,7 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
           botToken: options.botToken,
           text: responseText,
           replyMarkup: getPostActionKeyboard(parsed.intent),
+          parseMode: 'HTML',
         });
 
         return { statusCode: 200, payload: { ok: true } };
@@ -170,7 +177,8 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
           botToken: options.botToken,
           text: isAwaitingLinkToken
             ? getInvalidTokenMessage()
-            : 'Não foi possível processar sua mensagem com segurança agora.',
+            : '⚠️ <b>Não foi possível processar sua mensagem com segurança agora.</b>',
+          parseMode: 'HTML',
         });
         return { statusCode: 200, payload: { ok: true } };
       }
@@ -199,6 +207,7 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
       botToken: options.botToken,
       text: getLinkPromptMessage(),
       replyMarkup: getLinkKeyboard(),
+      parseMode: 'HTML',
     });
     return { statusCode: 200, payload: { ok: true } };
   }
@@ -211,6 +220,7 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
       botToken: options.botToken,
       text: responseText,
       replyMarkup: getMainMenuKeyboard(),
+      parseMode: 'HTML',
     });
     return { statusCode: 200, payload: { ok: true } };
   }
@@ -221,6 +231,29 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
       botToken: options.botToken,
       text: getHelpMessage(),
       replyMarkup: getMainMenuKeyboard(),
+      parseMode: 'HTML',
+    });
+    return { statusCode: 200, payload: { ok: true } };
+  }
+
+  if (callbackQuery.data === 'guide:expense') {
+    await options.sendMessage({
+      chatId,
+      botToken: options.botToken,
+      text: getExpenseGuideMessage(),
+      replyMarkup: getGuideKeyboard(),
+      parseMode: 'HTML',
+    });
+    return { statusCode: 200, payload: { ok: true } };
+  }
+
+  if (callbackQuery.data === 'guide:income') {
+    await options.sendMessage({
+      chatId,
+      botToken: options.botToken,
+      text: getIncomeGuideMessage(),
+      replyMarkup: getGuideKeyboard(),
+      parseMode: 'HTML',
     });
     return { statusCode: 200, payload: { ok: true } };
   }
@@ -230,6 +263,7 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
     botToken: options.botToken,
     text: getStartMessage(),
     replyMarkup: getMainMenuKeyboard(),
+    parseMode: 'HTML',
   });
 
   return { statusCode: 200, payload: { ok: true } };
@@ -263,57 +297,67 @@ function matchSupportedCommand(text: string) {
 
 function getStartMessage() {
   return [
-    'Bot do controle financeiro ativo.',
+    '🤖 <b>Bot do controle financeiro ativo</b>',
     '',
-    'Você pode mandar uma mensagem normal ou usar os botões abaixo.',
+    'Me mande uma movimentação em linguagem natural ou use os botões abaixo.',
     '',
-    'Exemplos:',
-    'gastei 25 no almoço',
-    'paguei 100 internet',
-    'recebi 6500 salário',
-    'resumo do mês',
+    '✨ <b>Exemplos rápidos</b>',
+    '• <code>gastei 25 no almoço</code>',
+    '• <code>paguei 100 internet</code>',
+    '• <code>recebi 6500 salário</code>',
+    '• <code>resumo do mês</code>',
   ].join('\n');
 }
 
 function getHelpMessage() {
   return [
-    'Exemplos de uso:',
+    '❓ <b>Como usar</b>',
     '',
-    'gastei 25 no almoço',
-    'paguei 100 internet',
-    'comprei 32,90 ifood',
-    'recebi 6500 salário',
-    'resumo do mês',
+    'Você pode escrever de forma simples:',
+    '',
+    '💸 <b>Gastos</b>',
+    '• <code>gastei 25 no almoço</code>',
+    '• <code>paguei 100 internet</code>',
+    '• <code>comprei 32,90 ifood</code>',
+    '',
+    '💰 <b>Entradas</b>',
+    '• <code>recebi 6500 salário</code>',
+    '',
+    '📊 <b>Consulta</b>',
+    '• <code>resumo do mês</code>',
   ].join('\n');
 }
 
 function getLinkPromptMessage() {
   return [
-    'Antes de usar o bot, conecte sua conta.',
+    '🔐 <b>Conecte sua conta</b>',
     '',
-    'Qual o token de acesso?',
+    'Qual o <b>token de acesso</b> gerado em Configurações?',
   ].join('\n');
 }
 
 function getLinkHelpMessage() {
   return [
-    'Para conectar sua conta, envie o token de acesso gerado em Configurações.',
+    '🔐 <b>Primeiro, conecte sua conta</b>',
+    '',
+    'Envie aqui o token gerado em <b>Configurações</b>.',
     '',
     'Depois da conexão, você poderá enviar:',
-    'gastei 25 no almoço',
-    'recebi 6500 salário',
-    'resumo do mês',
+    '• <code>gastei 25 no almoço</code>',
+    '• <code>recebi 6500 salário</code>',
+    '• <code>resumo do mês</code>',
   ].join('\n');
 }
 
 function getLinkedSuccessMessage() {
   return [
-    'Telegram conectado com sucesso à sua conta.',
+    '✅ <b>Telegram conectado com sucesso!</b>',
     '',
-    'Agora você já pode enviar:',
-    'gastei 25 no almoço',
-    'recebi 6500 salário',
-    'resumo do mês',
+    'Agora você já pode registrar suas movimentações por mensagem.',
+    '',
+    '• <code>gastei 25 no almoço</code>',
+    '• <code>recebi 6500 salário</code>',
+    '• <code>resumo do mês</code>',
   ].join('\n');
 }
 
@@ -321,8 +365,12 @@ function getMainMenuKeyboard(): TelegramReplyMarkup {
   return {
     inline_keyboard: [
       [
-        { text: 'Resumo do mês', callback_data: 'summary:month' },
-        { text: 'Ajuda', callback_data: 'help:examples' },
+        { text: '💸 Registrar gasto', callback_data: 'guide:expense' },
+        { text: '💰 Registrar entrada', callback_data: 'guide:income' },
+      ],
+      [
+        { text: '📊 Resumo do mês', callback_data: 'summary:month' },
+        { text: '❓ Ajuda', callback_data: 'help:examples' },
       ],
     ],
   };
@@ -331,7 +379,18 @@ function getMainMenuKeyboard(): TelegramReplyMarkup {
 function getLinkKeyboard(): TelegramReplyMarkup {
   return {
     inline_keyboard: [
-      [{ text: 'Ajuda', callback_data: 'help:examples' }],
+      [{ text: '❓ Ajuda', callback_data: 'help:examples' }],
+    ],
+  };
+}
+
+function getGuideKeyboard(): TelegramReplyMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '📊 Resumo do mês', callback_data: 'summary:month' },
+        { text: '❓ Ajuda', callback_data: 'help:examples' },
+      ],
     ],
   };
 }
@@ -341,8 +400,8 @@ function getPostActionKeyboard(intent: TelegramParsedMessage['intent']): Telegra
     return {
       inline_keyboard: [
         [
-          { text: 'Ver resumo', callback_data: 'summary:month' },
-          { text: 'Ajuda', callback_data: 'help:examples' },
+          { text: intent === 'create_expense' ? '💸 Novo gasto' : '💰 Nova entrada', callback_data: intent === 'create_expense' ? 'guide:expense' : 'guide:income' },
+          { text: '📊 Ver resumo', callback_data: 'summary:month' },
         ],
       ],
     };
@@ -353,8 +412,33 @@ function getPostActionKeyboard(intent: TelegramParsedMessage['intent']): Telegra
 
 function getInvalidTokenMessage() {
   return [
-    'Token de acesso inválido.',
+    '⚠️ <b>Token de acesso inválido.</b>',
     '',
     'Confira o token gerado em Configurações e tente novamente.',
+  ].join('\n');
+}
+
+function getExpenseGuideMessage() {
+  return [
+    '💸 <b>Registrar gasto</b>',
+    '',
+    'Me envie uma mensagem com valor e descrição.',
+    '',
+    'Exemplos:',
+    '• <code>gastei 25 no almoço</code>',
+    '• <code>paguei 100 internet</code>',
+    '• <code>comprei 32,90 ifood</code>',
+  ].join('\n');
+}
+
+function getIncomeGuideMessage() {
+  return [
+    '💰 <b>Registrar entrada</b>',
+    '',
+    'Me envie uma mensagem com valor e descrição.',
+    '',
+    'Exemplos:',
+    '• <code>recebi 6500 salário</code>',
+    '• <code>recebi 1200 freela</code>',
   ].join('\n');
 }

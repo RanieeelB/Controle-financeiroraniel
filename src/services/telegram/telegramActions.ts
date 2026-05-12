@@ -202,20 +202,20 @@ async function createTransactionMessage(
 
   return type === 'gasto'
     ? [
-        'Gasto registrado com sucesso.',
+        '✅ <b>Gasto registrado</b>',
         '',
-        `Descrição: ${transactionPayload.description}`,
-        `Categoria: ${category.name}`,
-        `Valor: ${formatCurrency(transactionPayload.amount)}`,
-        `Data: ${formatDate(data.date)}`,
+        `📝 <b>Descrição:</b> ${escapeTelegramHtml(transactionPayload.description)}`,
+        `🏷️ <b>Categoria:</b> ${escapeTelegramHtml(category.name)}`,
+        `💸 <b>Valor:</b> ${formatCurrency(transactionPayload.amount)}`,
+        `📅 <b>Data:</b> ${formatDate(data.date)}`,
       ].join('\n')
     : [
-        'Entrada registrada com sucesso.',
+        '✅ <b>Entrada registrada</b>',
         '',
-        `Descrição: ${transactionPayload.description}`,
-        `Categoria: ${category.name}`,
-        `Valor: ${formatCurrency(transactionPayload.amount)}`,
-        `Data: ${formatDate(data.date)}`,
+        `📝 <b>Descrição:</b> ${escapeTelegramHtml(transactionPayload.description)}`,
+        `🏷️ <b>Categoria:</b> ${escapeTelegramHtml(category.name)}`,
+        `💰 <b>Valor:</b> ${formatCurrency(transactionPayload.amount)}`,
+        `📅 <b>Data:</b> ${formatDate(data.date)}`,
       ].join('\n');
 }
 
@@ -283,13 +283,13 @@ async function createMonthlySummaryMessage(userId: string, options: CreateTelegr
   });
 
   return [
-    `Resumo de ${formatMonthYear(monthKey)}`,
+    `📊 <b>Resumo de ${formatMonthYear(monthKey)}</b>`,
     '',
-    `Entradas: ${formatCurrency(summary.totalIncome)}`,
-    `Gastos: ${formatCurrency(summary.totalExpense)}`,
-    `Contas fixas: ${formatCurrency(summary.fixedBillsTotal)}`,
-    `Faturas abertas: ${formatCurrency(summary.openInvoices)}`,
-    `Sobra prevista: ${formatCurrency(summary.projectedBalance)}`,
+    `💰 <b>Entradas:</b> ${formatCurrency(summary.totalIncome)}`,
+    `💸 <b>Gastos:</b> ${formatCurrency(summary.totalExpense)}`,
+    `🏠 <b>Contas fixas:</b> ${formatCurrency(summary.fixedBillsTotal)}`,
+    `💳 <b>Faturas abertas:</b> ${formatCurrency(summary.openInvoices)}`,
+    `🧮 <b>Sobra prevista:</b> ${formatCurrency(summary.projectedBalance)}`,
   ].join('\n');
 }
 
@@ -358,11 +358,11 @@ function validateUserId(userId: string) {
 
 function getUnknownMessage() {
   return [
-    'Não consegui entender com segurança.',
+    '🤔 <b>Não consegui entender com segurança.</b>',
     '',
     'Tente enviar assim:',
-    'gastei 25 no almoço',
-    'recebi 6500 salário',
+    '• <code>gastei 25 no almoço</code>',
+    '• <code>recebi 6500 salário</code>',
   ].join('\n');
 }
 
@@ -405,4 +405,11 @@ function getMonth(date: Date, timeZone = 'America/Fortaleza') {
     timeZone,
     month: '2-digit',
   }).format(date));
+}
+
+function escapeTelegramHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }

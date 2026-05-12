@@ -54,7 +54,8 @@ describe('telegramService', () => {
     expect(result.statusCode).toBe(200);
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
       chatId: 99,
-      text: expect.stringContaining('Qual o token de acesso?'),
+      parseMode: 'HTML',
+      text: expect.stringContaining('token de acesso'),
     }));
   });
 
@@ -81,14 +82,51 @@ describe('telegramService', () => {
 
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
       chatId: 99,
-      text: expect.stringContaining('Bot do controle financeiro ativo.'),
+      parseMode: 'HTML',
+      text: expect.stringContaining('<b>Bot do controle financeiro ativo</b>'),
       replyMarkup: expect.objectContaining({
         inline_keyboard: expect.arrayContaining([
           expect.arrayContaining([
-            expect.objectContaining({ text: 'Resumo do mês', callback_data: 'summary:month' }),
+            expect.objectContaining({ text: '💸 Registrar gasto', callback_data: 'guide:expense' }),
+            expect.objectContaining({ text: '💰 Registrar entrada', callback_data: 'guide:income' }),
+          ]),
+          expect.arrayContaining([
+            expect.objectContaining({ text: '📊 Resumo do mês', callback_data: 'summary:month' }),
+            expect.objectContaining({ text: '❓ Ajuda', callback_data: 'help:examples' }),
           ]),
         ]),
       }),
+    }));
+  });
+
+  it('shows an expense guide when the user taps the expense button', async () => {
+    const { service, sendMessage, getLinkedAccountByTelegramUserId } = buildService();
+    getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
+      userId: 'user-1',
+      telegramUserId: '12345',
+    });
+
+    await service.handleRequest({
+      method: 'POST',
+      headers: {
+        'x-telegram-bot-api-secret-token': 'secret-token',
+      },
+      body: {
+        callback_query: {
+          id: 'callback-1',
+          data: 'guide:expense',
+          message: {
+            chat: { id: 99 },
+          },
+          from: { id: 12345 },
+        },
+      },
+    });
+
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      chatId: 99,
+      parseMode: 'HTML',
+      text: expect.stringContaining('<b>Registrar gasto</b>'),
     }));
   });
 
@@ -260,10 +298,11 @@ describe('telegramService', () => {
     );
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
       text: 'registrado',
+      parseMode: 'HTML',
       replyMarkup: expect.objectContaining({
         inline_keyboard: expect.arrayContaining([
           expect.arrayContaining([
-            expect.objectContaining({ text: 'Ver resumo', callback_data: 'summary:month' }),
+            expect.objectContaining({ text: '📊 Ver resumo', callback_data: 'summary:month' }),
           ]),
         ]),
       }),
