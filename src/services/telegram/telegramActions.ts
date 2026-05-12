@@ -492,21 +492,23 @@ async function createOpenInvoicesMessage(userId: string, options: CreateTelegram
   validateUserId(userId);
   const context = await getMonthlyContext(userId, options, now);
 
-  if (context.openInvoiceItems.length === 0) {
+  if (context.invoiceItems.length === 0) {
     return [
-      `💳 <b>Faturas abertas de ${formatMonthYear(context.monthKey)}</b>`,
+      `💳 <b>Faturas de ${formatMonthYear(context.monthKey)}</b>`,
       '',
-      'Nenhuma fatura aberta encontrada neste mês.',
+      'Nenhuma fatura encontrada neste mês.',
     ].join('\n');
   }
 
-  const byCard = groupInvoiceItemsByCard(context.openInvoiceItems);
+  const byCard = groupInvoiceItemsByCard(context.invoiceItems, context.transactions);
+  const total = context.invoiceItems.reduce((sum, item) => sum + Number(item.amount), 0);
   return [
-    `💳 <b>Faturas abertas de ${formatMonthYear(context.monthKey)}</b>`,
+    `💳 <b>Faturas de ${formatMonthYear(context.monthKey)}</b>`,
     '',
-    `<b>Total:</b> ${formatCurrency(context.openInvoicesTotal)}`,
+    `<b>Total das faturas:</b> ${formatCurrency(total)}`,
+    `<b>Em aberto:</b> ${formatCurrency(context.openInvoicesTotal)}`,
     '',
-    ...byCard.map(group => `• ${escapeTelegramHtml(group.name)}: ${formatCurrency(group.total)} (${group.count} item${group.count === 1 ? '' : 's'})`),
+    ...byCard.map(group => `• ${group.status === 'paid' ? '✅' : '⏳'} ${escapeTelegramHtml(group.name)}: ${formatCurrency(group.total)} (${group.status === 'paid' ? 'Paga' : 'Aberta'} · ${group.count} item${group.count === 1 ? '' : 's'})`),
   ].join('\n');
 }
 
@@ -529,10 +531,12 @@ async function createCardsMessage(userId: string, options: CreateTelegramActions
     '💳 <b>Cartões</b>',
     '',
     ...cards.map(card => {
-      const total = context.openInvoiceItems
+      const cardItems = context.invoiceItems
         .filter(item => item.card_id === card.id)
+      const total = cardItems
         .reduce((sum, item) => sum + Number(item.amount), 0);
-      return `• ${escapeTelegramHtml(card.name)} •••• ${escapeTelegramHtml(card.last_digits)} · limite ${formatCurrency(Number(card.credit_limit))} · fatura ${formatCurrency(total)}`;
+      const status = getCardInvoiceStatus(cardItems, context.transactions);
+      return `• ${escapeTelegramHtml(card.name)} •••• ${escapeTelegramHtml(card.last_digits)} · limite ${formatCurrency(Number(card.credit_limit))} · fatura ${formatCurrency(total)} · ${status === 'paid' ? 'Paga' : 'Aberta'}`;
     }),
   ].join('\n');
 }
@@ -569,15 +573,17 @@ async function createCardInvoiceMessage(
   }
 
   const card = matches[0];
-  const items = context.openInvoiceItems
+  const items = context.invoiceItems
     .filter(item => item.card_id === card.id)
     .sort((left, right) => right.date.localeCompare(left.date));
   const total = items.reduce((sum, item) => sum + Number(item.amount), 0);
+  const status = getCardInvoiceStatus(items, context.transactions);
 
   return [
     `💳 <b>Fatura ${escapeTelegramHtml(card.name)} · ${formatMonthYear(context.monthKey)}</b>`,
     '',
     `<b>Total:</b> ${formatCurrency(total)}`,
+    `<b>Status:</b> ${status === 'paid' ? 'Paga' : 'Aberta'}`,
     `<b>Final:</b> •••• ${escapeTelegramHtml(card.last_digits)}`,
     '',
     ...(items.length > 0
@@ -732,18 +738,7 @@ function calculateMonthlySummary(context: MonthlyContext) {
 
 function getOpenInvoiceItems(invoiceItems: TelegramInvoiceItemRecord[], transactions: TelegramTransactionRecord[]) {
   return invoiceItems.filter(item => {
-    const linkedTransaction = transactions.find(transaction => transaction.notes === `invoice_item:${item.id}`);
-    if (linkedTransaction) {
-      return linkedTransaction.status !== 'pago';
-    }
-
-    const signature = `${(item.description || '').trim().toLocaleLowerCase('pt-BR')}|${Number(item.amount).toFixed(2)}|${item.date}`;
-    const fallbackTransaction = transactions.find(transaction => {
-      if (transaction.payment_method !== undefined && transaction.payment_method !== 'credito') return false;
-      if (!transaction.description || !transaction.date) return false;
-      const transactionSignature = `${transaction.description.trim().toLocaleLowerCase('pt-BR')}|${Number(transaction.amount).toFixed(2)}|${transaction.date}`;
-      return transactionSignature === signature;
-    });
+    const fallbackTransaction = findInvoiceTransaction(item, transactions);
 
     if (fallbackTransaction) {
       return fallbackTransaction.status !== 'pago';
@@ -753,8 +748,13 @@ function getOpenInvoiceItems(invoiceItems: TelegramInvoiceItemRecord[], transact
   });
 }
 
-function groupInvoiceItemsByCard(items: TelegramInvoiceItemRecord[]) {
-  const byCard = new Map<string, { name: string; total: number; count: number }>();
+function groupInvoiceItemsByCard(items: TelegramInvoiceItemRecord[], transactions: TelegramTransactionRecord[]) {
+  const byCard = new Map<string, {
+    name: string;
+    total: number;
+    count: number;
+    items: TelegramInvoiceItemRecord[];
+  }>();
 
   for (const item of items) {
     const cardKey = item.card_id ?? item.credit_card?.id ?? 'unknown';
@@ -764,10 +764,40 @@ function groupInvoiceItemsByCard(items: TelegramInvoiceItemRecord[]) {
       name: current?.name ?? cardName,
       total: (current?.total ?? 0) + Number(item.amount),
       count: (current?.count ?? 0) + 1,
+      items: [...(current?.items ?? []), item],
     });
   }
 
-  return [...byCard.values()].sort((left, right) => right.total - left.total);
+  return [...byCard.values()]
+    .map(group => ({
+      ...group,
+      status: getCardInvoiceStatus(group.items, transactions),
+    }))
+    .sort((left, right) => right.total - left.total);
+}
+
+function getCardInvoiceStatus(items: TelegramInvoiceItemRecord[], transactions: TelegramTransactionRecord[]) {
+  if (items.length === 0) return 'open' as const;
+
+  const matchedTransactions = items
+    .map(item => findInvoiceTransaction(item, transactions))
+    .filter((transaction): transaction is TelegramTransactionRecord => Boolean(transaction));
+
+  if (matchedTransactions.length < items.length) return 'open' as const;
+  return matchedTransactions.every(transaction => transaction.status === 'pago') ? 'paid' as const : 'open' as const;
+}
+
+function findInvoiceTransaction(item: TelegramInvoiceItemRecord, transactions: TelegramTransactionRecord[]) {
+  const linkedTransaction = transactions.find(transaction => transaction.notes === `invoice_item:${item.id}`);
+  if (linkedTransaction) return linkedTransaction;
+
+  const signature = `${(item.description || '').trim().toLocaleLowerCase('pt-BR')}|${Number(item.amount).toFixed(2)}|${item.date}`;
+  return transactions.find(transaction => {
+    if (transaction.payment_method !== undefined && transaction.payment_method !== 'credito') return false;
+    if (!transaction.description || !transaction.date) return false;
+    const transactionSignature = `${transaction.description.trim().toLocaleLowerCase('pt-BR')}|${Number(transaction.amount).toFixed(2)}|${transaction.date}`;
+    return transactionSignature === signature;
+  });
 }
 
 async function ensureCategoryForUser(input: {

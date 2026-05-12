@@ -17,6 +17,7 @@ function buildActions() {
       { id: 'expense-1', type: 'gasto', amount: 200, status: 'pago', notes: null, description: 'Mercado', date: '2026-05-09', category: { name: 'Mercado', color: '#75ff9e' } },
       { id: 'expense-2', type: 'gasto', amount: 80, status: 'pago', notes: null, description: 'Ifood', date: '2026-05-07', category: { name: 'Alimentação', color: '#ffb4ab' } },
       { id: 'invoice-tx-1', type: 'gasto', amount: 300, status: 'pendente', notes: 'invoice_item:invoice-1', description: 'Cartão', date: '2026-05-08', payment_method: 'credito', category: { name: 'Outros', color: '#859585' } },
+      { id: 'invoice-tx-2', type: 'gasto', amount: 120, status: 'pago', notes: 'invoice_item:invoice-2', description: 'Streaming', date: '2026-05-06', payment_method: 'credito', category: { name: 'Outros', color: '#859585' } },
       { id: 'bill-payment-1', type: 'gasto', amount: 120, status: 'pago', notes: 'fixed_bill:bill-2', description: 'Água', date: '2026-05-10', category: { name: 'Contas', color: '#bacbb9' } },
     ]),
     listMonthInvoiceItems: vi.fn().mockResolvedValue([
@@ -91,9 +92,9 @@ describe('telegramActions', () => {
 
     expect(response).toContain('📊 <b>Resumo de maio/2026</b>');
     expect(response).toContain('💰 <b>Entradas:</b> R$ 7.000,00');
-    expect(response).toContain('💸 <b>Gastos:</b> R$ 700,00');
+    expect(response).toContain('💸 <b>Gastos:</b> R$ 820,00');
     expect(response).toContain('🏠 <b>Contas fixas:</b> R$ 270,00');
-    expect(response).toContain('💳 <b>Faturas abertas:</b> R$ 420,00');
+    expect(response).toContain('💳 <b>Faturas abertas:</b> R$ 300,00');
     expect(response).toContain('🧮 <b>Sobra prevista:</b> R$ 5.730,00');
   });
 
@@ -109,7 +110,7 @@ describe('telegramActions', () => {
     });
 
     expect(response).toContain('💸 <b>Gastos de maio/2026</b>');
-    expect(response).toContain('<b>Total:</b> R$ 700,00');
+    expect(response).toContain('<b>Total:</b> R$ 820,00');
     expect(response).toContain('Mercado');
     expect(response).toContain('Ifood');
   });
@@ -161,6 +162,33 @@ describe('telegramActions', () => {
     expect(response).toContain('💳 <b>Fatura Nubank');
     expect(response).toContain('Cartão');
     expect(response).toContain('<b>Total:</b> R$ 300,00');
+  });
+
+  it('shows card invoice totals even when linked invoice transactions are already paid', async () => {
+    const { actions } = buildActions();
+
+    const cardsResponse = await actions.handleParsedMessageForUser('user-1', {
+      intent: 'list_cards',
+      data: {
+        description: 'Cartões',
+        date: '2026-05-10',
+      },
+    });
+    const invoicesResponse = await actions.handleParsedMessageForUser('user-1', {
+      intent: 'list_open_invoices',
+      data: {
+        description: 'Faturas abertas',
+        date: '2026-05-10',
+      },
+    });
+
+    expect(cardsResponse).toContain('Nubank');
+    expect(cardsResponse).toContain('fatura R$ 300,00');
+    expect(cardsResponse).toContain('Inter');
+    expect(cardsResponse).toContain('fatura R$ 120,00');
+    expect(invoicesResponse).toContain('Nubank: R$ 300,00');
+    expect(invoicesResponse).toContain('Inter: R$ 120,00');
+    expect(invoicesResponse).toContain('Paga');
   });
 
   it('lists investments with totals', async () => {
