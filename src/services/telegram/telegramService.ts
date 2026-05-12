@@ -119,8 +119,8 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
           await options.sendMessage({
             chatId: message.chat.id,
             botToken: options.botToken,
-            text: linkedAccount ? getStartMessage() : getLinkPromptMessage(),
-            replyMarkup: linkedAccount ? getMainMenuKeyboard() : getLinkKeyboard(),
+            text: linkedAccount ? getStartMessage() : getOnboardingStartMessage(),
+            replyMarkup: linkedAccount ? getMainMenuKeyboard() : getOnboardingKeyboard(),
             parseMode: 'HTML',
           });
           return { statusCode: 200, payload: { ok: true } };
@@ -202,11 +202,33 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
 
   const linkedAccount = await options.getLinkedAccountByTelegramUserId(fromId);
   if (!linkedAccount) {
+    if (callbackQuery.data === 'onboarding:has-account') {
+      await options.sendMessage({
+        chatId,
+        botToken: options.botToken,
+        text: getLinkPromptMessage(),
+        replyMarkup: getLinkKeyboard(),
+        parseMode: 'HTML',
+      });
+      return { statusCode: 200, payload: { ok: true } };
+    }
+
+    if (callbackQuery.data === 'onboarding:create-account') {
+      await options.sendMessage({
+        chatId,
+        botToken: options.botToken,
+        text: getCreateAccountStepsMessage(),
+        replyMarkup: getCreateAccountKeyboard(),
+        parseMode: 'HTML',
+      });
+      return { statusCode: 200, payload: { ok: true } };
+    }
+
     await options.sendMessage({
       chatId,
       botToken: options.botToken,
-      text: getLinkPromptMessage(),
-      replyMarkup: getLinkKeyboard(),
+      text: getOnboardingStartMessage(),
+      replyMarkup: getOnboardingKeyboard(),
       parseMode: 'HTML',
     });
     return { statusCode: 200, payload: { ok: true } };
@@ -372,11 +394,37 @@ function getHelpMessage() {
   ].join('\n');
 }
 
+function getOnboardingStartMessage() {
+  return [
+    '👋 <b>Bem-vindo ao Saldo Real</b>',
+    '',
+    'Você já tem uma conta no site?',
+    '',
+    'Se já tiver, eu vou pedir seu token de acesso.',
+    'Se ainda não tiver, eu te mostro o passo a passo para criar a conta e gerar o token.',
+  ].join('\n');
+}
+
 function getLinkPromptMessage() {
   return [
     '🔐 <b>Conecte sua conta</b>',
     '',
     'Qual o <b>token de acesso</b> gerado em Configurações?',
+  ].join('\n');
+}
+
+function getCreateAccountStepsMessage() {
+  return [
+    '🆕 <b>Criar conta e conectar o Telegram</b>',
+    '',
+    '1. Acesse:',
+    '<a href="https://controle-financeiroraniel.vercel.app/">https://controle-financeiroraniel.vercel.app/</a>',
+    '',
+    '2. Clique em <b>Criar conta</b>.',
+    '',
+    '3. Depois de criar sua conta, vá em <b>Configurações</b> e gere seu token do Telegram.',
+    '',
+    '4. Copie o token gerado e me envie aqui para finalizar a integração.',
   ].join('\n');
 }
 
@@ -407,6 +455,17 @@ function getLinkedSuccessMessage() {
   ].join('\n');
 }
 
+function getOnboardingKeyboard(): TelegramReplyMarkup {
+  return {
+    inline_keyboard: [
+      [
+        { text: '✅ Já tenho conta', callback_data: 'onboarding:has-account' },
+        { text: '🆕 Criar conta', callback_data: 'onboarding:create-account' },
+      ],
+    ],
+  };
+}
+
 function getMainMenuKeyboard(): TelegramReplyMarkup {
   return {
     inline_keyboard: [
@@ -434,6 +493,14 @@ function getMainMenuKeyboard(): TelegramReplyMarkup {
         { text: '🏠 Fixas', callback_data: 'list:fixed-bills' },
         { text: '❓ Ajuda', callback_data: 'help:examples' },
       ],
+    ],
+  };
+}
+
+function getCreateAccountKeyboard(): TelegramReplyMarkup {
+  return {
+    inline_keyboard: [
+      [{ text: '✅ Já gerei meu token', callback_data: 'onboarding:has-account' }],
     ],
   };
 }

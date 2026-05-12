@@ -37,7 +37,7 @@ function buildService() {
 }
 
 describe('telegramService', () => {
-  it('asks for the access token on /start when the telegram user is not linked', async () => {
+  it('asks if the unlinked user already has an account on /start', async () => {
     const { service, sendMessage } = buildService();
 
     const result = await service.handleRequest({
@@ -58,7 +58,78 @@ describe('telegramService', () => {
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
       chatId: 99,
       parseMode: 'HTML',
+      text: expect.stringContaining('Você já tem uma conta'),
+      replyMarkup: expect.objectContaining({
+        inline_keyboard: expect.arrayContaining([
+          expect.arrayContaining([
+            expect.objectContaining({ text: '✅ Já tenho conta', callback_data: 'onboarding:has-account' }),
+            expect.objectContaining({ text: '🆕 Criar conta', callback_data: 'onboarding:create-account' }),
+          ]),
+        ]),
+      }),
+    }));
+  });
+
+  it('asks for the access token when an unlinked user confirms they already have an account', async () => {
+    const { service, sendMessage } = buildService();
+
+    await service.handleRequest({
+      method: 'POST',
+      headers: {
+        'x-telegram-bot-api-secret-token': 'secret-token',
+      },
+      body: {
+        callback_query: {
+          id: 'callback-1',
+          data: 'onboarding:has-account',
+          message: {
+            message_id: 123,
+            chat: { id: 99 },
+          },
+          from: { id: 12345 },
+        },
+      },
+    });
+
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      chatId: 99,
+      parseMode: 'HTML',
       text: expect.stringContaining('token de acesso'),
+    }));
+  });
+
+  it('shows account creation steps when an unlinked user does not have an account', async () => {
+    const { service, sendMessage } = buildService();
+
+    await service.handleRequest({
+      method: 'POST',
+      headers: {
+        'x-telegram-bot-api-secret-token': 'secret-token',
+      },
+      body: {
+        callback_query: {
+          id: 'callback-1',
+          data: 'onboarding:create-account',
+          message: {
+            message_id: 123,
+            chat: { id: 99 },
+          },
+          from: { id: 12345 },
+        },
+      },
+    });
+
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      chatId: 99,
+      parseMode: 'HTML',
+      text: expect.stringContaining('https://controle-financeiroraniel.vercel.app/'),
+      replyMarkup: expect.objectContaining({
+        inline_keyboard: expect.arrayContaining([
+          expect.arrayContaining([
+            expect.objectContaining({ text: '✅ Já gerei meu token', callback_data: 'onboarding:has-account' }),
+          ]),
+        ]),
+      }),
     }));
   });
 
