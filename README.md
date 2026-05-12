@@ -40,7 +40,7 @@ O projeto adota uma abordagem robusta de segurança focada no banco de dados:
 - **Front-end:** React 18, Vite, React Router DOM, TypeScript.
 - **Estilização:** Tailwind CSS v4, Lucide Icons, UI inspirada em Glassmorphism e Design Tokens.
 - **Back-end/BaaS:** Supabase (PostgreSQL, Auth, RLS).
-- **Automações:** Vercel Cron chamando `/api/telegram/automations` de hora em hora; o backend decide os envios válidos no fuso `America/Fortaleza`.
+- **Automações:** Vercel Cron chamando `/api/telegram/automations` uma vez por dia às `21:00 UTC` (`18:00` em `America/Fortaleza`), compatível com contas Hobby; o backend decide os envios válidos e consolida vencimentos, resumo diário, alertas e fechamento semanal.
 - **Data Viz:** Recharts.
 
 ## 🚀 Como Executar Localmente

@@ -140,11 +140,20 @@ function buildDueMessages(
   const todayKey = local.dateKey;
 
   if (local.hour === MORNING_HOUR) {
-    const morning = buildMorningMessage(context, todayKey);
+    const morning = buildDueReminderMessage(context, todayKey, {
+      keyPrefix: 'morning-agenda',
+      title: '🌅 <b>Agenda da manhã</b>',
+    });
     if (morning) messages.push(morning);
   }
 
   if (local.hour === EVENING_HOUR) {
+    const eveningReminders = buildDueReminderMessage(context, todayKey, {
+      keyPrefix: 'evening-due-reminders',
+      title: '🗓️ <b>Vencimentos próximos</b>',
+    });
+    if (eveningReminders) messages.push(eveningReminders);
+
     const daily = buildDailySummaryMessage(context, todayKey, now, timeZone);
     if (daily) messages.push(daily);
 
@@ -160,7 +169,11 @@ function buildDueMessages(
   return messages;
 }
 
-function buildMorningMessage(context: MonthlyContext, todayKey: string): AutomationMessage | null {
+function buildDueReminderMessage(
+  context: MonthlyContext,
+  todayKey: string,
+  input: { keyPrefix: string; title: string },
+): AutomationMessage | null {
   const items = getCriticalCommitments(context, todayKey, 3, true);
   if (items.length === 0) return null;
 
@@ -170,9 +183,9 @@ function buildMorningMessage(context: MonthlyContext, todayKey: string): Automat
     .map(item => [{ text: `Marcar ${item.shortLabel} como pago`, callback_data: item.callbackData! }]);
 
   return {
-    key: `morning-agenda:${todayKey}`,
+    key: `${input.keyPrefix}:${todayKey}`,
     text: [
-      '🌅 <b>Agenda da manhã</b>',
+      input.title,
       '',
       'Compromissos próximos ou em atraso:',
       '',
