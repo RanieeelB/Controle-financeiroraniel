@@ -46,6 +46,12 @@ interface CreateTelegramServiceOptions {
   maxPayloadBytes?: number;
   now?: Date;
   handleParsedMessageForUser(userId: string, parsed: TelegramParsedMessage): Promise<string>;
+  handleAdvisorMessageForUser?(input: {
+    userId: string;
+    telegramChatId: string;
+    telegramUserId: string;
+    message: string;
+  }): Promise<string>;
   parseMessageWithAi?(text: string, options: { now?: Date }): Promise<TelegramParsedMessage | null>;
   getLinkedAccountByTelegramUserId(telegramUserId: string): Promise<{ userId: string; telegramUserId: string; } | null>;
   linkTelegramUser(input: { rawToken: string; telegramUserId: string; telegramChatId: string; }): Promise<{ userId: string }>;
@@ -160,13 +166,22 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
           parsed = await options.parseMessageWithAi(sanitizedText, { now: options.now }) ?? parsed;
         }
 
-        const responseText = await options.handleParsedMessageForUser(linkedAccount.userId, parsed);
+        const advisorHandler = options.handleAdvisorMessageForUser;
+        const isAdvisorResponse = parsed.intent === 'unknown' && !!advisorHandler;
+        const responseText = isAdvisorResponse
+          ? await advisorHandler({
+              userId: linkedAccount.userId,
+              telegramChatId: chatId,
+              telegramUserId: fromId,
+              message: sanitizedText,
+            })
+          : await options.handleParsedMessageForUser(linkedAccount.userId, parsed);
 
         await options.sendMessage({
           chatId: message.chat.id,
           botToken: options.botToken,
-          text: responseText,
-          replyMarkup: getPostActionKeyboard(parsed.intent),
+          text: isAdvisorResponse ? escapeTelegramHtml(responseText) : responseText,
+          replyMarkup: getPostActionKeyboard(parsed.intent, isAdvisorResponse),
           parseMode: 'HTML',
         });
 
@@ -395,7 +410,18 @@ function getGuideKeyboard(): TelegramReplyMarkup {
   };
 }
 
-function getPostActionKeyboard(intent: TelegramParsedMessage['intent']): TelegramReplyMarkup {
+function getPostActionKeyboard(intent: TelegramParsedMessage['intent'], isAdvisorResponse = false): TelegramReplyMarkup {
+  if (isAdvisorResponse) {
+    return {
+      inline_keyboard: [
+        [
+          { text: '💬 Conversar mais', callback_data: 'help:examples' },
+          { text: '📊 Ver resumo', callback_data: 'summary:month' },
+        ],
+      ],
+    };
+  }
+
   if (intent === 'create_expense' || intent === 'create_income') {
     return {
       inline_keyboard: [
@@ -441,4 +467,11 @@ function getIncomeGuideMessage() {
     '• <code>recebi 6500 salário</code>',
     '• <code>recebi 1200 freela</code>',
   ].join('\n');
+}
+
+function escapeTelegramHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { CheckCircle, Settings as SettingsIcon, Wallet, MessageCircle, ShieldCheck, Link2 } from 'lucide-react';
+import { CheckCircle, Settings as SettingsIcon, Wallet, MessageCircle, ShieldCheck, Link2, Copy, ExternalLink } from 'lucide-react';
 import { upsertSalarySetting } from '../lib/financialActions';
 import { parseCurrencyValue } from '../lib/financialPayloads';
 import { useSalarySettings } from '../hooks/useSalarySettings';
@@ -21,6 +21,7 @@ export function Settings() {
   const [telegramSuccess, setTelegramSuccess] = useState('');
   const [generatedTelegramToken, setGeneratedTelegramToken] = useState('');
   const [isGeneratingTelegramToken, setIsGeneratingTelegramToken] = useState(false);
+  const [isCopyingTelegramToken, setIsCopyingTelegramToken] = useState(false);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -103,7 +104,7 @@ export function Settings() {
       }
 
       setGeneratedTelegramToken(payload.token);
-      setTelegramSuccess('Esse token aparece apenas uma vez. Copie agora e envie ao bot no Telegram.');
+      setTelegramSuccess('Token do Telegram pronto. Agora você pode copiar e enviar ao bot.');
       await refetchTelegramConnection();
     } catch (submitError) {
       setTelegramError(submitError instanceof Error ? submitError.message : 'Não foi possível gerar o token do Telegram.');
@@ -112,9 +113,58 @@ export function Settings() {
     }
   }
 
+  async function fetchExistingTelegramToken() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      if (!accessToken) return;
+
+      const response = await fetch('/api/telegram/link-token', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) return;
+      const payload = await response.json() as { ok?: boolean; token?: string | null };
+      if (payload.ok && payload.token) {
+        setGeneratedTelegramToken(payload.token);
+      }
+    } catch {
+      // Silent fallback: the screen still works without showing the stored token.
+    }
+  }
+
+  async function handleCopyTelegramToken() {
+    if (!generatedTelegramToken) return;
+
+    setIsCopyingTelegramToken(true);
+    setTelegramError('');
+    try {
+      await navigator.clipboard.writeText(generatedTelegramToken);
+      setTelegramSuccess('Token copiado. Agora envie no bot do Telegram.');
+    } catch {
+      setTelegramError('Não foi possível copiar o token automaticamente.');
+    } finally {
+      setIsCopyingTelegramToken(false);
+    }
+  }
+
   const isTelegramLinked = Boolean(connection?.telegram_user_id && connection?.linked_at);
   const hasGeneratedTelegramToken = Boolean(connection?.token_generated_at && !isTelegramLinked);
   const canGenerateTelegramToken = !isTelegramLinked && !hasGeneratedTelegramToken && !isLoadingTelegram;
+
+  useEffect(() => {
+    if (hasGeneratedTelegramToken && !generatedTelegramToken) {
+      const timeout = window.setTimeout(() => {
+        void fetchExistingTelegramToken();
+      }, 0);
+
+      return () => window.clearTimeout(timeout);
+    }
+  }, [generatedTelegramToken, hasGeneratedTelegramToken]);
 
   return (
     <div className="flex flex-col gap-xl min-w-0">
@@ -220,6 +270,22 @@ export function Settings() {
               Gere um token único para vincular seu Telegram ao app. Depois da conexão, o bot reconhecerá sua conta automaticamente.
             </p>
 
+            <div className="rounded-lg border border-outline-variant bg-background px-md py-md flex flex-col sm:flex-row sm:items-center sm:justify-between gap-sm">
+              <div className="min-w-0">
+                <p className="text-[13px] uppercase tracking-wider text-on-surface-variant mb-xs">Bot oficial</p>
+                <p className="text-on-surface font-medium truncate">@Saldo_real_bot</p>
+              </div>
+              <a
+                href="https://t.me/Saldo_real_bot"
+                target="_blank"
+                rel="noreferrer"
+                className="px-md py-sm font-label-md text-[14px] font-semibold text-background bg-primary rounded-lg hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs min-h-11 w-full sm:w-auto"
+              >
+                <ExternalLink size={18} />
+                <span>Abrir bot</span>
+              </a>
+            </div>
+
             {telegramError && (
               <div className="rounded-lg border border-error/40 bg-error-container/20 px-md py-sm text-on-error-container text-[14px]">
                 {telegramError}
@@ -236,7 +302,18 @@ export function Settings() {
               <div className="rounded-lg border border-primary/30 bg-background px-md py-md">
                 <p className="text-[13px] uppercase tracking-wider text-on-surface-variant mb-xs">Token gerado</p>
                 <p className="font-mono text-[14px] break-all text-on-surface">{generatedTelegramToken}</p>
-                <p className="text-[13px] text-on-surface-variant mt-sm">Esse token aparece apenas uma vez.</p>
+                <p className="text-[13px] text-on-surface-variant mt-sm">Esse token aparece apenas uma vez na geração inicial, mas fica disponível aqui para copiar novamente. Ele é único por conta e não pode ser alterado nem regenerado.</p>
+                <div className="flex justify-end mt-md">
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyTelegramToken()}
+                    disabled={isCopyingTelegramToken}
+                    className="px-md py-sm font-label-md text-[14px] font-semibold text-on-surface bg-surface-container-high rounded-lg hover:bg-surface-container-highest transition-all flex items-center justify-center gap-xs disabled:opacity-60 disabled:cursor-not-allowed min-h-11 w-full sm:w-auto"
+                  >
+                    <Copy size={18} />
+                    <span>{isCopyingTelegramToken ? 'Copiando...' : 'Copiar token'}</span>
+                  </button>
+                </div>
               </div>
             )}
 

@@ -12,7 +12,7 @@ export function useTelegramConnection() {
     try {
       const { data, error } = await supabase
         .from('telegram_connections')
-        .select('id, user_id, link_token_hash, token_generated_at, telegram_user_id, telegram_chat_id, linked_at, created_at, updated_at')
+        .select('id, user_id, link_token_hash, token_encrypted, token_generated_at, telegram_user_id, telegram_chat_id, linked_at, created_at, updated_at')
         .maybeSingle();
 
       if (error) throw error;

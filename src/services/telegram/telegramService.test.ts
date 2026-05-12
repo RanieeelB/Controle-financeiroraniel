@@ -5,6 +5,7 @@ function buildService() {
   const sendMessage = vi.fn().mockResolvedValue(undefined);
   const answerCallbackQuery = vi.fn().mockResolvedValue(undefined);
   const handleParsedMessageForUser = vi.fn().mockResolvedValue('ok');
+  const handleAdvisorMessageForUser = vi.fn().mockResolvedValue('resposta consultiva');
   const getLinkedAccountByTelegramUserId = vi.fn().mockResolvedValue(null);
   const linkTelegramUser = vi.fn().mockResolvedValue({
     connectionId: 'conn-1',
@@ -17,6 +18,7 @@ function buildService() {
     botToken: 'bot-token',
     webhookSecret: 'secret-token',
     handleParsedMessageForUser,
+    handleAdvisorMessageForUser,
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
     sendMessage,
@@ -28,6 +30,7 @@ function buildService() {
     sendMessage,
     answerCallbackQuery,
     handleParsedMessageForUser,
+    handleAdvisorMessageForUser,
     getLinkedAccountByTelegramUserId,
     linkTelegramUser,
   };
@@ -306,6 +309,36 @@ describe('telegramService', () => {
           ]),
         ]),
       }),
+    }));
+  });
+
+  it('routes free-form finance questions to the advisor when the parser stays unknown', async () => {
+    const { service, handleAdvisorMessageForUser, handleParsedMessageForUser, getLinkedAccountByTelegramUserId } = buildService();
+    getLinkedAccountByTelegramUserId.mockResolvedValueOnce({
+      userId: 'user-1',
+      telegramUserId: '12345',
+    });
+
+    await service.handleRequest({
+      method: 'POST',
+      headers: {
+        'x-telegram-bot-api-secret-token': 'secret-token',
+      },
+      body: {
+        message: {
+          text: 'onde posso economizar esse mês?',
+          chat: { id: 99 },
+          from: { id: 12345 },
+        },
+      },
+    });
+
+    expect(handleParsedMessageForUser).not.toHaveBeenCalled();
+    expect(handleAdvisorMessageForUser).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'user-1',
+      telegramChatId: '99',
+      telegramUserId: '12345',
+      message: 'onde posso economizar esse mês?',
     }));
   });
 

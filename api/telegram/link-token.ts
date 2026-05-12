@@ -10,12 +10,21 @@ type ServerlessResponse = ServerResponse<IncomingMessage>;
 
 export default async function handler(req: ServerlessRequest, res: ServerlessResponse) {
   try {
-    if (req.method !== 'POST') {
+    if (req.method !== 'POST' && req.method !== 'GET') {
       return sendJson(res, 405, { ok: false });
     }
 
     const user = await resolveSessionUserFromHeaders(toHeaderRecord(req.headers));
     const service = createTelegramLinkTokenService();
+    if (req.method === 'GET') {
+      const existing = await service.getPendingTokenForUser(user.id);
+      return sendJson(res, 200, {
+        ok: true,
+        token: existing?.rawToken ?? null,
+        generatedAt: existing?.generatedAt ?? null,
+      });
+    }
+
     const generated = await service.generateTokenForUser(user.id);
 
     return sendJson(res, 200, {

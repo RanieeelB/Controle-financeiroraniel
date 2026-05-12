@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { createTelegramLinkService, type TelegramConnectionRecord } from '../../src/services/telegram/telegramLinkService.js';
-import type { FixedBill, Transaction } from '../../src/types/financial.js';
+import type { FinancialGoal, FixedBill, Investment, SalarySetting, Transaction } from '../../src/types/financial.js';
 
 export function getServerEnv() {
   const supabaseUrl = process.env.SUPABASE_URL?.trim() || process.env.VITE_SUPABASE_URL?.trim() || '';
@@ -22,16 +22,18 @@ export function getTelegramWebhookEnv() {
   const { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey } = getServerEnv();
   const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? '';
   const telegramWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? '';
+  const telegramLinkTokenSecret = process.env.TELEGRAM_LINK_TOKEN_SECRET?.trim() ?? '';
   const geminiApiKey = process.env.GEMINI_API_KEY?.trim() ?? '';
   const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash-lite';
 
-  if (!telegramBotToken || !telegramWebhookSecret) {
+  if (!telegramBotToken || !telegramWebhookSecret || !telegramLinkTokenSecret) {
     throw new Error('Configuração do servidor incompleta para o webhook do Telegram.');
   }
 
   return {
     telegramBotToken,
     telegramWebhookSecret,
+    telegramLinkTokenSecret,
     geminiApiKey,
     geminiModel,
     supabaseUrl,
@@ -84,23 +86,24 @@ export function createTelegramLinkRepository(supabase: SupabaseClient) {
     async getConnectionByUserId(userId: string): Promise<TelegramConnectionRecord | null> {
       const { data, error } = await supabase
         .from('telegram_connections')
-        .select('id, user_id, link_token_hash, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
+        .select('id, user_id, link_token_hash, token_encrypted, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    async saveGeneratedToken(input: { userId: string; tokenHash: string; generatedAt: string; }) {
+    async saveGeneratedToken(input: { userId: string; tokenHash: string; encryptedToken: string; generatedAt: string; }) {
       const { data, error } = await supabase
         .from('telegram_connections')
         .upsert({
           user_id: input.userId,
           link_token_hash: input.tokenHash,
+          token_encrypted: input.encryptedToken,
           token_generated_at: input.generatedAt,
           updated_at: input.generatedAt,
         }, { onConflict: 'user_id' })
-        .select('id, user_id, link_token_hash, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
+        .select('id, user_id, link_token_hash, token_encrypted, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
         .single();
 
       if (error) throw error;
@@ -119,7 +122,7 @@ export function createTelegramLinkRepository(supabase: SupabaseClient) {
     async getConnectionByTokenHash(tokenHash: string): Promise<TelegramConnectionRecord | null> {
       const { data, error } = await supabase
         .from('telegram_connections')
-        .select('id, user_id, link_token_hash, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
+        .select('id, user_id, link_token_hash, token_encrypted, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
         .eq('link_token_hash', tokenHash)
         .maybeSingle();
 
@@ -134,6 +137,7 @@ export function createTelegramLinkRepository(supabase: SupabaseClient) {
           telegram_chat_id: input.telegramChatId,
           linked_at: input.linkedAt,
           link_token_hash: null,
+          token_encrypted: null,
           updated_at: input.linkedAt,
         })
         .eq('id', input.connectionId);
@@ -284,13 +288,108 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
         created_at: String(bill.created_at ?? ''),
       }));
     },
+    async listInvestments(userId: string) {
+      const { data, error } = await supabase
+        .from('investments')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return ((data ?? []) as Array<Record<string, unknown>>).map(investment => ({
+        id: String(investment.id),
+        user_id: typeof investment.user_id === 'string' ? investment.user_id : null,
+        name: String(investment.name ?? ''),
+        ticker: typeof investment.ticker === 'string' ? investment.ticker : null,
+        category: investment.category as Investment['category'],
+        amount_invested: Number(investment.amount_invested),
+        current_value: Number(investment.current_value),
+        return_percentage: Number(investment.return_percentage ?? 0),
+        monthly_contribution: Number(investment.monthly_contribution ?? 0),
+        last_auto_contribution_at: typeof investment.last_auto_contribution_at === 'string' ? investment.last_auto_contribution_at : null,
+        created_at: String(investment.created_at ?? ''),
+      }));
+    },
+    async listFinancialGoals(userId: string) {
+      const { data, error } = await supabase
+        .from('financial_goals')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return ((data ?? []) as Array<Record<string, unknown>>).map(goal => ({
+        id: String(goal.id),
+        user_id: typeof goal.user_id === 'string' ? goal.user_id : null,
+        title: String(goal.title ?? ''),
+        target_amount: Number(goal.target_amount),
+        current_amount: Number(goal.current_amount),
+        deadline: typeof goal.deadline === 'string' ? goal.deadline : null,
+        icon: String(goal.icon ?? 'target'),
+        created_at: String(goal.created_at ?? ''),
+      })) as FinancialGoal[];
+    },
+    async getSalarySettings(userId: string) {
+      const { data, error } = await supabase
+        .from('salary_settings')
+        .select('amount, day_of_month')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        amount: Number(data.amount),
+        day_of_month: Number(data.day_of_month),
+      } satisfies Pick<SalarySetting, 'amount' | 'day_of_month'>;
+    },
+    async listRecentConversationMessages(input: { userId: string; telegramChatId: string; limit: number }) {
+      const { data, error } = await supabase
+        .from('telegram_conversation_messages')
+        .select('role, content')
+        .eq('user_id', input.userId)
+        .eq('telegram_chat_id', input.telegramChatId)
+        .order('created_at', { ascending: false })
+        .limit(input.limit);
+
+      if (error) throw error;
+      return ((data ?? []) as Array<Record<string, unknown>>)
+        .reverse()
+        .map(message => ({
+          role: (message.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+          content: String(message.content ?? ''),
+        }));
+    },
+    async saveConversationMessage(input: {
+      userId: string;
+      telegramChatId: string;
+      telegramUserId: string;
+      role: 'user' | 'assistant';
+      content: string;
+    }) {
+      const { error } = await supabase
+        .from('telegram_conversation_messages')
+        .insert({
+          user_id: input.userId,
+          telegram_chat_id: input.telegramChatId,
+          telegram_user_id: input.telegramUserId,
+          role: input.role,
+          content: input.content,
+        });
+
+      if (error) throw error;
+    },
   };
 }
 
 export function createTelegramLinkTokenService() {
   const supabase = createSupabaseAdminClient();
   const repo = createTelegramLinkRepository(supabase);
-  return createTelegramLinkService({ repo });
+  const tokenSecret = process.env.TELEGRAM_LINK_TOKEN_SECRET?.trim() ?? '';
+  if (!tokenSecret) {
+    throw new Error('Configuração do servidor incompleta para o token do Telegram.');
+  }
+  return createTelegramLinkService({ repo, tokenSecret });
 }
 
 export async function resolveSessionUserFromHeaders(headers: Record<string, string | string[] | undefined>) {
