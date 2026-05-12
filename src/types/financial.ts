@@ -143,6 +143,7 @@ export interface TelegramConnection {
   id: string;
   user_id: string;
   link_token_hash: string | null;
+  token_encrypted?: string | null;
   token_generated_at: string | null;
   telegram_user_id: string | null;
   telegram_chat_id: string | null;

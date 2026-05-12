@@ -22,16 +22,18 @@ export function getTelegramWebhookEnv() {
   const { supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey } = getServerEnv();
   const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN?.trim() ?? '';
   const telegramWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim() ?? '';
+  const telegramLinkTokenSecret = process.env.TELEGRAM_LINK_TOKEN_SECRET?.trim() ?? '';
   const geminiApiKey = process.env.GEMINI_API_KEY?.trim() ?? '';
   const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash-lite';
 
-  if (!telegramBotToken || !telegramWebhookSecret) {
+  if (!telegramBotToken || !telegramWebhookSecret || !telegramLinkTokenSecret) {
     throw new Error('Configuração do servidor incompleta para o webhook do Telegram.');
   }
 
   return {
     telegramBotToken,
     telegramWebhookSecret,
+    telegramLinkTokenSecret,
     geminiApiKey,
     geminiModel,
     supabaseUrl,
@@ -84,23 +86,24 @@ export function createTelegramLinkRepository(supabase: SupabaseClient) {
     async getConnectionByUserId(userId: string): Promise<TelegramConnectionRecord | null> {
       const { data, error } = await supabase
         .from('telegram_connections')
-        .select('id, user_id, link_token_hash, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
+        .select('id, user_id, link_token_hash, token_encrypted, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (error) throw error;
       return data;
     },
-    async saveGeneratedToken(input: { userId: string; tokenHash: string; generatedAt: string; }) {
+    async saveGeneratedToken(input: { userId: string; tokenHash: string; encryptedToken: string; generatedAt: string; }) {
       const { data, error } = await supabase
         .from('telegram_connections')
         .upsert({
           user_id: input.userId,
           link_token_hash: input.tokenHash,
+          token_encrypted: input.encryptedToken,
           token_generated_at: input.generatedAt,
           updated_at: input.generatedAt,
         }, { onConflict: 'user_id' })
-        .select('id, user_id, link_token_hash, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
+        .select('id, user_id, link_token_hash, token_encrypted, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
         .single();
 
       if (error) throw error;
@@ -119,7 +122,7 @@ export function createTelegramLinkRepository(supabase: SupabaseClient) {
     async getConnectionByTokenHash(tokenHash: string): Promise<TelegramConnectionRecord | null> {
       const { data, error } = await supabase
         .from('telegram_connections')
-        .select('id, user_id, link_token_hash, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
+        .select('id, user_id, link_token_hash, token_encrypted, token_generated_at, telegram_user_id, telegram_chat_id, linked_at')
         .eq('link_token_hash', tokenHash)
         .maybeSingle();
 
@@ -134,6 +137,7 @@ export function createTelegramLinkRepository(supabase: SupabaseClient) {
           telegram_chat_id: input.telegramChatId,
           linked_at: input.linkedAt,
           link_token_hash: null,
+          token_encrypted: null,
           updated_at: input.linkedAt,
         })
         .eq('id', input.connectionId);
@@ -381,7 +385,11 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
 export function createTelegramLinkTokenService() {
   const supabase = createSupabaseAdminClient();
   const repo = createTelegramLinkRepository(supabase);
-  return createTelegramLinkService({ repo });
+  const tokenSecret = process.env.TELEGRAM_LINK_TOKEN_SECRET?.trim() ?? '';
+  if (!tokenSecret) {
+    throw new Error('Configuração do servidor incompleta para o token do Telegram.');
+  }
+  return createTelegramLinkService({ repo, tokenSecret });
 }
 
 export async function resolveSessionUserFromHeaders(headers: Record<string, string | string[] | undefined>) {

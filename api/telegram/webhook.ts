@@ -26,7 +26,7 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
     const env = getTelegramWebhookEnv();
     const supabase = createSupabaseAdminClient();
     const repo = createTelegramWebhookRepository(supabase);
-    const linkService = createTelegramLinkService({ repo });
+    const linkService = createTelegramLinkService({ repo, tokenSecret: env.telegramLinkTokenSecret });
 
     const telegramActions = createTelegramActions({
       repo,

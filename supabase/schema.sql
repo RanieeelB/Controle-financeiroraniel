@@ -142,6 +142,7 @@ CREATE TABLE public.telegram_connections (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     link_token_hash TEXT,
+    token_encrypted TEXT,
     token_generated_at TIMESTAMPTZ,
     telegram_user_id TEXT UNIQUE,
     telegram_chat_id TEXT,
