@@ -150,6 +150,17 @@ CREATE TABLE public.telegram_connections (
     updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+-- 7.6 MEMÓRIA DO CONSULTOR TELEGRAM
+CREATE TABLE public.telegram_conversation_messages (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    telegram_chat_id TEXT NOT NULL,
+    telegram_user_id TEXT,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 -- 8. INVESTIMENTOS
 CREATE TABLE public.investments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -185,6 +196,7 @@ ALTER TABLE public.fixed_bills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financial_goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.salary_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.telegram_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.telegram_conversation_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investment_deposits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -230,6 +242,8 @@ CREATE POLICY "Users can delete own salary_settings" ON public.salary_settings F
 CREATE POLICY "Users can view own telegram_connections" ON public.telegram_connections FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own telegram_connections" ON public.telegram_connections FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own telegram_connections" ON public.telegram_connections FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can view own telegram_conversation_messages" ON public.telegram_conversation_messages FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own telegram_conversation_messages" ON public.telegram_conversation_messages FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can view own investments" ON public.investments FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own investments" ON public.investments FOR INSERT WITH CHECK (auth.uid() = user_id);
