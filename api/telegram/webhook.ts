@@ -74,6 +74,22 @@ export default async function handler(req: ServerlessRequest, res: ServerlessRes
           throw new Error('Falha ao responder callback do Telegram.');
         }
       },
+      deleteMessage: async ({ chatId, messageId, botToken }) => {
+        const telegramResponse = await fetch(`https://api.telegram.org/bot${botToken}/deleteMessage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            message_id: messageId,
+          }),
+        });
+
+        if (!telegramResponse.ok) {
+          throw new Error('Falha ao apagar mensagem do Telegram.');
+        }
+      },
     });
 
     const body = await readJsonBody(req, MAX_PAYLOAD_BYTES);

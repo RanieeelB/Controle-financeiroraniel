@@ -50,6 +50,7 @@ interface CreateTelegramServiceOptions {
   linkTelegramUser(input: { rawToken: string; telegramUserId: string; telegramChatId: string; }): Promise<{ userId: string }>;
   sendMessage(input: { chatId: number; text: string; botToken: string; replyMarkup?: TelegramReplyMarkup; parseMode?: TelegramParseMode }): Promise<void>;
   answerCallbackQuery?(input: { callbackQueryId: string; botToken: string; text?: string }): Promise<void>;
+  deleteMessage?(input: { chatId: number; messageId: number; botToken: string }): Promise<void>;
 }
 
 interface TelegramRequestInput {
@@ -110,6 +111,8 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
       let isAwaitingLinkToken = false;
 
       try {
+        await safelyDeleteMessage(options, message.chat.id, message.message_id);
+
         const command = matchSupportedCommand(sanitizedText);
         if (command === 'start') {
           const linkedAccount = await options.getLinkedAccountByTelegramUserId(fromId);
@@ -184,6 +187,7 @@ export function createTelegramService(options: CreateTelegramServiceOptions) {
 async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options: CreateTelegramServiceOptions) {
   const callbackQueryId = callbackQuery.id;
   const chatId = callbackQuery.message?.chat?.id;
+  const messageId = callbackQuery.message?.message_id;
   const fromId = String(callbackQuery.from?.id ?? '');
 
   if (!callbackQueryId || !chatId || !fromId) {
@@ -194,6 +198,7 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
     callbackQueryId,
     botToken: options.botToken,
   });
+  await safelyDeleteMessage(options, chatId, messageId);
 
   const linkedAccount = await options.getLinkedAccountByTelegramUserId(fromId);
   if (!linkedAccount) {
@@ -276,6 +281,20 @@ async function handleCallbackQuery(callbackQuery: TelegramCallbackQuery, options
   });
 
   return { statusCode: 200, payload: { ok: true } };
+}
+
+async function safelyDeleteMessage(options: CreateTelegramServiceOptions, chatId?: number, messageId?: number) {
+  if (!options.deleteMessage || typeof chatId !== 'number' || typeof messageId !== 'number') return;
+
+  try {
+    await options.deleteMessage({
+      chatId,
+      messageId,
+      botToken: options.botToken,
+    });
+  } catch {
+    // Telegram can refuse deletions depending on age, chat type, or bot permissions.
+  }
 }
 
 function normalizeUpdate(body: unknown): TelegramUpdate {
