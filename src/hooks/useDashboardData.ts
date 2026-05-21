@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
+import { buildBalanceEvolution } from '../lib/balanceEvolution';
 import { calculateSummaryCards } from '../lib/financialPlanning';
 import { supabase } from '../lib/supabase';
 import type {
@@ -145,7 +146,7 @@ export function useDashboardData(monthRange?: MonthRange) {
         fixedBillsTotal,
         unpaidFixedBills,
       }));
-      setBalanceEvolution(buildBalanceEvolution(mappedTransactions));
+      setBalanceEvolution(buildBalanceEvolution(mappedTransactions, today));
       setCategoryExpense(buildCategoryExpense(mappedTransactions));
       setMonthlyAnalysis(buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length));
     } catch (error) {
@@ -178,32 +179,6 @@ export function useDashboardData(monthRange?: MonthRange) {
     monthlyAnalysis,
     isLoading,
   };
-}
-
-function buildBalanceEvolution(transactions: Transaction[]) {
-  const byDay = new Map<string, number>();
-
-  // Group the net amount for each day
-  transactions.forEach(transaction => {
-    const key = transaction.date; // YYYY-MM-DD
-    const signedAmount = transaction.type === 'entrada' ? transaction.amount : -transaction.amount;
-    byDay.set(key, (byDay.get(key) ?? 0) + signedAmount);
-  });
-
-  // Sort days chronologically
-  const sortedDays = [...byDay.entries()]
-    .sort(([left], [right]) => left.localeCompare(right));
-
-  // Calculate cumulative balance
-  let runningBalance = 0;
-  return sortedDays.map(([date, dayNet]) => {
-    runningBalance += dayNet;
-    const day = date.split('-')[2]; // Get only the day part
-    return {
-      label: day,
-      balance: runningBalance,
-    };
-  });
 }
 
 function buildCategoryExpense(transactions: Transaction[]) {
