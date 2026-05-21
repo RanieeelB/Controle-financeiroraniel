@@ -74,6 +74,10 @@ CREATE TABLE public.transactions (
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+CREATE UNIQUE INDEX transactions_user_balance_carryover_note_unique
+ON public.transactions (user_id, notes)
+WHERE notes LIKE 'carryover:auto:%';
+
 -- 3. CARTÕES DE CRÉDITO
 CREATE TABLE public.credit_cards (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

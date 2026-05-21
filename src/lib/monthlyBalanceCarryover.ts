@@ -44,6 +44,10 @@ export function buildBalanceCarryoverPayload(input: BalanceCarryoverPayloadInput
   };
 }
 
+export function shouldCreateBalanceCarryoverForMonth(monthKey: string, today = new Date()) {
+  return monthKey === toMonthKey(today);
+}
+
 function calculatePreviousMonthAvailableBalance(transactions: CarryoverTransaction[]) {
   const receivedIncome = transactions
     .filter(transaction => transaction.type === 'entrada' && transaction.status === 'recebido')

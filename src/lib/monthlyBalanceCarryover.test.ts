@@ -3,6 +3,7 @@ import {
   buildBalanceCarryoverPayload,
   buildBalanceCarryoverTransactionNote,
   getPreviousMonthRange,
+  shouldCreateBalanceCarryoverForMonth,
 } from './monthlyBalanceCarryover';
 
 describe('monthly balance carryover helpers', () => {
@@ -61,5 +62,11 @@ describe('monthly balance carryover helpers', () => {
       startDate: '2025-12-01',
       endDate: '2026-01-01',
     });
+  });
+
+  it('only allows automatic creation for the real current month', () => {
+    expect(shouldCreateBalanceCarryoverForMonth('2026-06', new Date('2026-06-01T08:00:00'))).toBe(true);
+    expect(shouldCreateBalanceCarryoverForMonth('2026-07', new Date('2026-06-01T08:00:00'))).toBe(false);
+    expect(shouldCreateBalanceCarryoverForMonth('2026-05', new Date('2026-06-01T08:00:00'))).toBe(false);
   });
 });
