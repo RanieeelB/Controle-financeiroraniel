@@ -129,7 +129,7 @@ export function generateMonthlyFinancialReportPdf(data: ReportData) {
     { label: 'Gastos lançados:', value: formatCurrencyBRL(data.expense) },
     { label: 'Contas fixas:', value: formatCurrencyBRL(data.fixedBillsTotal) },
     { label: 'Faturas abertas:', value: formatCurrencyBRL(data.openInvoices) },
-    { label: 'Sobra prevista:', value: formatCurrencyBRL(data.income - (data.expense + data.unpaidFixedBills + data.openInvoices)) }
+    { label: 'Sobra prevista:', value: formatCurrencyBRL(data.income - (data.expense + data.unpaidFixedBills)) }
   ];
 
   let coverY = 135;
@@ -154,7 +154,7 @@ export function generateMonthlyFinancialReportPdf(data: ReportData) {
     ['Contas Fixas', formatCurrencyBRL(data.fixedBillsTotal)],
     ['Faturas Abertas', formatCurrencyBRL(data.openInvoices)],
     ['Investimentos / Caixinhas', formatCurrencyBRL(data.investmentsTotal)],
-    ['Sobra Prevista', formatCurrencyBRL(data.income - (data.expense + data.unpaidFixedBills + data.openInvoices))]
+    ['Sobra Prevista', formatCurrencyBRL(data.income - (data.expense + data.unpaidFixedBills))]
   ];
 
   autoTable(doc, {
@@ -455,7 +455,7 @@ export function generateMonthlyFinancialReportPdf(data: ReportData) {
   doc.setFontSize(12);
   doc.setTextColor(...TEXT_COLOR);
 
-  const totalExp = data.expense + data.openInvoices + data.unpaidFixedBills;
+  const totalExp = data.expense + data.unpaidFixedBills;
   const analysisLines = [
     "Diagnóstico do Mês:",
     `Neste mês, sua receita registrada foi de ${formatCurrencyBRL(data.income)}, com ${formatCurrencyBRL(totalExp)} em despesas totais.`,

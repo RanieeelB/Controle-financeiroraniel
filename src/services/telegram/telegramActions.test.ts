@@ -95,7 +95,7 @@ describe('telegramActions', () => {
     expect(response).toContain('💸 <b>Gastos:</b> R$ 820,00');
     expect(response).toContain('🏠 <b>Contas fixas:</b> R$ 270,00');
     expect(response).toContain('💳 <b>Faturas abertas:</b> R$ 300,00');
-    expect(response).toContain('🧮 <b>Sobra prevista:</b> R$ 5.730,00');
+    expect(response).toContain('🧮 <b>Sobra prevista:</b> R$ 6.030,00');
   });
 
   it('lists month expenses with totals and recent items', async () => {
