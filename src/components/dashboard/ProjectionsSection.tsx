@@ -3,8 +3,12 @@ import { useProjections, type MonthProjection } from '../../hooks/useProjections
 import { ProjectionDetailsModal } from '../finance/FinanceModals';
 import { TrendingUp, ArrowUpRight, Calendar } from 'lucide-react';
 
-export function ProjectionsSection() {
-  const { projections } = useProjections();
+interface ProjectionsSectionProps {
+  baseMonthKey: string;
+}
+
+export function ProjectionsSection({ baseMonthKey }: ProjectionsSectionProps) {
+  const { projections } = useProjections(baseMonthKey);
   const [selectedProjection, setSelectedProjection] = useState<MonthProjection | null>(null);
 
   const fmt = (val: number) => val.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
@@ -40,6 +44,16 @@ export function ProjectionsSection() {
               <div className="flex justify-between gap-md text-[13px] min-w-0">
                 <span className="text-on-surface-variant">Fixos + Aportes:</span>
                 <span className="font-medium text-on-surface text-right">R$ {fmt(proj.breakdown.fixedBills + proj.breakdown.investments)}</span>
+              </div>
+              <div className="flex justify-between gap-md text-[13px] min-w-0">
+                <span className="text-on-surface-variant">Salário:</span>
+                <span className="font-medium text-primary text-right">R$ {fmt(proj.salary)}</span>
+              </div>
+              <div className="flex justify-between gap-md text-[13px] min-w-0">
+                <span className="text-on-surface-variant">Sobra prevista:</span>
+                <span className={`font-semibold text-right ${proj.projectedLeftover >= 0 ? 'text-secondary' : 'text-error'}`}>
+                  R$ {fmt(proj.projectedLeftover)}
+                </span>
               </div>
             </div>
 

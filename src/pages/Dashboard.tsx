@@ -59,7 +59,7 @@ export function Dashboard() {
         </div>
       </section>
 
-      <ProjectionsSection />
+      <ProjectionsSection baseMonthKey={selectedMonthRange.monthKey} />
     </div>
   );
 }

@@ -164,6 +164,15 @@ describe('layout width classes', () => {
     expect(summaryCards.indexOf('Contas fixas')).toBeLessThan(summaryCards.indexOf('Sobra prevista'));
   });
 
+  it('anchors dashboard projections to the selected month and shows salary planning', () => {
+    const dashboard = readFileSync(join(process.cwd(), 'src/pages/Dashboard.tsx'), 'utf8');
+    const projections = readFileSync(join(process.cwd(), 'src/components/dashboard/ProjectionsSection.tsx'), 'utf8');
+
+    expect(dashboard).toContain('<ProjectionsSection baseMonthKey={selectedMonthRange.monthKey}');
+    expect(projections).toContain('Salário:');
+    expect(projections).toContain('Sobra prevista:');
+  });
+
   it('uses mobile card lists for data-heavy pages before switching to tables', () => {
     const files = [
       'src/pages/Incomes.tsx',
