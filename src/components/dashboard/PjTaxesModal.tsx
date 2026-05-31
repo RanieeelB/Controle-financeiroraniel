@@ -17,7 +17,6 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [simplesRateStr, setSimplesRateStr] = useState('6.00');
-  const [proLaboreStr, setProLaboreStr] = useState('1.412,00');
   const [totalIncome, setTotalIncome] = useState(0);
   const { categories } = useCategories('gasto');
 
@@ -48,11 +47,11 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
   const estimatedSimples = totalIncome * (parsedRate / 100);
 
   const proLaboreCalc = useMemo(() => {
-    const proLabore = parseFloat(proLaboreStr.replace(/\./g, '').replace(',', '.')) || 0;
+    const autoProLabore = Math.round((totalIncome * 0.28 + Number.EPSILON) * 100) / 100;
     const inssRate = 0.11;
-    const inss = Math.round((proLabore * inssRate + Number.EPSILON) * 100) / 100;
-    return { proLabore, inss };
-  }, [proLaboreStr]);
+    const inss = Math.round((autoProLabore * inssRate + Number.EPSILON) * 100) / 100;
+    return { autoProLabore, inss };
+  }, [totalIncome]);
 
   async function handleLogTax(amount: number, description: string) {
     if (isSubmitting) return;
@@ -145,19 +144,15 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
             <div className="p-md bg-surface border border-outline-variant rounded-lg">
               <div className="mb-md">
                 <p className="font-semibold text-on-surface text-[15px]">Pró-labore + INSS</p>
-                <p className="text-[12px] text-on-surface-variant">11% de INSS sobre o pró-labore</p>
+                <p className="text-[12px] text-on-surface-variant">28% do faturamento como pró-labore, 11% de INSS sobre o pró-labore</p>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-md mb-md">
                 <div className="flex-1">
-                  <label className="text-[12px] text-on-surface-variant mb-1 block">Pró-labore (R$)</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={proLaboreStr}
-                    onChange={(e) => setProLaboreStr(e.target.value)}
-                    className="w-full bg-surface-container border border-outline-variant rounded-lg px-md py-sm text-on-surface focus:border-tertiary focus:ring-1 focus:ring-tertiary outline-none transition-all"
-                  />
+                  <label className="text-[12px] text-on-surface-variant mb-1 block">Pró-labore (28%)</label>
+                  <div className="w-full bg-surface-variant border border-outline-variant/30 rounded-lg px-md py-sm text-on-surface font-numeral-lg text-[16px]">
+                    R$ {fmt(proLaboreCalc.autoProLabore)}
+                  </div>
                 </div>
                 <div className="flex-[2]">
                   <label className="text-[12px] text-on-surface-variant mb-1 block">INSS (11%)</label>
@@ -176,8 +171,8 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
                   {success === 'INSS sobre Pró-labore (11%)' ? <Check size={18} /> : <Plus size={18} />} {success === 'INSS sobre Pró-labore (11%)' ? 'Lançado!' : 'Lançar INSS'}
                 </button>
                 <button
-                  onClick={() => handleLogTax(proLaboreCalc.proLabore, 'Pró-labore')}
-                  disabled={isSubmitting || proLaboreCalc.proLabore <= 0}
+                  onClick={() => handleLogTax(proLaboreCalc.autoProLabore, 'Pró-labore')}
+                  disabled={isSubmitting || proLaboreCalc.autoProLabore <= 0}
                   className="w-full font-label-md text-[14px] font-semibold border border-outline-variant text-on-surface-variant py-sm rounded-lg hover:bg-surface-variant transition-colors flex items-center justify-center gap-sm disabled:opacity-50"
                 >
                   {success === 'Pró-labore' ? <Check size={18} /> : <Plus size={18} />} {success === 'Pró-labore' ? 'Lançado!' : 'Lançar Pró-labore'}
