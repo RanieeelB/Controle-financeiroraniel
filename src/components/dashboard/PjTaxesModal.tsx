@@ -1,6 +1,5 @@
 import { Building2, Check, Plus, X } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { useCategories } from '../../hooks/useCategories';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { createFinancialTransaction } from '../../lib/financialActions';
 import { supabase } from '../../lib/supabase';
@@ -18,7 +17,6 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [simplesRateStr, setSimplesRateStr] = useState('6.00');
   const [totalIncome, setTotalIncome] = useState(0);
-  const { categories } = useCategories('gasto');
 
   useEffect(() => {
     async function fetchIncome() {
@@ -57,7 +55,12 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const taxCategory = categories.find(c => c.name === 'Impostos PJ');
+      // Fetch category directly to avoid timing issues with useCategories
+      const { data: catData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', 'Impostos PJ')
+        .maybeSingle();
 
       await createFinancialTransaction({
         type: 'gasto',
@@ -65,7 +68,7 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
         amount,
         date: new Date().toISOString().split('T')[0],
         paymentMethod: 'pix',
-        categoryId: taxCategory?.id || null,
+        categoryId: catData?.id || null,
       });
 
       setSuccess(description);
