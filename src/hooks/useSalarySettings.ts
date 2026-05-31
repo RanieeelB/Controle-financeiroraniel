@@ -27,6 +27,9 @@ export function useSalarySettings() {
         ...(data as SalarySetting),
         amount: Number(data.amount),
         day_of_month: Number(data.day_of_month),
+        daily_rate: data.daily_rate ? Number(data.daily_rate) : null,
+        work_start_day: data.work_start_day ? Number(data.work_start_day) : null,
+        work_end_day: data.work_end_day ? Number(data.work_end_day) : null,
       });
     } catch (error) {
       console.error('Error fetching salary setting:', error);
