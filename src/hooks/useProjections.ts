@@ -41,14 +41,17 @@ export function useProjections(baseMonthKey = getCurrentMonthKey()) {
   }, [baseMonthKey]);
 
   const projections = useMemo(() => {
+    // When daily_rate is configured, salary varies monthly and is launched manually
+    const salaryAmount = salarySetting?.daily_rate ? 0 : (salarySetting?.amount ?? 0);
+
     return buildFinancialProjections({
       baseMonthKey,
       fixedBills,
       investments,
       futureInvoiceItems: allFutureItems,
-      salaryAmount: salarySetting?.amount ?? 0,
+      salaryAmount,
     });
-  }, [baseMonthKey, fixedBills, investments, allFutureItems, salarySetting?.amount]);
+  }, [baseMonthKey, fixedBills, investments, allFutureItems, salarySetting]);
 
   return { projections };
 }
