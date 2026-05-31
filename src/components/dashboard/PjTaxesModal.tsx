@@ -1,6 +1,5 @@
 import { Building2, Check, Plus, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useCategories } from '../../hooks/useCategories';
+import { useState, useEffect, useMemo } from 'react';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { createFinancialTransaction } from '../../lib/financialActions';
 import { supabase } from '../../lib/supabase';
@@ -15,10 +14,9 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
   useLockBodyScroll();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
   const [simplesRateStr, setSimplesRateStr] = useState('6.00');
   const [totalIncome, setTotalIncome] = useState(0);
-  const { categories } = useCategories('gasto');
 
   useEffect(() => {
     async function fetchIncome() {
@@ -30,7 +28,7 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
           .eq('status', 'recebido')
           .gte('date', monthRange.startDate)
           .lt('date', monthRange.endDate);
-        
+
         const sum = data?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
         setTotalIncome(sum);
       } catch (e) {
@@ -39,32 +37,45 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
     }
     void fetchIncome();
   }, [monthRange]);
-  
-  const isMei = totalIncome <= 6750; // Limite MEI
+
+  const isMei = totalIncome <= 6750;
   const estimatedMei = 75.60;
-  
+
   const parsedRate = parseFloat(simplesRateStr.replace(',', '.')) || 0;
   const estimatedSimples = totalIncome * (parsedRate / 100);
+
+  const proLaboreCalc = useMemo(() => {
+    const autoProLabore = Math.round((totalIncome * 0.28 + Number.EPSILON) * 100) / 100;
+    const inssRate = 0.11;
+    const inss = Math.round((autoProLabore * inssRate + Number.EPSILON) * 100) / 100;
+    return { autoProLabore, inss };
+  }, [totalIncome]);
 
   async function handleLogTax(amount: number, description: string) {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const taxCategory = categories.find(c => c.name === 'Impostos PJ');
-      
+      const { data: catData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', 'Impostos PJ')
+        .maybeSingle();
+
+      // Use the first day of the selected month range
+      const taxDate = monthRange.startDate;
+
       await createFinancialTransaction({
         type: 'gasto',
         description,
         amount,
-        date: new Date().toISOString().split('T')[0],
+        date: taxDate,
         paymentMethod: 'pix',
-        categoryId: taxCategory?.id || null,
+        categoryId: catData?.id || null,
       });
-      
-      setSuccess(true);
+
+      setSuccess(description);
       setTimeout(() => {
-        setSuccess(false);
-        onClose();
+        setSuccess(null);
       }, 2000);
     } catch (error) {
       console.error('Erro ao lançar imposto:', error);
@@ -101,11 +112,11 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
             <div className="p-md bg-surface border border-outline-variant rounded-lg">
               <div className="flex justify-between items-center mb-md">
                 <div>
-                  <p className="font-semibold text-on-surface text-[15px]">Simples Nacional</p>
-                  <p className="text-[12px] text-on-surface-variant">Calcular DAS (Anexo III, IV, etc)</p>
+                  <p className="font-semibold text-on-surface text-[15px]">Simples Nacional (DAS)</p>
+                  <p className="text-[12px] text-on-surface-variant">Imposto sobre faturamento</p>
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center gap-md mb-md">
                 <div className="flex-1">
                   <label className="text-[12px] text-on-surface-variant mb-1 block">Alíquota (%)</label>
@@ -125,13 +136,53 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={() => handleLogTax(estimatedSimples, 'DAS Simples Nacional')}
                 disabled={isSubmitting || totalIncome === 0 || estimatedSimples <= 0}
                 className="w-full font-label-md text-[14px] font-semibold border border-tertiary-container text-tertiary-container py-sm rounded-lg hover:bg-tertiary-container/10 transition-colors flex items-center justify-center gap-sm disabled:opacity-50"
               >
-                {success ? <Check size={18} /> : <Plus size={18} />} {success ? 'Imposto Lançado!' : 'Lançar Pagamento'}
+                {success === 'DAS Simples Nacional' ? <Check size={18} /> : <Plus size={18} />} {success === 'DAS Simples Nacional' ? 'Lançado!' : 'Lançar DAS'}
               </button>
+            </div>
+
+            {/* Pró-labore + INSS */}
+            <div className="p-md bg-surface border border-outline-variant rounded-lg">
+              <div className="mb-md">
+                <p className="font-semibold text-on-surface text-[15px]">Pró-labore + INSS</p>
+                <p className="text-[12px] text-on-surface-variant">28% do faturamento como pró-labore, 11% de INSS sobre o pró-labore</p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-md mb-md">
+                <div className="flex-1">
+                  <label className="text-[12px] text-on-surface-variant mb-1 block">Pró-labore (28%)</label>
+                  <div className="w-full bg-surface-variant border border-outline-variant/30 rounded-lg px-md py-sm text-on-surface font-numeral-lg text-[16px]">
+                    R$ {fmt(proLaboreCalc.autoProLabore)}
+                  </div>
+                </div>
+                <div className="flex-[2]">
+                  <label className="text-[12px] text-on-surface-variant mb-1 block">INSS (11%)</label>
+                  <div className="w-full bg-surface-variant border border-outline-variant/30 rounded-lg px-md py-sm text-on-surface font-numeral-lg text-[16px]">
+                    R$ {fmt(proLaboreCalc.inss)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-sm">
+                <button
+                  onClick={() => handleLogTax(proLaboreCalc.inss, 'INSS sobre Pró-labore (11%)')}
+                  disabled={isSubmitting || proLaboreCalc.inss <= 0}
+                  className="w-full font-label-md text-[14px] font-semibold border border-tertiary-container text-tertiary-container py-sm rounded-lg hover:bg-tertiary-container/10 transition-colors flex items-center justify-center gap-sm disabled:opacity-50"
+                >
+                  {success === 'INSS sobre Pró-labore (11%)' ? <Check size={18} /> : <Plus size={18} />} {success === 'INSS sobre Pró-labore (11%)' ? 'Lançado!' : 'Lançar INSS'}
+                </button>
+                <button
+                  onClick={() => handleLogTax(proLaboreCalc.autoProLabore, 'Pró-labore')}
+                  disabled={isSubmitting || proLaboreCalc.autoProLabore <= 0}
+                  className="w-full font-label-md text-[14px] font-semibold border border-outline-variant text-on-surface-variant py-sm rounded-lg hover:bg-surface-variant transition-colors flex items-center justify-center gap-sm disabled:opacity-50"
+                >
+                  {success === 'Pró-labore' ? <Check size={18} /> : <Plus size={18} />} {success === 'Pró-labore' ? 'Lançado!' : 'Lançar Pró-labore'}
+                </button>
+              </div>
             </div>
 
             {/* MEI */}
@@ -149,13 +200,13 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
                   </div>
                 </div>
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => handleLogTax(estimatedMei, 'DAS MEI')}
                 disabled={isSubmitting}
                 className="w-full font-label-md text-[14px] font-semibold border border-outline-variant text-on-surface-variant py-sm rounded-lg hover:bg-surface-variant transition-colors flex items-center justify-center gap-sm disabled:opacity-50"
               >
-                {success ? <Check size={18} /> : <Plus size={18} />} {success ? 'Imposto Lançado!' : 'Lançar Pagamento'}
+                {success === 'DAS MEI' ? <Check size={18} /> : <Plus size={18} />} {success === 'DAS MEI' ? 'Lançado!' : 'Lançar DAS MEI'}
               </button>
             </div>
           </div>

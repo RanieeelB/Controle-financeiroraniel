@@ -16,11 +16,17 @@ export interface FutureInvoiceItem {
 
 export type { MonthProjection };
 
+interface SalaryEntry {
+  monthKey: string;
+  amount: number;
+}
+
 export function useProjections(baseMonthKey = getCurrentMonthKey()) {
   const { bills: fixedBills } = useFixedBills();
   const { investments } = useInvestments();
   const { salarySetting } = useSalarySettings();
   const [allFutureItems, setAllFutureItems] = useState<FutureInvoiceItem[]>([]);
+  const [salaryEntries, setSalaryEntries] = useState<SalaryEntry[]>([]);
 
   useEffect(() => {
     async function fetchFutureItems() {
@@ -40,15 +46,42 @@ export function useProjections(baseMonthKey = getCurrentMonthKey()) {
     fetchFutureItems();
   }, [baseMonthKey]);
 
+  useEffect(() => {
+    async function fetchSalaryEntries() {
+      const startDate = buildMonthRange(moveMonth(baseMonthKey, 1)).startDate;
+      const endDate = buildMonthRange(moveMonth(baseMonthKey, 4)).startDate;
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('amount, date')
+        .eq('type', 'entrada')
+        .ilike('description', 'Salário')
+        .gte('date', startDate)
+        .lt('date', endDate);
+
+      if (!error && data) {
+        const entries: SalaryEntry[] = data.map(t => ({
+          monthKey: (t.date as string).slice(0, 7),
+          amount: Number(t.amount),
+        }));
+        setSalaryEntries(entries);
+      }
+    }
+    fetchSalaryEntries();
+  }, [baseMonthKey]);
+
   const projections = useMemo(() => {
+    const useDailyRate = Boolean(salarySetting?.daily_rate);
+
     return buildFinancialProjections({
       baseMonthKey,
       fixedBills,
       investments,
       futureInvoiceItems: allFutureItems,
-      salaryAmount: salarySetting?.amount ?? 0,
+      salaryAmount: useDailyRate ? 0 : (salarySetting?.amount ?? 0),
+      salaryEntries: useDailyRate ? salaryEntries : undefined,
     });
-  }, [baseMonthKey, fixedBills, investments, allFutureItems, salarySetting?.amount]);
+  }, [baseMonthKey, fixedBills, investments, allFutureItems, salarySetting, salaryEntries]);
 
   return { projections };
 }

@@ -1,9 +1,9 @@
-import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Check, RotateCcw } from 'lucide-react';
+import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Check, RotateCcw, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { FixedBillModal } from '../components/finance/FinanceModals';
 import { useFixedBills } from '../hooks/useFixedBills';
 import type { DynamicFixedBill } from '../types/financial';
-import { payFixedBill, removeFixedBillPayments } from '../lib/financialActions';
+import { payFixedBill, removeFixedBillPayments, deleteFixedBill } from '../lib/financialActions';
 import { useOutletContext } from 'react-router-dom';
 import type { LayoutContext } from '../components/layout/Layout';
 
@@ -11,6 +11,7 @@ export function FixedBills() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const { bills, isLoading, totals, categoryBreakdown } = useFixedBills(selectedMonthRange);
   const [isFixedBillModalOpen, setIsFixedBillModalOpen] = useState(false);
+  const [editingBill, setEditingBill] = useState<DynamicFixedBill | null>(null);
   const [activeBillAction, setActiveBillAction] = useState<string | null>(null);
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
@@ -42,6 +43,25 @@ export function FixedBills() {
     } finally {
       setActiveBillAction(null);
     }
+  }
+
+  async function handleDelete(bill: DynamicFixedBill) {
+    if (activeBillAction) return;
+    if (!confirm(`Excluir "${bill.description}"? Essa ação não pode ser desfeita.`)) return;
+
+    setActiveBillAction(bill.id);
+    try {
+      await deleteFixedBill(bill.id);
+    } catch (error) {
+      console.error('Error deleting fixed bill:', error);
+    } finally {
+      setActiveBillAction(null);
+    }
+  }
+
+  function handleEdit(bill: DynamicFixedBill) {
+    setEditingBill(bill);
+    setIsFixedBillModalOpen(true);
   }
 
   return (
@@ -94,22 +114,39 @@ export function FixedBills() {
                       Dia {b.due_day}{b.dynamicStatus === 'atrasado' && b.daysOverdue > 0 ? ` • ${b.daysOverdue} dias de atraso` : ''}
                     </p>
                   </div>
-                  <button
-                    onClick={() => (b.dynamicStatus === 'pago' ? handleReopen(b) : handlePay(b))}
-                    disabled={activeBillAction === b.id}
-                    className={`p-2 rounded-lg transition-all min-h-11 min-w-11 shrink-0 ${
-                      b.dynamicStatus === 'pago'
-                        ? 'text-secondary bg-secondary/10'
-                        : 'text-primary bg-primary/10'
-                    }`}
-                    title={b.dynamicStatus === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta neste mês'}
-                  >
-                    {activeBillAction === b.id ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                    ) : (
-                      b.dynamicStatus === 'pago' ? <RotateCcw size={20} /> : <Check size={20} />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-xs shrink-0">
+                    <button
+                      onClick={() => handleEdit(b)}
+                      className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all min-h-11 min-w-11"
+                      title="Editar conta"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(b)}
+                      disabled={activeBillAction === b.id}
+                      className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all min-h-11 min-w-11"
+                      title="Excluir conta"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                    <button
+                      onClick={() => (b.dynamicStatus === 'pago' ? handleReopen(b) : handlePay(b))}
+                      disabled={activeBillAction === b.id}
+                      className={`p-2 rounded-lg transition-all min-h-11 min-w-11 ${
+                        b.dynamicStatus === 'pago'
+                          ? 'text-secondary bg-secondary/10'
+                          : 'text-primary bg-primary/10'
+                      }`}
+                      title={b.dynamicStatus === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta neste mês'}
+                    >
+                      {activeBillAction === b.id ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                      ) : (
+                        b.dynamicStatus === 'pago' ? <RotateCcw size={20} /> : <Check size={20} />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-md flex items-end justify-between gap-md">
                   <div className="min-w-0">
@@ -128,7 +165,7 @@ export function FixedBills() {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full min-w-[760px] text-left border-collapse">
               <thead><tr className="border-b border-outline-variant text-on-surface-variant font-label-md text-[14px] font-semibold uppercase tracking-wider">
-                <th className="py-md px-lg">Descrição</th><th className="py-md px-lg">Categoria</th><th className="py-md px-lg">Vencimento</th><th className="py-md px-lg text-right">Valor</th><th className="py-md px-lg text-center">Status</th><th className="py-md px-lg text-center">Ação</th>
+                <th className="py-md px-lg">Descrição</th><th className="py-md px-lg">Categoria</th><th className="py-md px-lg">Vencimento</th><th className="py-md px-lg text-right">Valor</th><th className="py-md px-lg text-center">Status</th><th className="py-md px-lg text-center">Ações</th>
               </tr></thead>
               <tbody>
                 {bills.length === 0 ? (
@@ -152,22 +189,39 @@ export function FixedBills() {
                       </div>
                     </td>
                     <td className="py-md px-lg text-center">
-                      <button
-                        onClick={() => (b.dynamicStatus === 'pago' ? handleReopen(b) : handlePay(b))}
-                        disabled={activeBillAction === b.id}
-                        className={`p-2 rounded-lg transition-all ${
-                          b.dynamicStatus === 'pago'
-                            ? 'text-secondary hover:text-secondary hover:bg-secondary/10'
-                            : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
-                        }`}
-                        title={b.dynamicStatus === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta neste mês'}
-                      >
-                        {activeBillAction === b.id ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                        ) : (
-                          b.dynamicStatus === 'pago' ? <RotateCcw size={20} /> : <Check size={20} />
-                        )}
-                      </button>
+                      <div className="flex items-center justify-center gap-xs">
+                        <button
+                          onClick={() => handleEdit(b)}
+                          className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all"
+                          title="Editar conta"
+                        >
+                          <Pencil size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(b)}
+                          disabled={activeBillAction === b.id}
+                          className="p-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all"
+                          title="Excluir conta"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => (b.dynamicStatus === 'pago' ? handleReopen(b) : handlePay(b))}
+                          disabled={activeBillAction === b.id}
+                          className={`p-2 rounded-lg transition-all ${
+                            b.dynamicStatus === 'pago'
+                              ? 'text-secondary hover:text-secondary hover:bg-secondary/10'
+                              : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
+                          }`}
+                          title={b.dynamicStatus === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta neste mês'}
+                        >
+                          {activeBillAction === b.id ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                          ) : (
+                            b.dynamicStatus === 'pago' ? <RotateCcw size={20} /> : <Check size={20} />
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -201,7 +255,7 @@ export function FixedBills() {
       </section>
 
       {isFixedBillModalOpen && (
-        <FixedBillModal onClose={() => setIsFixedBillModalOpen(false)} />
+        <FixedBillModal bill={editingBill} onClose={() => { setIsFixedBillModalOpen(false); setEditingBill(null); }} />
       )}
     </div>
   );

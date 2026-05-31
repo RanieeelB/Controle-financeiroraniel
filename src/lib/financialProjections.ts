@@ -13,6 +13,7 @@ export interface BuildFinancialProjectionsInput {
     total_installments: number;
   }>;
   salaryAmount: number;
+  salaryEntries?: Array<{ monthKey: string; amount: number }>;
 }
 
 export interface MonthProjection {
@@ -68,7 +69,13 @@ export function buildFinancialProjections(input: BuildFinancialProjectionsInput)
       }, 0);
 
     const total = roundCurrency(fixedTotal + cardTotal + investmentTotal);
-    const salary = roundCurrency(input.salaryAmount);
+
+    // Use salary entries from actual transactions if available, otherwise use fixed amount
+    let salary = roundCurrency(input.salaryAmount);
+    if (input.salaryEntries) {
+      const entry = input.salaryEntries.find(e => e.monthKey === monthKey);
+      salary = entry ? roundCurrency(entry.amount) : 0;
+    }
 
     return {
       monthKey,

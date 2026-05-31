@@ -92,6 +92,9 @@ export interface FinancialGoalPayloadInput {
 export interface SalarySettingPayloadInput {
   amount: number;
   dayOfMonth: number;
+  dailyRate?: number | null;
+  workStartDay?: number | null;
+  workEndDay?: number | null;
 }
 
 const cardBrandColors: Record<string, string> = {
@@ -299,6 +302,9 @@ export function buildSalarySettingPayload(input: SalarySettingPayloadInput) {
   return {
     amount: roundCurrency(input.amount),
     day_of_month: clampDay(input.dayOfMonth),
+    daily_rate: input.dailyRate ? roundCurrency(input.dailyRate) : null,
+    work_start_day: input.workStartDay ? clampDay(input.workStartDay) : null,
+    work_end_day: input.workEndDay ? clampDay(input.workEndDay) : null,
   };
 }
 
