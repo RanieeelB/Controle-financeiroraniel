@@ -248,6 +248,26 @@ export async function createFixedBill(input: FixedBillPayloadInput) {
   emitFinancialDataChanged();
 }
 
+export async function updateFixedBill(billId: string, input: FixedBillPayloadInput) {
+  const { error } = await supabase
+    .from('fixed_bills')
+    .update(buildFixedBillPayload(input))
+    .eq('id', billId);
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
+export async function deleteFixedBill(billId: string) {
+  const { error } = await supabase
+    .from('fixed_bills')
+    .delete()
+    .eq('id', billId);
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
 export async function payFixedBill(bill: FixedBill) {
   const userId = await getUserId();
   
@@ -484,6 +504,13 @@ export async function ensureMonthlySalaryTransaction(monthKey: string) {
 
   const amount = Number(settingData.amount);
   const dayOfMonth = Number(settingData.day_of_month);
+  const dailyRate = settingData.daily_rate ? Number(settingData.daily_rate) : null;
+
+  // When daily rate is configured, don't auto-create salary transactions.
+  // The user manages this manually since the amount varies each month.
+  if (dailyRate) return null;
+
+  // Fixed salary mode — create in every month as before
   const note = buildSalaryTransactionNote(monthKey);
   const transactionPayload = buildSalaryTransactionPayload({
     amount,

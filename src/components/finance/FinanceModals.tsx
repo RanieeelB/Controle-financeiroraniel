@@ -9,12 +9,13 @@ import {
   createInvestment,
   createInvestmentDeposit,
   updateCreditCard,
+  updateFixedBill,
 } from '../../lib/financialActions';
 import { getInstallmentAmount, parseCurrencyValue, type InvoicePurchaseBatchItemInput } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
-import type { CreditCard, Investment, InvestmentCategory } from '../../types/financial';
+import type { CreditCard, FixedBill, Investment, InvestmentCategory } from '../../types/financial';
 
 const inputClass = 'w-full min-h-11 bg-background border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none placeholder:text-outline';
 const selectClass = `${inputClass} appearance-none pr-xl`;
@@ -473,13 +474,13 @@ export function CreditCardModal({ card, onClose }: CreditCardModalProps) {
   );
 }
 
-export function FixedBillModal({ onClose }: { onClose: () => void }) {
+export function FixedBillModal({ bill, onClose }: { bill?: FixedBill | null; onClose: () => void }) {
   const { categories } = useCategories('gasto');
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [dueDay, setDueDay] = useState(10);
-  const [status, setStatus] = useState<'pago' | 'pendente' | 'atrasado'>('pendente');
-  const [categoryId, setCategoryId] = useState('');
+  const [description, setDescription] = useState(bill?.description ?? '');
+  const [amount, setAmount] = useState(bill ? bill.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+  const [dueDay, setDueDay] = useState(bill?.due_day ?? 10);
+  const [status, setStatus] = useState<'pago' | 'pendente' | 'atrasado'>(bill?.status ?? 'pendente');
+  const [categoryId, setCategoryId] = useState(bill?.category_id ?? '');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -499,7 +500,11 @@ export function FixedBillModal({ onClose }: { onClose: () => void }) {
 
     setIsSaving(true);
     try {
-      await createFixedBill({ description, amount: value, dueDay, status, categoryId });
+      if (bill) {
+        await updateFixedBill(bill.id, { description, amount: value, dueDay, status, categoryId });
+      } else {
+        await createFixedBill({ description, amount: value, dueDay, status, categoryId });
+      }
       onClose();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar a conta fixa.');
@@ -509,7 +514,7 @@ export function FixedBillModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <ModalShell title="Nova conta fixa" subtitle="Cadastre despesas que se repetem todo mês." onClose={onClose}>
+    <ModalShell title={bill ? 'Editar conta fixa' : 'Nova conta fixa'} subtitle="Cadastre despesas que se repetem todo mês." onClose={onClose}>
       <form onSubmit={handleSubmit} className={modalBodyClass}>
         <div className={modalSectionClass}>
           <h3 className="font-label-md text-[13px] font-semibold text-on-surface uppercase tracking-wider">Conta mensal</h3>

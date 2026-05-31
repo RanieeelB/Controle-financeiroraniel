@@ -135,6 +135,9 @@ export interface SalarySetting {
   user_id: string;
   amount: number;
   day_of_month: number;
+  daily_rate: number | null;
+  work_start_day: number | null;
+  work_end_day: number | null;
   created_at: string;
   updated_at: string;
 }
