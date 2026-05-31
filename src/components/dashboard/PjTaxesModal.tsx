@@ -55,18 +55,20 @@ export function PjTaxesModal({ monthRange, onClose }: PjTaxesModalProps) {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      // Fetch category directly to avoid timing issues with useCategories
       const { data: catData } = await supabase
         .from('categories')
         .select('id')
         .eq('name', 'Impostos PJ')
         .maybeSingle();
 
+      // Use the first day of the selected month range
+      const taxDate = monthRange.startDate;
+
       await createFinancialTransaction({
         type: 'gasto',
         description,
         amount,
-        date: new Date().toISOString().split('T')[0],
+        date: taxDate,
         paymentMethod: 'pix',
         categoryId: catData?.id || null,
       });
