@@ -102,4 +102,89 @@
     box-shadow: 0 0 20px rgba(0, 230, 118, 0.1);
     transition: all 0.3s ease;
   }
+
+  /* Immersive animations */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px var(--glow-color, rgba(117, 255, 158, 0.3));
+    }
+    50% {
+      box-shadow: 0 0 40px var(--glow-color, rgba(117, 255, 158, 0.5)), 0 0 60px var(--glow-color, rgba(117, 255, 158, 0.3));
+    }
+  }
+
+  @keyframes bounce-subtle {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .animate-bounce-subtle {
+    animation: bounce-subtle 0.6s ease-in-out;
+  }
+
+  /* Card hover effects */
+  .card-glow:hover {
+    box-shadow: 0 0 30px var(--glow-color, rgba(117, 255, 158, 0.2));
+  }
+
+  /* Progress bar animation */
+  .progress-fill {
+    animation: progress-fill 1s ease-out forwards;
+  }
+
+  @keyframes progress-fill {
+    from {
+      width: 0;
+    }
+  }
 }

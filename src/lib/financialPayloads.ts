@@ -52,6 +52,8 @@ export interface InvestmentPayloadInput {
   amountInvested: number;
   currentValue: number;
   monthlyContribution?: number;
+  icon?: string;
+  goalId?: string | null;
 }
 
 export interface InvestmentDepositPayloadInput {
@@ -113,6 +115,25 @@ export function parseCurrencyValue(value: string) {
   if (!Number.isFinite(amount) || amount <= 0) return null;
 
   return roundCurrency(amount);
+}
+
+export function formatCurrencyInput(value: string): string {
+  let cleaned = value.replace(/[^\d.,]/g, '');
+  const dotCount = (cleaned.match(/\./g) || []).length;
+  const commaCount = (cleaned.match(/,/g) || []).length;
+
+  if (dotCount > 0 && commaCount > 0) {
+    cleaned = cleaned.replace(/,/g, '').replace('.', ',');
+  } else if (dotCount > 0) {
+    cleaned = cleaned.replace('.', ',');
+  }
+
+  const parts = cleaned.split(',');
+  if (parts.length > 1) {
+    cleaned = parts[0] + ',' + parts[1].slice(0, 2);
+  }
+
+  return cleaned;
 }
 
 export function roundCurrency(value: number) {
@@ -208,6 +229,8 @@ export function buildInvestmentPayload(input: InvestmentPayloadInput) {
     current_value: currentValue,
     monthly_contribution: monthlyContribution,
     return_percentage: returnPercentage,
+    icon: input.icon || 'piggy-bank',
+    goal_id: input.goalId || null,
   };
 }
 

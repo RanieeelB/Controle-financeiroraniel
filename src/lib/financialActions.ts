@@ -47,6 +47,7 @@ import {
   getInvestmentTotalsAfterDeposit,
   getInvestmentTotalsAfterDepositRemoval,
   parseLinkedRecordNote,
+  roundCurrency,
   type CreditCardPayloadInput,
   type FinancialGoalPayloadInput,
   type FixedBillPayloadInput,
@@ -311,6 +312,35 @@ export async function createInvestment(input: InvestmentPayloadInput) {
   const { error } = await supabase
     .from('investments')
     .insert({ ...buildInvestmentPayload(input), user_id: userId });
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
+export async function updateInvestment(investmentId: string, input: Partial<InvestmentPayloadInput>) {
+  const updates: Record<string, unknown> = {};
+
+  if (input.name !== undefined) updates.name = input.name.trim();
+  if (input.ticker !== undefined) updates.ticker = input.ticker?.trim().toUpperCase() ?? null;
+  if (input.category !== undefined) updates.category = input.category;
+  if (input.amountInvested !== undefined) updates.amount_invested = roundCurrency(input.amountInvested);
+  if (input.currentValue !== undefined) updates.current_value = roundCurrency(input.currentValue);
+  if (input.monthlyContribution !== undefined) updates.monthly_contribution = roundCurrency(input.monthlyContribution ?? 0);
+  if (input.icon !== undefined) updates.icon = input.icon;
+  if (input.goalId !== undefined) updates.goal_id = input.goalId || null;
+
+  if (input.amountInvested !== undefined || input.currentValue !== undefined) {
+    const amountInvested = input.amountInvested ?? 0;
+    const currentValue = input.currentValue ?? 0;
+    updates.return_percentage = amountInvested > 0
+      ? roundCurrency(((currentValue - amountInvested) / amountInvested) * 100)
+      : 0;
+  }
+
+  const { error } = await supabase
+    .from('investments')
+    .update(updates)
+    .eq('id', investmentId);
 
   if (error) throw error;
   emitFinancialDataChanged();

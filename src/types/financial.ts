@@ -113,7 +113,11 @@ export interface Investment {
   return_percentage: number;
   monthly_contribution: number;
   last_auto_contribution_at: string | null;
+  icon: string;
+  goal_id: string | null;
   created_at: string;
+  // Joined
+  goal?: FinancialGoal;
 }
 
 // === APORTES EM INVESTIMENTOS / CAIXINHAS ===

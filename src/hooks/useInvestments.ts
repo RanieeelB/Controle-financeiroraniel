@@ -24,6 +24,8 @@ export function useInvestments() {
           return_percentage: Number(i.return_percentage),
           monthly_contribution: Number(i.monthly_contribution || 0),
           last_auto_contribution_at: i.last_auto_contribution_at as string | null,
+          icon: (i.icon as string) || 'piggy-bank',
+          goal_id: (i.goal_id as string) || null,
         })) as Investment[]);
       }
 
