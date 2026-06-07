@@ -5,7 +5,7 @@ interface RecordActionsMenuProps {
   label: string;
   deleteLabel?: string;
   primaryActionLabel?: string;
-  onPrimaryAction?: () => Promise<void>;
+  onPrimaryAction?: () => void;
   onDelete: () => Promise<void>;
 }
 
@@ -17,51 +17,31 @@ export function RecordActionsMenu({
   onDelete,
 }: RecordActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isActing, setIsActing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    function handlePointerDown(event: MouseEvent) {
+    function handleClickOutside(event: Event) {
       const target = event.target as Node;
       if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
       setIsOpen(false);
     }
 
-    window.addEventListener('mousedown', handlePointerDown);
-    return () => window.removeEventListener('mousedown', handlePointerDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [isOpen]);
 
-  function openMenu() {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const menuWidth = 176;
-    const menuHeight = onPrimaryAction ? 128 : 92;
-    const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth));
-    const opensAbove = rect.bottom + menuHeight + 8 > window.innerHeight;
-    const top = opensAbove ? Math.max(8, rect.top - menuHeight - 4) : rect.bottom + 4;
-
-    setMenuPosition({ top, left });
-    setIsOpen(true);
-  }
-
-  async function handlePrimaryAction() {
-    if (!onPrimaryAction) return;
-
-    setIsActing(true);
-    try {
-      await onPrimaryAction();
-      setIsOpen(false);
-    } catch (error) {
-      console.error('Error running primary record action:', error);
-      window.alert('Não foi possível concluir esta ação. Tente novamente.');
-    } finally {
-      setIsActing(false);
+  function handlePrimaryAction() {
+    setIsOpen(false);
+    if (onPrimaryAction) {
+      onPrimaryAction();
     }
   }
 
@@ -75,21 +55,21 @@ export function RecordActionsMenu({
       setIsOpen(false);
     } catch (error) {
       console.error('Error deleting record:', error);
-      window.alert('Não foi possível excluir este lançamento. Tente novamente.');
+      window.alert('Não foi possível excluir. Tente novamente.');
     } finally {
       setIsDeleting(false);
     }
   }
 
   return (
-    <div className="inline-flex justify-end">
+    <div className="relative inline-block">
       <button
         ref={buttonRef}
         aria-expanded={isOpen}
         aria-label={`Ações de ${label}`}
         className="text-on-surface-variant hover:text-primary transition-all p-xs rounded-md hover:bg-surface-variant"
-        disabled={isDeleting || isActing}
-        onClick={() => (isOpen ? setIsOpen(false) : openMenu())}
+        disabled={isDeleting}
+        onClick={() => setIsOpen(!isOpen)}
         type="button"
       >
         <MoreVertical size={20} />
@@ -98,31 +78,19 @@ export function RecordActionsMenu({
       {isOpen && (
         <div
           ref={menuRef}
-          className="fixed z-50 w-[11rem] overflow-hidden rounded-lg border border-outline-variant bg-surface-container-high shadow-xl"
-          style={{ top: menuPosition.top, left: menuPosition.left }}
+          className="absolute right-0 top-full mt-1 z-50 w-[11rem] overflow-hidden rounded-lg border border-outline-variant bg-surface-container-high shadow-xl"
         >
-          {onPrimaryAction ? (
-            <button
-              className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-primary hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60"
-              disabled={isActing}
-              onClick={handlePrimaryAction}
-              type="button"
-            >
-              <Pencil size={16} />
-              {isActing ? 'Atualizando...' : primaryActionLabel}
-            </button>
-          ) : (
-            <button
-              className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-on-surface-variant cursor-not-allowed"
-              disabled
-              type="button"
-            >
-              <Pencil size={16} />
-              Editar em breve
-            </button>
-          )}
           <button
-            className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-error hover:bg-error/10 disabled:cursor-wait disabled:opacity-60"
+            className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-primary hover:bg-primary/10 disabled:opacity-60"
+            disabled={isDeleting}
+            onClick={handlePrimaryAction}
+            type="button"
+          >
+            <Pencil size={16} />
+            {primaryActionLabel || 'Editar'}
+          </button>
+          <button
+            className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-error hover:bg-error/10 disabled:opacity-60"
             disabled={isDeleting}
             onClick={handleDelete}
             type="button"
