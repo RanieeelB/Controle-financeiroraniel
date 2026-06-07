@@ -25,16 +25,16 @@ import {
   Star,
   Trophy,
   TrendingUp,
+  Trash2,
   Wallet,
   Zap,
 } from 'lucide-react';
 import { useState, useEffect, useCallback, type ElementType } from 'react';
-import { InvestmentDepositModal, InvestmentModal } from '../components/finance/FinanceModals';
-import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
+import { InvestmentDepositModal, InvestmentEditDepositModal, InvestmentModal } from '../components/finance/FinanceModals';
 import { useInvestments } from '../hooks/useInvestments';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 import { deleteInvestmentDeposit, updateInvestment } from '../lib/financialActions';
-import type { Investment, InvestmentCategory } from '../types/financial';
+import type { Investment, InvestmentCategory, InvestmentDeposit } from '../types/financial';
 
 const INVESTMENT_ICONS: { name: string; icon: LucideIcon }[] = [
   { name: 'piggy-bank', icon: PiggyBank },
@@ -93,6 +93,7 @@ export function Investments() {
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [depositInvestment, setDepositInvestment] = useState<Investment | null>(null);
   const [editInvestment, setEditInvestment] = useState<Investment | null>(null);
+  const [editingDeposit, setEditingDeposit] = useState<{ deposit: InvestmentDeposit; investment: Investment } | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
@@ -237,6 +238,7 @@ export function Investments() {
                   handleDepositAdded();
                 }}
                 onEdit={() => setEditInvestment(investment)}
+                onEditDeposit={(deposit) => setEditingDeposit({ deposit, investment })}
                 onDeleteDeposit={async (deposit: ReturnType<typeof getInvestmentDeposits>[number]) => {
                   await deleteInvestmentDeposit({ deposit, investment });
                   await refetch();
@@ -259,6 +261,13 @@ export function Investments() {
         <InvestmentEditModal
           investment={editInvestment}
           onClose={() => setEditInvestment(null)}
+        />
+      )}
+      {editingDeposit && (
+        <InvestmentEditDepositModal
+          deposit={editingDeposit.deposit}
+          investment={editingDeposit.investment}
+          onClose={() => setEditingDeposit(null)}
         />
       )}
     </div>
@@ -317,6 +326,7 @@ interface InvestmentCardProps {
   delay: number;
   onDeposit: () => void;
   onEdit: () => void;
+  onEditDeposit: (deposit: ReturnType<ReturnType<typeof useInvestments>['getInvestmentDeposits']>[number]) => void;
   onDeleteDeposit: (deposit: ReturnType<ReturnType<typeof useInvestments>['getInvestmentDeposits']>[number]) => Promise<void>;
   fmt: (value: number) => string;
 }
@@ -331,6 +341,7 @@ function InvestmentCard({
   delay,
   onDeposit,
   onEdit,
+  onEditDeposit,
   onDeleteDeposit,
   fmt,
 }: InvestmentCardProps) {
@@ -469,24 +480,32 @@ function InvestmentCard({
             <ul className="space-y-sm max-h-40 overflow-y-auto pr-1">
               {investmentDeposits.slice(0, 4).map(deposit => (
                 <li key={deposit.id} className="flex justify-between items-center gap-md border-b border-outline-variant/30 pb-sm last:border-0 last:pb-0 min-w-0">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-on-surface font-medium">R$ {fmt(deposit.amount)}</p>
                     <p className="text-[11px] text-on-surface-variant">
                       {new Date(`${deposit.date}T00:00:00`).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-sm shrink-0">
-                    <span className="text-primary font-label-md text-[12px] font-semibold flex items-center gap-1">
-                      <Gift size={12} />
-                      Guardado
-                    </span>
-                    <RecordActionsMenu
-                      label={`aporte de ${investment.name}`}
-                      deleteLabel="Excluir aporte"
-                      onDelete={async () => {
-                        await onDeleteDeposit(deposit);
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => onEditDeposit(deposit)}
+                      className="p-1.5 rounded-md hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
+                      title="Editar aporte"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const confirmed = window.confirm(`Excluir aporte de R$ ${fmt(deposit.amount)}?`);
+                        if (confirmed) {
+                          await onDeleteDeposit(deposit);
+                        }
                       }}
-                    />
+                      className="p-1.5 rounded-md hover:bg-error/10 transition-colors text-on-surface-variant hover:text-error"
+                      title="Excluir aporte"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </li>
               ))}

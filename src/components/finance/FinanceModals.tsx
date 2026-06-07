@@ -10,13 +10,14 @@ import {
   createInvestmentDeposit,
   updateCreditCard,
   updateFixedBill,
+  updateFinancialGoal,
 } from '../../lib/financialActions';
 import { getInstallmentAmount, parseCurrencyValue, formatCurrencyInput, type InvoicePurchaseBatchItemInput } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { useFinancialGoals } from '../../hooks/useFinancialGoals';
-import type { CreditCard, FixedBill, Investment, InvestmentCategory } from '../../types/financial';
+import type { CreditCard, FixedBill, FinancialGoal, Investment, InvestmentCategory, InvestmentDeposit } from '../../types/financial';
 import {
   PiggyBank,
   Wallet,
@@ -867,13 +868,15 @@ export function InvestmentDepositModal({ investment, onClose }: { investment: In
   );
 }
 
-export function FinancialGoalModal({ onClose }: { onClose: () => void }) {
-  const [title, setTitle] = useState('');
-  const [targetAmount, setTargetAmount] = useState('');
-  const [currentAmount, setCurrentAmount] = useState('');
-  const [deadline, setDeadline] = useState('');
+export function FinancialGoalModal({ goal, onClose }: { goal?: FinancialGoal | null; onClose: () => void }) {
+  const isEditing = !!goal;
+  const [title, setTitle] = useState(goal?.title ?? '');
+  const [targetAmount, setTargetAmount] = useState(goal ? goal.target_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+  const [currentAmount, setCurrentAmount] = useState(goal ? goal.current_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
+  const [deadline, setDeadline] = useState(goal?.deadline ?? '');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const { refetch } = useFinancialGoals();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -896,7 +899,12 @@ export function FinancialGoalModal({ onClose }: { onClose: () => void }) {
 
     setIsSaving(true);
     try {
-      await createFinancialGoal({ title, targetAmount: target, currentAmount: current, deadline });
+      if (isEditing && goal) {
+        await updateFinancialGoal(goal.id, { title, targetAmount: target, currentAmount: current, deadline });
+      } else {
+        await createFinancialGoal({ title, targetAmount: target, currentAmount: current, deadline });
+      }
+      await refetch();
       onClose();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar a meta.');
@@ -906,7 +914,7 @@ export function FinancialGoalModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <ModalShell title="Nova meta" subtitle="Cadastre metas, objetivos e caixinhas de reserva." onClose={onClose}>
+    <ModalShell title={isEditing ? 'Editar meta' : 'Nova meta'} subtitle={isEditing ? 'Altere os dados da sua meta.' : 'Cadastre metas, objetivos e caixinhas de reserva.'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="p-lg space-y-md">
         <label>
           <span className={labelClass}>Nome</span>
@@ -915,11 +923,11 @@ export function FinancialGoalModal({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
           <label>
             <span className={labelClass}>Valor alvo</span>
-            <input value={targetAmount} onChange={event => setTargetAmount(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+            <input value={targetAmount} onChange={event => setTargetAmount(formatCurrencyInput(event.target.value))} className={inputClass} inputMode="decimal" placeholder="0,00" />
           </label>
           <label>
             <span className={labelClass}>Valor acumulado</span>
-            <input value={currentAmount} onChange={event => setCurrentAmount(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+            <input value={currentAmount} onChange={event => setCurrentAmount(formatCurrencyInput(event.target.value))} className={inputClass} inputMode="decimal" placeholder="0,00" />
           </label>
         </div>
         <label>
@@ -931,7 +939,7 @@ export function FinancialGoalModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex justify-end gap-md pt-md border-t border-outline-variant">
           <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors">Cancelar</button>
-          <SubmitButton isSaving={isSaving}>Salvar meta</SubmitButton>
+          <SubmitButton isSaving={isSaving}>{isEditing ? 'Salvar alterações' : 'Criar meta'}</SubmitButton>
         </div>
       </form>
     </ModalShell>
@@ -986,4 +994,126 @@ export function ProjectionDetailsModal({ projection, onClose }: { projection: Mo
       </div>
     </ModalShell>
   );
+}
+
+export function InvestmentEditDepositModal({ deposit, investment, onClose }: { deposit: InvestmentDeposit; investment: Investment; onClose: () => void }) {
+  const [amount, setAmount] = useState(deposit.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+  const [date, setDate] = useState(deposit.date);
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const { refetch } = useInvestments();
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+
+    const value = parseCurrencyValue(amount);
+    if (!value) {
+      setError('Informe um valor maior que zero.');
+      return;
+    }
+
+    const oldAmount = deposit.amount;
+    const amountDiff = value - oldAmount;
+
+    setIsSaving(true);
+    try {
+      // Update deposit
+      const { error: depositError } = await supabase
+        .from('investment_deposits')
+        .update({ amount: value, date })
+        .eq('id', deposit.id);
+
+      if (depositError && !isMissingInvestmentDepositsTable(depositError)) {
+        throw depositError;
+      }
+
+      // Update investment totals
+      const newAmountInvested = investment.amount_invested + amountDiff;
+      const newCurrentValue = investment.current_value + amountDiff;
+      const newReturnPercentage = newAmountInvested > 0
+        ? roundCurrency(((newCurrentValue - newAmountInvested) / newAmountInvested) * 100)
+        : 0;
+
+      await supabase
+        .from('investments')
+        .update({
+          amount_invested: newAmountInvested,
+          current_value: newCurrentValue,
+          return_percentage: newReturnPercentage,
+        })
+        .eq('id', investment.id);
+
+      // Update linked goal if exists
+      if (investment.goal_id) {
+        const { data: goalData } = await supabase
+          .from('financial_goals')
+          .select('current_amount')
+          .eq('id', investment.goal_id)
+          .single();
+
+        if (goalData) {
+          const newCurrentAmount = roundCurrency(Number(goalData.current_amount) + amountDiff);
+          await supabase
+            .from('financial_goals')
+            .update({ current_amount: Math.max(0, newCurrentAmount) })
+            .eq('id', investment.goal_id);
+        }
+      }
+
+      await refetch();
+      emitFinancialDataChanged();
+      onClose();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Não foi possível salvar o aporte.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <ModalShell title="Editar aporte" subtitle={`Aporte em ${investment.name}.`} onClose={onClose}>
+      <form onSubmit={handleSubmit} className={modalBodyClass}>
+        <div className={modalSectionClass}>
+          <label>
+            <span className={labelClass}>Valor</span>
+            <input
+              value={amount}
+              onChange={event => setAmount(formatCurrencyInput(event.target.value))}
+              className={inputClass}
+              inputMode="decimal"
+              placeholder="0,00"
+            />
+          </label>
+          <label>
+            <span className={labelClass}>Data</span>
+            <input
+              value={date}
+              onChange={event => setDate(event.target.value)}
+              className={inputClass}
+              type="date"
+            />
+          </label>
+        </div>
+
+        <ErrorMessage error={error} />
+
+        <div className={modalFooterClass}>
+          <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors min-h-11">Cancelar</button>
+          <SubmitButton isSaving={isSaving}>Salvar alterações</SubmitButton>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+import { supabase } from '../../lib/supabase';
+import { roundCurrency } from '../../lib/financialPayloads';
+import { useInvestments } from '../../hooks/useInvestments';
+import { emitFinancialDataChanged } from '../../lib/financialEvents';
+
+function isMissingInvestmentDepositsTable(error: { code?: string; message?: string }) {
+  return error.code === '42P01'
+    || error.message?.includes('investment_deposits') === true
+    || error.message?.includes('Could not find the table') === true;
 }

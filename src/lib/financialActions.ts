@@ -377,6 +377,23 @@ export async function createInvestmentDeposit(input: InvestmentDepositPayloadInp
 
   if (investmentError) throw investmentError;
 
+  // Update linked goal if exists
+  if (input.investment.goal_id) {
+    const { data: goalData, error: goalFetchError } = await supabase
+      .from('financial_goals')
+      .select('current_amount')
+      .eq('id', input.investment.goal_id)
+      .single();
+
+    if (!goalFetchError && goalData) {
+      const newCurrentAmount = roundCurrency(Number(goalData.current_amount) + input.amount);
+      await supabase
+        .from('financial_goals')
+        .update({ current_amount: newCurrentAmount })
+        .eq('id', input.investment.goal_id);
+    }
+  }
+
   const { error: transactionError } = await supabase
     .from('transactions')
     .insert({
@@ -454,6 +471,23 @@ export async function deleteInvestmentDeposit(input: { deposit: InvestmentDeposi
 
   if (investmentError) throw investmentError;
 
+  // Update linked goal if exists
+  if (investment.goal_id) {
+    const { data: goalData, error: goalFetchError } = await supabase
+      .from('financial_goals')
+      .select('current_amount')
+      .eq('id', investment.goal_id)
+      .single();
+
+    if (!goalFetchError && goalData) {
+      const newCurrentAmount = Math.max(0, roundCurrency(Number(goalData.current_amount) - deposit.amount));
+      await supabase
+        .from('financial_goals')
+        .update({ current_amount: newCurrentAmount })
+        .eq('id', investment.goal_id);
+    }
+  }
+
   await deleteLinkedInvestmentDepositTransaction({ deposit, investment });
   emitFinancialDataChanged();
 }
@@ -463,6 +497,23 @@ export async function createFinancialGoal(input: FinancialGoalPayloadInput) {
   const { error } = await supabase
     .from('financial_goals')
     .insert({ ...buildFinancialGoalPayload(input), user_id: userId });
+
+  if (error) throw error;
+  emitFinancialDataChanged();
+}
+
+export async function updateFinancialGoal(goalId: string, input: Partial<FinancialGoalPayloadInput>) {
+  const updates: Record<string, unknown> = {};
+
+  if (input.title !== undefined) updates.title = input.title.trim();
+  if (input.targetAmount !== undefined) updates.target_amount = roundCurrency(input.targetAmount);
+  if (input.currentAmount !== undefined) updates.current_amount = roundCurrency(input.currentAmount);
+  if (input.deadline !== undefined) updates.deadline = input.deadline || null;
+
+  const { error } = await supabase
+    .from('financial_goals')
+    .update(updates)
+    .eq('id', goalId);
 
   if (error) throw error;
   emitFinancialDataChanged();
