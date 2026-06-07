@@ -1,13 +1,37 @@
-import { Target, Plus } from 'lucide-react';
+import { Target, Plus, Edit3, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { FinancialGoalModal } from '../components/finance/FinanceModals';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
+import type { FinancialGoal } from '../types/financial';
+import { supabase } from '../lib/supabase';
+import { emitFinancialDataChanged } from '../lib/financialEvents';
 
 export function Goals() {
-  const { goals, isLoading, totalTarget, totalSaved, overallProgress } = useFinancialGoals();
+  const { goals, isLoading, totalTarget, totalSaved, overallProgress, refetch } = useFinancialGoals();
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<FinancialGoal | null>(null);
+  const [deletingGoal, setDeletingGoal] = useState<FinancialGoal | null>(null);
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+  async function handleDeleteGoal(goal: FinancialGoal) {
+    const confirmed = window.confirm(`Excluir a meta "${goal.title}"? Essa ação não pode ser desfeita.`);
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('financial_goals')
+      .delete()
+      .eq('id', goal.id);
+
+    if (error) {
+      window.alert('Não foi possível excluir a meta.');
+      return;
+    }
+
+    emitFinancialDataChanged();
+    await refetch();
+    setDeletingGoal(null);
+  }
 
   if (goals.length === 0) {
     return (
@@ -66,8 +90,29 @@ export function Goals() {
             <div key={goal.id} className="bg-surface-container border border-outline-variant rounded-xl p-md sm:p-lg relative overflow-hidden group hover:border-primary/50 transition-colors min-w-0">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/30 group-hover:bg-primary transition-colors"></div>
               <div className="flex justify-between items-start gap-md mb-lg min-w-0">
-                <h3 className="font-h2 text-[20px] font-semibold text-on-surface truncate min-w-0">{goal.title}</h3>
-                <span className="font-label-md text-[14px] font-semibold text-primary shrink-0">{progress}%</span>
+                <div className="flex items-center gap-sm">
+                  <Target size={20} className="text-primary shrink-0" />
+                  <h3 className="font-h2 text-[18px] sm:text-[20px] font-semibold text-on-surface truncate min-w-0">{goal.title}</h3>
+                </div>
+                <div className="flex items-center gap-xs shrink-0">
+                  <span className="font-label-md text-[14px] font-semibold text-primary">{progress}%</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setEditingGoal(goal)}
+                      className="p-1.5 rounded-md hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
+                      title="Editar meta"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={() => setDeletingGoal(goal)}
+                      className="p-1.5 rounded-md hover:bg-error/10 transition-colors text-on-surface-variant hover:text-error"
+                      title="Excluir meta"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="w-full bg-surface-variant rounded-full h-2 mb-md overflow-hidden">
                 <div className="bg-primary h-full rounded-full shadow-[0_0_10px_rgba(117,255,158,0.3)] transition-all" style={{ width: `${progress}%` }}></div>
@@ -94,6 +139,31 @@ export function Goals() {
       </section>
 
       {isGoalModalOpen && <FinancialGoalModal onClose={() => setIsGoalModalOpen(false)} />}
+      {editingGoal && <FinancialGoalModal goal={editingGoal} onClose={() => setEditingGoal(null)} />}
+      {deletingGoal && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-background/80 backdrop-blur-sm p-md">
+          <div className="bg-surface-container border border-outline-variant rounded-xl p-lg max-w-sm w-full">
+            <h3 className="font-h2 text-[20px] font-semibold text-on-surface mb-md">Excluir meta?</h3>
+            <p className="text-on-surface-variant mb-lg">
+              Tem certeza que deseja excluir a meta <strong>"{deletingGoal.title}"</strong>? Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-md">
+              <button
+                onClick={() => setDeletingGoal(null)}
+                className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteGoal(deletingGoal)}
+                className="px-lg py-sm bg-error text-on-error rounded-lg hover:bg-error/80 transition-colors"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
