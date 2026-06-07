@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, ChevronDown, X } from 'lucide-react';
+import { Link2, CheckCircle, ChevronDown, X, Edit3 } from 'lucide-react';
 import {
   createCreditCard,
   createCreditPurchasesBatch,
@@ -11,11 +11,34 @@ import {
   updateCreditCard,
   updateFixedBill,
 } from '../../lib/financialActions';
-import { getInstallmentAmount, parseCurrencyValue, type InvoicePurchaseBatchItemInput } from '../../lib/financialPayloads';
+import { getInstallmentAmount, parseCurrencyValue, formatCurrencyInput, type InvoicePurchaseBatchItemInput } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
+import { useFinancialGoals } from '../../hooks/useFinancialGoals';
 import type { CreditCard, FixedBill, Investment, InvestmentCategory } from '../../types/financial';
+import {
+  PiggyBank,
+  Wallet,
+  Coins,
+  DollarSign,
+  Landmark,
+  TrendingUp,
+  Building2,
+  Bitcoin,
+  Home,
+  Heart,
+  Gift,
+  Trophy,
+  Star,
+  Crown,
+  Plane,
+  Laptop,
+  Shield,
+  ShoppingBag,
+  Zap,
+  Sparkles,
+} from 'lucide-react';
 
 const inputClass = 'w-full min-h-11 bg-background border border-outline-variant rounded-lg px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none placeholder:text-outline';
 const selectClass = `${inputClass} appearance-none pr-xl`;
@@ -581,8 +604,35 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
   const [amountInvested, setAmountInvested] = useState('');
   const [currentValue, setCurrentValue] = useState('');
   const [monthlyContribution, setMonthlyContribution] = useState('');
+  const [icon, setIcon] = useState('piggy-bank');
+  const [goalId, setGoalId] = useState('');
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const { goals } = useFinancialGoals();
+
+  const iconOptions = [
+    { name: 'piggy-bank', Icon: PiggyBank },
+    { name: 'wallet', Icon: Wallet },
+    { name: 'coins', Icon: Coins },
+    { name: 'dollar-sign', Icon: DollarSign },
+    { name: 'landmark', Icon: Landmark },
+    { name: 'trending-up', Icon: TrendingUp },
+    { name: 'building', Icon: Building2 },
+    { name: 'bitcoin', Icon: Bitcoin },
+    { name: 'home', Icon: Home },
+    { name: 'heart', Icon: Heart },
+    { name: 'gift', Icon: Gift },
+    { name: 'trophy', Icon: Trophy },
+    { name: 'star', Icon: Star },
+    { name: 'crown', Icon: Crown },
+    { name: 'plane', Icon: Plane },
+    { name: 'laptop', Icon: Laptop },
+    { name: 'shield', Icon: Shield },
+    { name: 'shopping-bag', Icon: ShoppingBag },
+    { name: 'zap', Icon: Zap },
+    { name: 'sparkles', Icon: Sparkles },
+  ];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -591,7 +641,7 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
     const invested = parseCurrencyValue(amountInvested);
     const current = parseCurrencyValue(currentValue);
     const monthly = monthlyContribution.trim() ? parseCurrencyValue(monthlyContribution) : 0;
-    
+
     if (!name.trim()) {
       setError('Informe o nome do investimento ou caixinha.');
       return;
@@ -603,13 +653,15 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
 
     setIsSaving(true);
     try {
-      await createInvestment({ 
-        name, 
-        ticker, 
-        category, 
-        amountInvested: invested, 
+      await createInvestment({
+        name,
+        ticker,
+        category,
+        amountInvested: invested,
         currentValue: current,
-        monthlyContribution: monthly || 0
+        monthlyContribution: monthly || 0,
+        icon,
+        goalId: goalId || null,
       });
       onClose();
     } catch (submitError) {
@@ -619,9 +671,55 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
     }
   }
 
+  const SelectedIcon = iconOptions.find(i => i.name === icon)?.Icon ?? PiggyBank;
+  const catColors: Record<InvestmentCategory, string> = {
+    renda_fixa: '#75ff9e',
+    acoes: '#00a6e0',
+    fiis: '#ffba79',
+    cripto: '#859585',
+  };
+  const accentColor = catColors[category];
+  const selectedGoal = goals.find(g => g.id === goalId);
+
   return (
     <ModalShell title="Novo investimento" subtitle="Cadastre investimentos, caixinhas e patrimônio." onClose={onClose}>
       <form onSubmit={handleSubmit} className={modalBodyClass}>
+        <div className="flex flex-col items-center py-md">
+          <div
+            className="relative w-20 h-20 rounded-2xl flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110"
+            style={{
+              backgroundColor: `${accentColor}20`,
+              color: accentColor,
+              boxShadow: `0 0 30px ${accentColor}40`,
+            }}
+            onClick={() => setShowIconPicker(!showIconPicker)}
+          >
+            <SelectedIcon size={36} />
+            <div className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-lg">
+              <Edit3 size={12} className="text-on-primary" />
+            </div>
+          </div>
+          <p className="text-[12px] text-on-surface-variant mt-sm">Clique para mudar o ícone</p>
+        </div>
+
+        {showIconPicker && (
+          <div className="grid grid-cols-5 gap-2 p-md bg-surface rounded-xl border border-outline-variant max-h-48 overflow-y-auto">
+            {iconOptions.map(({ name: iconName, Icon: IconComp }) => (
+              <button
+                key={iconName}
+                type="button"
+                onClick={() => {
+                  setIcon(iconName);
+                  setShowIconPicker(false);
+                }}
+                className={`p-3 rounded-xl flex items-center justify-center transition-all duration-200 ${icon === iconName ? 'bg-primary/30 ring-2 ring-primary' : 'hover:bg-surface-variant'}`}
+              >
+                <IconComp size={22} className={icon === iconName ? 'text-primary' : 'text-on-surface-variant'} />
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className={modalSectionClass}>
           <h3 className="font-label-md text-[13px] font-semibold text-on-surface uppercase tracking-wider mb-md">Dados principais</h3>
           <div className={modalGridClass}>
@@ -650,21 +748,44 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
             </div>
           </label>
 
+          <label>
+            <span className={labelClass}>Vincular a uma meta</span>
+            <div className="relative">
+              <select value={goalId} onChange={event => setGoalId(event.target.value)} className={selectClass}>
+                <option value="">Nenhuma meta (uso livre)</option>
+                {goals.map(goal => (
+                  <option key={goal.id} value={goal.id}>
+                    {goal.title} (R$ {goal.target_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                  </option>
+                ))}
+              </select>
+              <SelectChevron />
+            </div>
+            {selectedGoal && (
+              <div className="mt-sm p-sm rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-sm">
+                <Link2 size={16} className="text-primary" />
+                <span className="text-[13px] text-on-surface">
+                  Vinculado à meta: <strong className="text-primary">{selectedGoal.title}</strong>
+                </span>
+              </div>
+            )}
+          </label>
+
           <h3 className="font-label-md text-[13px] font-semibold text-on-surface uppercase tracking-wider">Patrimônio inicial</h3>
           <div className={modalGridClass}>
             <label>
               <span className={labelClass}>Valor aplicado</span>
-              <input value={amountInvested} onChange={event => setAmountInvested(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+              <input value={amountInvested} onChange={event => setAmountInvested(formatCurrencyInput(event.target.value))} className={inputClass} inputMode="decimal" placeholder="0,00" />
             </label>
             <label>
               <span className={labelClass}>Valor atual</span>
-              <input value={currentValue} onChange={event => setCurrentValue(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+              <input value={currentValue} onChange={event => setCurrentValue(formatCurrencyInput(event.target.value))} className={inputClass} inputMode="decimal" placeholder="0,00" />
             </label>
           </div>
 
           <label>
             <span className={labelClass}>Aporte mensal automático (Todo dia 1)</span>
-            <input value={monthlyContribution} onChange={event => setMonthlyContribution(event.target.value)} className={inputClass} inputMode="decimal" placeholder="0,00" />
+            <input value={monthlyContribution} onChange={event => setMonthlyContribution(formatCurrencyInput(event.target.value))} className={inputClass} inputMode="decimal" placeholder="0,00" />
           </label>
         </div>
 
