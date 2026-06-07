@@ -29,12 +29,12 @@ import {
   Zap,
 } from 'lucide-react';
 import { useState, useEffect, useCallback, type ElementType } from 'react';
-import { InvestmentDepositModal, InvestmentModal } from '../components/finance/FinanceModals';
+import { InvestmentDepositModal, InvestmentEditDepositModal, InvestmentModal } from '../components/finance/FinanceModals';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { useInvestments } from '../hooks/useInvestments';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 import { deleteInvestmentDeposit, updateInvestment } from '../lib/financialActions';
-import type { Investment, InvestmentCategory } from '../types/financial';
+import type { Investment, InvestmentCategory, InvestmentDeposit } from '../types/financial';
 
 const INVESTMENT_ICONS: { name: string; icon: LucideIcon }[] = [
   { name: 'piggy-bank', icon: PiggyBank },
@@ -93,6 +93,7 @@ export function Investments() {
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [depositInvestment, setDepositInvestment] = useState<Investment | null>(null);
   const [editInvestment, setEditInvestment] = useState<Investment | null>(null);
+  const [editingDeposit, setEditingDeposit] = useState<{ deposit: InvestmentDeposit; investment: Investment } | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
@@ -237,6 +238,7 @@ export function Investments() {
                   handleDepositAdded();
                 }}
                 onEdit={() => setEditInvestment(investment)}
+                onEditDeposit={(deposit) => setEditingDeposit({ deposit, investment })}
                 onDeleteDeposit={async (deposit: ReturnType<typeof getInvestmentDeposits>[number]) => {
                   await deleteInvestmentDeposit({ deposit, investment });
                   await refetch();
@@ -259,6 +261,13 @@ export function Investments() {
         <InvestmentEditModal
           investment={editInvestment}
           onClose={() => setEditInvestment(null)}
+        />
+      )}
+      {editingDeposit && (
+        <InvestmentEditDepositModal
+          deposit={editingDeposit.deposit}
+          investment={editingDeposit.investment}
+          onClose={() => setEditingDeposit(null)}
         />
       )}
     </div>
@@ -317,6 +326,7 @@ interface InvestmentCardProps {
   delay: number;
   onDeposit: () => void;
   onEdit: () => void;
+  onEditDeposit: (deposit: ReturnType<ReturnType<typeof useInvestments>['getInvestmentDeposits']>[number]) => void;
   onDeleteDeposit: (deposit: ReturnType<ReturnType<typeof useInvestments>['getInvestmentDeposits']>[number]) => Promise<void>;
   fmt: (value: number) => string;
 }
@@ -331,6 +341,7 @@ function InvestmentCard({
   delay,
   onDeposit,
   onEdit,
+  onEditDeposit,
   onDeleteDeposit,
   fmt,
 }: InvestmentCardProps) {
@@ -482,6 +493,10 @@ function InvestmentCard({
                     </span>
                     <RecordActionsMenu
                       label={`aporte de ${investment.name}`}
+                      primaryActionLabel="Editar aporte"
+                      onPrimaryAction={async () => {
+                        onEditDeposit(deposit);
+                      }}
                       deleteLabel="Excluir aporte"
                       onDelete={async () => {
                         await onDeleteDeposit(deposit);
