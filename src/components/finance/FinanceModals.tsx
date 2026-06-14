@@ -808,6 +808,8 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
           </label>
         </div>
 
+        <ErrorMessage error={error} />
+
         <div className={modalFooterClass}>
           <button type="button" onClick={onClose} className="px-lg py-sm border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors min-h-11">Cancelar</button>
           <SubmitButton isSaving={isSaving}>Salvar investimento</SubmitButton>
