@@ -34,6 +34,7 @@ import { InvestmentDepositModal, InvestmentEditDepositModal, InvestmentModal } f
 import { useInvestments } from '../hooks/useInvestments';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 import { deleteInvestmentDeposit, updateInvestment } from '../lib/financialActions';
+import { supabase } from '../lib/supabase';
 import type { Investment, InvestmentCategory, InvestmentDeposit } from '../types/financial';
 
 const INVESTMENT_ICONS: { name: string; icon: LucideIcon }[] = [
@@ -95,10 +96,35 @@ export function Investments() {
   const [editInvestment, setEditInvestment] = useState<Investment | null>(null);
   const [editingDeposit, setEditingDeposit] = useState<{ deposit: InvestmentDeposit; investment: Investment } | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
 
   useEffect(() => {
     setAnimationKey(prev => prev + 1);
   }, [investments.length]);
+
+  useEffect(() => {
+    async function fetchMonthlyIncome() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const startDate = `${year}-${month}-01`;
+      const endDate = `${year}-${month}-31`;
+
+      const { data } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('type', 'entrada')
+        .eq('status', 'recebido')
+        .gte('date', startDate)
+        .lte('date', endDate);
+
+      if (data) {
+        const total = data.reduce((sum, tx) => sum + Number(tx.amount), 0);
+        setMonthlyIncome(total);
+      }
+    }
+    void fetchMonthlyIncome();
+  }, []);
 
   const handleDepositAdded = useCallback(() => {
     setAnimationKey(prev => prev + 1);
@@ -215,7 +241,7 @@ export function Investments() {
 
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-tertiary/5 rounded-3xl blur-3xl" />
-        <section className="relative grid grid-cols-1 xl:grid-cols-2 gap-md sm:gap-lg">
+        <section className="relative grid grid-cols-1 xl:grid-cols-3 gap-md sm:gap-lg">
           {investments.map((investment, index) => {
             const investmentDeposits = getInvestmentDeposits(investment.id);
             const lastDeposit = getLastDeposit(investment.id);
@@ -233,6 +259,7 @@ export function Investments() {
                 lastDeposit={lastDeposit}
                 isPositive={isPositive}
                 delay={index * 100}
+                monthlyIncome={monthlyIncome}
                 onDeposit={() => {
                   setDepositInvestment(investment);
                   handleDepositAdded();
@@ -254,6 +281,7 @@ export function Investments() {
       {depositInvestment && (
         <InvestmentDepositModal
           investment={depositInvestment}
+          monthlyIncome={monthlyIncome}
           onClose={() => setDepositInvestment(null)}
         />
       )}
@@ -324,6 +352,7 @@ interface InvestmentCardProps {
   lastDeposit: ReturnType<ReturnType<typeof useInvestments>['getLastDeposit']>;
   isPositive: boolean;
   delay: number;
+  monthlyIncome: number;
   onDeposit: () => void;
   onEdit: () => void;
   onEditDeposit: (deposit: ReturnType<ReturnType<typeof useInvestments>['getInvestmentDeposits']>[number]) => void;
@@ -339,6 +368,7 @@ function InvestmentCard({
   lastDeposit,
   isPositive,
   delay,
+  monthlyIncome,
   onDeposit,
   onEdit,
   onEditDeposit,
@@ -346,6 +376,10 @@ function InvestmentCard({
   fmt,
 }: InvestmentCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+
+  const suggestedValue = investment.suggested_investment_percentage > 0
+    ? (monthlyIncome * investment.suggested_investment_percentage) / 100
+    : 0;
 
   return (
     <article
@@ -363,35 +397,29 @@ function InvestmentCard({
         <div className="flex items-start justify-between gap-md mb-md">
           <div className="flex items-start gap-md">
             <div
-              className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+              className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
               style={{
                 backgroundColor: `${colorScheme.primary}20`,
                 color: colorScheme.primary,
                 boxShadow: isHovered ? `0 0 30px ${colorScheme.glow}` : `0 0 15px ${colorScheme.glow}50`,
               }}
             >
-              <IconComponent size={28} className={isHovered ? 'animate-bounce-subtle' : ''} />
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-surface flex items-center justify-center border-2"
+              <IconComponent size={24} className={isHovered ? 'animate-bounce-subtle' : ''} />
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-surface flex items-center justify-center border-2"
                 style={{ borderColor: colorScheme.primary }}>
-                <Star size={10} fill={colorScheme.primary} color={colorScheme.primary} />
+                <Star size={8} fill={colorScheme.primary} color={colorScheme.primary} />
               </div>
             </div>
             <div className="min-w-0">
-              <h3 className="font-h2 text-[18px] sm:text-[20px] font-bold text-on-surface truncate">{investment.name}</h3>
+              <h3 className="font-h2 text-[16px] sm:text-[18px] font-bold text-on-surface truncate">{investment.name}</h3>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[12px] text-on-surface-variant flex items-center gap-1">
-                  <IconComponent size={12} />
+                <span className="text-[11px] text-on-surface-variant flex items-center gap-1">
+                  <IconComponent size={10} />
                   {catLabels[investment.category]}
                 </span>
                 {investment.ticker && (
-                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                     {investment.ticker}
-                  </span>
-                )}
-                {investment.goal_id && (
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary/20 text-secondary flex items-center gap-1">
-                    <Link2 size={10} />
-                    Meta vinculada
                   </span>
                 )}
               </div>
@@ -402,97 +430,105 @@ function InvestmentCard({
             className="shrink-0 p-2 rounded-xl hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
             title="Editar investimento"
           >
-            <Edit3 size={18} />
+            <Edit3 size={16} />
           </button>
         </div>
 
         <div className="bg-background/50 border border-outline-variant/50 rounded-2xl p-md mb-md">
           <div className="flex items-end justify-between gap-md mb-2">
             <div>
-              <p className="text-[11px] text-on-surface-variant uppercase tracking-wider mb-1">Saldo guardado</p>
-              <p className="font-numeral-lg text-[24px] sm:text-[28px] font-bold text-on-surface">
+              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider mb-1">Saldo guardado</p>
+              <p className="font-numeral-lg text-[20px] sm:text-[24px] font-bold text-on-surface">
                 R$ {fmt(investment.current_value)}
               </p>
             </div>
-            <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[13px] font-bold ${isPositive ? 'bg-primary/20 text-primary' : 'bg-error/20 text-error'}`}>
-              {isPositive ? <TrendingUp size={14} /> : <LineChart size={14} />}
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold ${isPositive ? 'bg-primary/20 text-primary' : 'bg-error/20 text-error'}`}>
+              {isPositive ? <TrendingUp size={12} /> : <LineChart size={12} />}
               {isPositive ? '+' : ''}{investment.return_percentage.toFixed(2)}%
             </div>
           </div>
 
-          <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+          {suggestedValue > 0 && (
+            <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-primary/10 border border-primary/20 mb-2">
+              <Wallet size={12} className="text-primary" />
+              <span className="text-[11px] font-medium text-primary">
+                Sugerido: R$ {fmt(suggestedValue)} ({investment.suggested_investment_percentage}%)
+              </span>
+            </div>
+          )}
+
+          <div className="h-1.5 bg-surface-variant rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
               style={{
                 width: `${Math.min(100, Math.max(5, ((investment.current_value - investment.amount_invested) / (investment.amount_invested || 1)) * 100 + 50))}%`,
                 background: `linear-gradient(90deg, ${colorScheme.primary}, ${isPositive ? '#00a6e0' : '#ffb4ab'})`,
-                boxShadow: `0 0 10px ${colorScheme.glow}`,
+                boxShadow: `0 0 8px ${colorScheme.glow}`,
               }}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
             </div>
           </div>
-          <div className="flex justify-between mt-1.5 text-[11px] text-on-surface-variant">
-            <span>Valor investido: R$ {fmt(investment.amount_invested)}</span>
-            <span>+{fmt(investment.current_value - investment.amount_invested)} de retorno</span>
+          <div className="flex justify-between mt-1 text-[10px] text-on-surface-variant">
+            <span>Investido: R$ {fmt(investment.amount_invested)}</span>
+            <span>+{fmt(investment.current_value - investment.amount_invested)}</span>
           </div>
         </div>
 
-        <div className="flex gap-md mb-md">
+        <div className="flex gap-sm mb-md">
           <button
             onClick={onDeposit}
-            className="flex-1 relative font-label-md text-[13px] font-semibold bg-primary text-on-primary px-md py-sm rounded-xl hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs min-h-12 overflow-hidden group/btn"
+            className="flex-1 relative font-label-md text-[12px] font-semibold bg-primary text-on-primary px-md py-sm rounded-xl hover:bg-primary-fixed transition-all flex items-center justify-center gap-xs min-h-10 overflow-hidden group/btn"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
-            <Plus size={18} className="group-hover/btn:rotate-90 transition-transform duration-300" />
+            <Plus size={16} className="group-hover/btn:rotate-90 transition-transform duration-300" />
             <span>Adicionar valor</span>
           </button>
           {investment.monthly_contribution > 0 && (
-            <div className="flex items-center gap-2 px-md py-sm rounded-xl bg-surface-variant/50 border border-outline-variant/30">
-              <Zap size={16} className="text-secondary" />
-              <span className="text-[12px] font-medium text-on-surface-variant">
-                +R$ {fmt(investment.monthly_contribution)}/mês
+            <div className="flex items-center gap-1 px-2 py-sm rounded-xl bg-surface-variant/50 border border-outline-variant/30">
+              <Zap size={12} className="text-secondary" />
+              <span className="text-[11px] font-medium text-on-surface-variant">
+                +R$ {fmt(investment.monthly_contribution)}
               </span>
             </div>
           )}
         </div>
 
-        <div className="bg-surface/30 border border-outline-variant/30 rounded-xl p-md">
-          <div className="flex items-center justify-between mb-md">
-            <h4 className="font-label-md text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
-              <Coins size={14} />
-              Histórico de aportes
+        <div className="bg-surface/30 border border-outline-variant/30 rounded-xl p-sm">
+          <div className="flex items-center justify-between mb-sm">
+            <h4 className="font-label-md text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
+              <Coins size={12} />
+              Histórico
             </h4>
             {lastDeposit && (
-              <span className="text-[11px] text-primary font-medium flex items-center gap-1">
-                <Sparkles size={10} />
-                Último: {new Date(`${lastDeposit.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+              <span className="text-[10px] text-primary font-medium flex items-center gap-1">
+                <Sparkles size={8} />
+                {new Date(`${lastDeposit.date}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
               </span>
             )}
           </div>
           {investmentDeposits.length === 0 ? (
-            <div className="text-center py-4">
-              <PiggyBank size={32} className="mx-auto mb-2 text-on-surface-variant/50" />
-              <p className="text-[13px] text-on-surface-variant">Nenhum aporte registrado ainda.</p>
-              <p className="text-[11px] text-on-surface-variant/70 mt-1">Clique em "Adicionar valor" para começar!</p>
+            <div className="text-center py-2">
+              <PiggyBank size={24} className="mx-auto mb-1 text-on-surface-variant/50" />
+              <p className="text-[11px] text-on-surface-variant">Nenhum aporte ainda.</p>
             </div>
           ) : (
-            <ul className="space-y-sm max-h-40 overflow-y-auto pr-1">
-              {investmentDeposits.slice(0, 4).map(deposit => (
-                <li key={deposit.id} className="flex justify-between items-center gap-md border-b border-outline-variant/30 pb-sm last:border-0 last:pb-0 min-w-0">
+            <ul className="space-y-xs max-h-28 overflow-y-auto pr-1">
+              {investmentDeposits.slice(0, 3).map(deposit => (
+                <li key={deposit.id} className="flex justify-between items-center gap-md border-b border-outline-variant/30 pb-xs last:border-0 last:pb-0 min-w-0">
                   <div className="min-w-0 flex-1">
-                    <p className="text-on-surface font-medium">R$ {fmt(deposit.amount)}</p>
-                    <p className="text-[11px] text-on-surface-variant">
+                    <p className="text-on-surface text-[12px] font-medium">R$ {fmt(deposit.amount)}</p>
+                    <p className="text-[10px] text-on-surface-variant">
                       {new Date(`${deposit.date}T00:00:00`).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => onEditDeposit(deposit)}
-                      className="p-1.5 rounded-md hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
+                      className="p-1 rounded-md hover:bg-surface-variant transition-colors text-on-surface-variant hover:text-primary"
                       title="Editar aporte"
                     >
-                      <Edit3 size={16} />
+                      <Edit3 size={14} />
                     </button>
                     <button
                       onClick={async () => {
@@ -501,10 +537,10 @@ function InvestmentCard({
                           await onDeleteDeposit(deposit);
                         }
                       }}
-                      className="p-1.5 rounded-md hover:bg-error/10 transition-colors text-on-surface-variant hover:text-error"
+                      className="p-1 rounded-md hover:bg-error/10 transition-colors text-on-surface-variant hover:text-error"
                       title="Excluir aporte"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </li>
@@ -528,6 +564,7 @@ function InvestmentEditModal({ investment, onClose }: InvestmentEditModalProps) 
   const [icon, setIcon] = useState(investment.icon);
   const [goalId, setGoalId] = useState(investment.goal_id || '');
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [suggestedInvestmentPercentage, setSuggestedInvestmentPercentage] = useState(investment.suggested_investment_percentage || 0);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const { refetch } = useInvestments();
@@ -549,6 +586,7 @@ function InvestmentEditModal({ investment, onClose }: InvestmentEditModalProps) 
         ticker: ticker.trim() || null,
         icon,
         goalId: goalId || null,
+        suggestedInvestmentPercentage: suggestedInvestmentPercentage,
       });
       await refetch();
       onClose();
@@ -636,6 +674,19 @@ function InvestmentEditModal({ investment, onClose }: InvestmentEditModalProps) 
                 onChange={event => setTicker(event.target.value)}
                 className="w-full min-h-12 bg-background border border-outline-variant rounded-xl px-md py-sm text-on-surface font-mono font-bold focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none uppercase"
                 placeholder="Ex: SDIV11"
+              />
+            </label>
+
+            <label>
+              <span className="block font-label-md text-[13px] font-semibold text-on-surface-variant mb-xs uppercase tracking-wider">Percentual de investimento (% da renda mensal)</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={suggestedInvestmentPercentage}
+                onChange={event => setSuggestedInvestmentPercentage(Math.max(0, Math.min(100, Number(event.target.value))))}
+                className="w-full min-h-12 bg-background border border-outline-variant rounded-xl px-md py-sm text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors outline-none text-center"
+                placeholder="0"
               />
             </label>
 

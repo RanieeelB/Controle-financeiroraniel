@@ -12,11 +12,15 @@ import {
   updateFixedBill,
   updateFinancialGoal,
 } from '../../lib/financialActions';
-import { getInstallmentAmount, parseCurrencyValue, formatCurrencyInput, type InvoicePurchaseBatchItemInput } from '../../lib/financialPayloads';
+import { getInstallmentAmount, parseCurrencyValue, formatCurrencyInput, roundCurrency, type InvoicePurchaseBatchItemInput } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { useFinancialGoals } from '../../hooks/useFinancialGoals';
+import { useInvestments } from '../../hooks/useInvestments';
+import { supabase } from '../../lib/supabase';
+import { emitFinancialDataChanged } from '../../lib/financialEvents';
+import type { MonthProjection } from '../../hooks/useProjections';
 import type { CreditCard, FixedBill, FinancialGoal, Investment, InvestmentCategory, InvestmentDeposit } from '../../types/financial';
 import {
   PiggyBank,
@@ -608,6 +612,7 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
   const [icon, setIcon] = useState('piggy-bank');
   const [goalId, setGoalId] = useState('');
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [suggestedInvestmentPercentage, setSuggestedInvestmentPercentage] = useState(0);
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const { goals } = useFinancialGoals();
@@ -663,6 +668,7 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
         monthlyContribution: monthly || 0,
         icon,
         goalId: goalId || null,
+        suggestedInvestmentPercentage: suggestedInvestmentPercentage,
       });
       onClose();
     } catch (submitError) {
@@ -783,10 +789,22 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
               <input value={currentValue} onChange={event => setCurrentValue(formatCurrencyInput(event.target.value))} className={inputClass} inputMode="decimal" placeholder="0,00" />
             </label>
           </div>
-
           <label>
             <span className={labelClass}>Aporte mensal automático (Todo dia 1)</span>
             <input value={monthlyContribution} onChange={event => setMonthlyContribution(formatCurrencyInput(event.target.value))} className={inputClass} inputMode="decimal" placeholder="0,00" />
+          </label>
+
+          <label>
+            <span className={labelClass}>Percentual de investimento (% da renda mensal)</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={suggestedInvestmentPercentage}
+              onChange={event => setSuggestedInvestmentPercentage(Math.max(0, Math.min(100, Number(event.target.value))))}
+              className={`${inputClass} text-center`}
+              placeholder="0"
+            />
           </label>
         </div>
 
@@ -801,8 +819,11 @@ export function InvestmentModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function InvestmentDepositModal({ investment, onClose }: { investment: Investment; onClose: () => void }) {
-  const [amount, setAmount] = useState('');
+export function InvestmentDepositModal({ investment, onClose, monthlyIncome = 0 }: { investment: Investment; onClose: () => void; monthlyIncome?: number }) {
+  const suggestedValue = investment.suggested_investment_percentage > 0
+    ? (monthlyIncome * investment.suggested_investment_percentage) / 100
+    : 0;
+  const [amount, setAmount] = useState(suggestedValue > 0 ? suggestedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '');
   const [date, setDate] = useState(today());
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
@@ -848,6 +869,11 @@ export function InvestmentDepositModal({ investment, onClose }: { investment: In
             <input value={date} onChange={event => setDate(event.target.value)} className={inputClass} type="date" />
           </label>
         </div>
+        {suggestedValue > 0 && (
+          <div className="rounded-lg border border-primary/30 bg-primary/10 px-md py-sm text-[13px] text-primary">
+            💰 Valor sugerido: R$ {suggestedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({investment.suggested_investment_percentage}% da renda)
+          </div>
+        )}
         <label>
           <span className={labelClass}>Observação</span>
           <textarea value={notes} onChange={event => setNotes(event.target.value)} className={`${inputClass} min-h-20 resize-y`} placeholder="Opcional" />
@@ -945,8 +971,6 @@ export function FinancialGoalModal({ goal, onClose }: { goal?: FinancialGoal | n
     </ModalShell>
   );
 }
-
-import type { MonthProjection } from '../../hooks/useProjections';
 
 export function ProjectionDetailsModal({ projection, onClose }: { projection: MonthProjection; onClose: () => void }) {
   return (
@@ -1106,11 +1130,6 @@ export function InvestmentEditDepositModal({ deposit, investment, onClose }: { d
     </ModalShell>
   );
 }
-
-import { supabase } from '../../lib/supabase';
-import { roundCurrency } from '../../lib/financialPayloads';
-import { useInvestments } from '../../hooks/useInvestments';
-import { emitFinancialDataChanged } from '../../lib/financialEvents';
 
 function isMissingInvestmentDepositsTable(error: { code?: string; message?: string }) {
   return error.code === '42P01'

@@ -1,7 +1,7 @@
 import type { BalanceEvolutionData, Transaction } from '../types/financial';
 import { roundCurrency } from './financialPayloads';
 
-type BalanceEvolutionTransaction = Pick<Transaction, 'type' | 'amount' | 'date'>;
+type BalanceEvolutionTransaction = Pick<Transaction, 'type' | 'amount' | 'date' | 'status'>;
 
 function toDateKey(date: Date) {
   const year = date.getFullYear();
@@ -19,6 +19,12 @@ export function buildBalanceEvolution(
 
   transactions
     .filter(transaction => transaction.date <= todayKey)
+    .filter(transaction => {
+      if (transaction.type === 'entrada') {
+        return transaction.status === 'recebido';
+      }
+      return transaction.status === 'pago';
+    })
     .forEach(transaction => {
       const signedAmount = transaction.type === 'entrada' ? transaction.amount : -transaction.amount;
       byDay.set(transaction.date, (byDay.get(transaction.date) ?? 0) + signedAmount);

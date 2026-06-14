@@ -115,6 +115,7 @@ export interface Investment {
   last_auto_contribution_at: string | null;
   icon: string;
   goal_id: string | null;
+  suggested_investment_percentage: number;
   created_at: string;
   // Joined
   goal?: FinancialGoal;

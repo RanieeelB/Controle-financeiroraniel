@@ -328,6 +328,7 @@ export async function updateInvestment(investmentId: string, input: Partial<Inve
   if (input.monthlyContribution !== undefined) updates.monthly_contribution = roundCurrency(input.monthlyContribution ?? 0);
   if (input.icon !== undefined) updates.icon = input.icon;
   if (input.goalId !== undefined) updates.goal_id = input.goalId || null;
+  if (input.suggestedInvestmentPercentage !== undefined) updates.suggested_investment_percentage = input.suggestedInvestmentPercentage;
 
   if (input.amountInvested !== undefined || input.currentValue !== undefined) {
     const amountInvested = input.amountInvested ?? 0;
