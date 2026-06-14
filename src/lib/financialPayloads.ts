@@ -54,6 +54,7 @@ export interface InvestmentPayloadInput {
   monthlyContribution?: number;
   icon?: string;
   goalId?: string | null;
+  suggestedInvestmentPercentage?: number;
 }
 
 export interface InvestmentDepositPayloadInput {
@@ -231,6 +232,7 @@ export function buildInvestmentPayload(input: InvestmentPayloadInput) {
     return_percentage: returnPercentage,
     icon: input.icon || 'piggy-bank',
     goal_id: input.goalId || null,
+    suggested_investment_percentage: input.suggestedInvestmentPercentage ?? 0,
   };
 }
 
