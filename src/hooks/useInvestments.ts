@@ -17,16 +17,23 @@ export function useInvestments() {
         .order('created_at', { ascending: true });
       if (error) throw error;
       if (data) {
+        console.log('[DEBUG] Raw investments data:', data);
+        console.log('[DEBUG] suggested_investment_percentage values:', data.map((i: Record<string, unknown>) => i.suggested_investment_percentage));
         setInvestments(data.map((i: Record<string, unknown>) => ({
           ...i,
           amount_invested: Number(i.amount_invested),
           current_value: Number(i.current_value),
           return_percentage: Number(i.return_percentage),
           monthly_contribution: Number(i.monthly_contribution || 0),
+          suggested_investment_percentage: Number(i.suggested_investment_percentage || 0),
           last_auto_contribution_at: i.last_auto_contribution_at as string | null,
           icon: (i.icon as string) || 'piggy-bank',
           goal_id: (i.goal_id as string) || null,
         })) as Investment[]);
+        console.log('[DEBUG] Mapped investments:', data.map((i: Record<string, unknown>) => ({
+          name: i.name,
+          suggested_investment_percentage: Number(i.suggested_investment_percentage || 0),
+        })));
       }
 
       const { data: depositsData, error: depositsError } = await supabase
