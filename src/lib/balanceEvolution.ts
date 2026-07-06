@@ -1,7 +1,8 @@
 import type { BalanceEvolutionData, Transaction } from '../types/financial';
 import { roundCurrency } from './financialPayloads';
+import { filterLegacyCarryoverTransactions } from './legacyCarryover';
 
-type BalanceEvolutionTransaction = Pick<Transaction, 'type' | 'amount' | 'date' | 'status'>;
+type BalanceEvolutionTransaction = Pick<Transaction, 'type' | 'amount' | 'date' | 'status' | 'notes'>;
 
 function toDateKey(date: Date) {
   const year = date.getFullYear();
@@ -17,7 +18,7 @@ export function buildBalanceEvolution(
   const todayKey = toDateKey(today);
   const byDay = new Map<string, number>();
 
-  transactions
+  filterLegacyCarryoverTransactions(transactions)
     .filter(transaction => transaction.date <= todayKey)
     .filter(transaction => {
       if (transaction.type === 'entrada') {

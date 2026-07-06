@@ -25,12 +25,6 @@ async function getUserId(): Promise<string> {
   return session.user.id;
 }
 import {
-  buildBalanceCarryoverPayload,
-  buildBalanceCarryoverTransactionNote,
-  getPreviousMonthRange,
-  shouldCreateBalanceCarryoverForMonth,
-} from './monthlyBalanceCarryover';
-import {
   buildSalarySettingPayload,
   buildSalaryTransactionNote,
   buildSalaryTransactionPayload,
@@ -640,78 +634,6 @@ export async function ensureMonthlySalaryTransaction(monthKey: string) {
   emitFinancialDataChanged();
   return data;
 }
-
-export async function ensureMonthlyBalanceCarryoverTransaction(monthKey: string, today = new Date()) {
-  if (!shouldCreateBalanceCarryoverForMonth(monthKey, today)) return null;
-
-  const userId = await getUserId();
-  const note = buildBalanceCarryoverTransactionNote(monthKey);
-
-  const { data: existingTransaction, error: existingError } = await supabase
-    .from('transactions')
-    .select('id, status')
-    .eq('user_id', userId)
-    .eq('notes', note)
-    .maybeSingle();
-
-  if (existingError) throw existingError;
-  if (existingTransaction) return existingTransaction;
-
-  const previousMonthRange = getPreviousMonthRange(monthKey);
-  const { data: previousTransactions, error: previousError } = await supabase
-    .from('transactions')
-    .select('type, amount, status')
-    .eq('user_id', userId)
-    .gte('date', previousMonthRange.startDate)
-    .lt('date', previousMonthRange.endDate);
-
-  if (previousError) throw previousError;
-
-  const payload = buildBalanceCarryoverPayload({
-    targetMonthKey: monthKey,
-    previousMonthTransactions: (previousTransactions ?? []).map(transaction => ({
-      ...transaction,
-      amount: Number(transaction.amount),
-    })),
-  });
-
-  if (!payload) return null;
-
-  const { data, error } = await supabase
-    .from('transactions')
-    .insert({
-      ...payload,
-      user_id: userId,
-    })
-    .select('id, status')
-    .single();
-
-  if (error) {
-    if (isUniqueConstraintError(error)) {
-      const { data: recoveredTransaction, error: recoveredError } = await supabase
-        .from('transactions')
-        .select('id, status')
-        .eq('user_id', userId)
-        .eq('notes', note)
-        .maybeSingle();
-
-      if (recoveredError) throw recoveredError;
-      if (recoveredTransaction) return recoveredTransaction;
-    }
-
-    throw error;
-  }
-
-  emitFinancialDataChanged();
-  return data;
-}
-
-
-
-function isUniqueConstraintError(error: { code?: string }) {
-  return error.code === '23505';
-}
-
 function isMissingInvestmentDepositsTable(error: { code?: string; message?: string }) {
   return error.code === '42P01'
     || error.message?.includes('investment_deposits') === true

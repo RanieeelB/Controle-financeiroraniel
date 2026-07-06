@@ -7,7 +7,6 @@ import { NewTransactionModal } from '../dashboard/NewTransactionModal';
 import { PjTaxesModal } from '../dashboard/PjTaxesModal';
 import { useAutoInvestments } from '../../hooks/useAutoInvestments';
 import { useAutoSalary } from '../../hooks/useAutoSalary';
-import { useAutoBalanceCarryover } from '../../hooks/useAutoBalanceCarryover';
 import { getCurrentMonthKey, buildMonthRange, moveMonth, formatMonthLabel } from '../../lib/monthSelection';
 import type { MonthRange } from '../../lib/monthSelection';
 
@@ -26,7 +25,6 @@ export function Layout() {
   const monthLabel = formatMonthLabel(selectedMonthKey);
   useAutoInvestments();
   useAutoSalary(selectedMonthKey);
-  useAutoBalanceCarryover(selectedMonthKey);
 
   const handlePreviousMonth = () => setSelectedMonthKey(prev => moveMonth(prev, -1));
   const handleNextMonth = () => setSelectedMonthKey(prev => moveMonth(prev, 1));

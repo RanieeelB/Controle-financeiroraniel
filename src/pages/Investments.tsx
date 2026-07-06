@@ -30,12 +30,14 @@ import {
   Zap,
 } from 'lucide-react';
 import { useState, useEffect, useCallback, type ElementType } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { InvestmentDepositModal, InvestmentEditDepositModal, InvestmentModal } from '../components/finance/FinanceModals';
 import { useInvestments } from '../hooks/useInvestments';
 import { useFinancialGoals } from '../hooks/useFinancialGoals';
 import { deleteInvestmentDeposit, updateInvestment } from '../lib/financialActions';
 import { supabase } from '../lib/supabase';
 import type { Investment, InvestmentCategory, InvestmentDeposit } from '../types/financial';
+import type { LayoutContext } from '../components/layout/Layout';
 
 const INVESTMENT_ICONS: { name: string; icon: LucideIcon }[] = [
   { name: 'piggy-bank', icon: PiggyBank },
@@ -80,6 +82,7 @@ const catColors: Record<InvestmentCategory, { primary: string; glow: string; gra
 };
 
 export function Investments() {
+  const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const {
     investments,
     deposits,
@@ -104,13 +107,12 @@ export function Investments() {
 
   useEffect(() => {
     async function fetchMonthlyIncome() {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const startDate = `${year}-${month}-01`;
-      const endDate = `${year}-${month}-31`;
+      const startDate = selectedMonthRange.startDate;
+      const endDate = selectedMonthRange.endDate;
 
-      const { data } = await supabase
+      console.log('[DEBUG] Fetching monthly income for:', { startDate, endDate, selectedMonthRange });
+
+      const { data, error } = await supabase
         .from('transactions')
         .select('amount')
         .eq('type', 'entrada')
@@ -118,13 +120,20 @@ export function Investments() {
         .gte('date', startDate)
         .lte('date', endDate);
 
+      if (error) {
+        console.error('[DEBUG] Error fetching monthly income:', error);
+        return;
+      }
+
       if (data) {
+        console.log('[DEBUG] Monthly income data:', data);
         const total = data.reduce((sum, tx) => sum + Number(tx.amount), 0);
+        console.log('[DEBUG] Monthly income total:', total);
         setMonthlyIncome(total);
       }
     }
     void fetchMonthlyIncome();
-  }, []);
+  }, [selectedMonthRange]);
 
   const handleDepositAdded = useCallback(() => {
     setAnimationKey(prev => prev + 1);
@@ -377,8 +386,9 @@ function InvestmentCard({
 }: InvestmentCardProps) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const suggestedValue = investment.suggested_investment_percentage > 0
-    ? (monthlyIncome * investment.suggested_investment_percentage) / 100
+  const suggestedPercentage = Number(investment.suggested_investment_percentage) || 0;
+  const suggestedValue = suggestedPercentage > 0
+    ? (monthlyIncome * suggestedPercentage) / 100
     : 0;
 
   return (

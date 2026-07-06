@@ -56,4 +56,26 @@ describe('salary planning helpers', () => {
       fixedBillsTotal: 700,
     });
   });
+
+  it('ignores legacy carryover entries in the dashboard summary', () => {
+    expect(calculateSummaryCards({
+      transactions: [
+        { type: 'entrada', amount: 800, status: 'recebido', notes: 'carryover:auto:2026-06' },
+        { type: 'entrada', amount: 5000, status: 'recebido', notes: 'salary:auto:2026-06' },
+        { type: 'gasto', amount: 1200, status: 'pago', notes: null },
+      ],
+      savedAmount: 0,
+      openInvoices: 0,
+      fixedBillsTotal: 0,
+      unpaidFixedBills: 0,
+    })).toEqual({
+      currentBalance: 3800,
+      projectedBalance: 3800,
+      totalIncome: 5000,
+      totalExpense: 1200,
+      savedAmount: 0,
+      openInvoices: 0,
+      fixedBillsTotal: 0,
+    });
+  });
 });
