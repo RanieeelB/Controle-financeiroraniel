@@ -21,4 +21,9 @@ describe('legacy carryover helpers', () => {
       { id: '3', notes: null },
     ]);
   });
+
+  it('treats only the carryover note prefix as legacy carryover', () => {
+    expect(isLegacyCarryoverTransaction({ notes: 'carryover:auto:2026-07' })).toBe(true);
+    expect(isLegacyCarryoverTransaction({ notes: 'investment_deposit:123' })).toBe(false);
+  });
 });
