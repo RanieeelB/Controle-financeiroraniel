@@ -22,4 +22,15 @@ describe('buildBalanceEvolution', () => {
       { label: '03', balance: 700 },
     ]);
   });
+
+  it('ignores legacy carryover entries in the running balance', () => {
+    expect(buildBalanceEvolution([
+      { type: 'entrada', amount: 500, date: '2026-05-01', status: 'recebido', notes: 'carryover:auto:2026-05' },
+      { type: 'entrada', amount: 1000, date: '2026-05-02', status: 'recebido', notes: null },
+      { type: 'gasto', amount: 300, date: '2026-05-03', status: 'pago', notes: null },
+    ], new Date('2026-05-10'))).toEqual([
+      { label: '02', balance: 1000 },
+      { label: '03', balance: 700 },
+    ]);
+  });
 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { filterLegacyCarryoverTransactions } from '../lib/legacyCarryover';
 import { supabase } from '../lib/supabase';
 import type { Transaction } from '../types/financial';
 import type { MonthRange } from '../lib/monthSelection';
@@ -26,10 +27,11 @@ export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRa
       const { data, error } = await query;
       if (error) throw error;
       if (data) {
-        setTransactions(data.map((t: Record<string, unknown>) => ({
+        const visibleTransactions = filterLegacyCarryoverTransactions(data.map((t: Record<string, unknown>) => ({
           ...t,
           amount: Number(t.amount),
         })) as Transaction[]);
+        setTransactions(visibleTransactions);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);

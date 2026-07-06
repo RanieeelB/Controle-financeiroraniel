@@ -4,10 +4,11 @@ import {
   buildSalaryTransactionPayload,
   roundCurrency,
 } from './financialPayloads.js';
+import { filterLegacyCarryoverTransactions } from './legacyCarryover.js';
 import type { SummaryCards, Transaction } from '../types/financial.js';
 
 interface SummaryCardsInput {
-  transactions: Array<Pick<Transaction, 'type' | 'amount' | 'status'>>;
+  transactions: Array<Pick<Transaction, 'type' | 'amount' | 'status' | 'notes'>>;
   savedAmount: number;
   openInvoices: number;
   fixedBillsTotal: number;
@@ -15,19 +16,21 @@ interface SummaryCardsInput {
 }
 
 export function calculateSummaryCards(input: SummaryCardsInput): SummaryCards {
-  const totalIncome = input.transactions
+  const visibleTransactions = filterLegacyCarryoverTransactions(input.transactions);
+
+  const totalIncome = visibleTransactions
     .filter(transaction => transaction.type === 'entrada')
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  const totalExpense = input.transactions
+  const totalExpense = visibleTransactions
     .filter(transaction => transaction.type === 'gasto')
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  const receivedIncome = input.transactions
+  const receivedIncome = visibleTransactions
     .filter(transaction => transaction.type === 'entrada' && transaction.status === 'recebido')
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  const paidExpense = input.transactions
+  const paidExpense = visibleTransactions
     .filter(transaction => transaction.type === 'gasto' && transaction.status === 'pago')
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 

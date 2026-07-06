@@ -3,6 +3,7 @@ import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
 import { buildBalanceEvolution } from '../lib/balanceEvolution';
 import { calculateSummaryCards } from '../lib/financialPlanning';
+import { filterLegacyCarryoverTransactions } from '../lib/legacyCarryover';
 import { supabase } from '../lib/supabase';
 import type {
   BalanceEvolutionData,
@@ -74,10 +75,10 @@ export function useDashboardData(monthRange?: MonthRange) {
       if (invoiceResult.error) throw invoiceResult.error;
       if (goalsResult.error) throw goalsResult.error;
 
-      const mappedTransactions = (txResult.data ?? []).map((transaction: Record<string, unknown>) => ({
+      const mappedTransactions = filterLegacyCarryoverTransactions((txResult.data ?? []).map((transaction: Record<string, unknown>) => ({
         ...transaction,
         amount: Number(transaction.amount),
-      })) as Transaction[];
+      })) as Transaction[]);
 
       const today = new Date();
       const currentMonth = today.getMonth() + 1;
