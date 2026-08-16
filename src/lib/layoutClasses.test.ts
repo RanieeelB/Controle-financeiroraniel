@@ -244,15 +244,15 @@ describe('layout width classes', () => {
     expect(modals).toContain('sticky bottom-0');
   });
 
-  it('uses compact two-column mobile summaries for investments and reports', () => {
+  it('uses compact responsive summaries for investments and reports', () => {
     const investments = readFileSync(join(process.cwd(), 'src/pages/Investments.tsx'), 'utf8');
     const reports = readFileSync(join(process.cwd(), 'src/pages/Reports.tsx'), 'utf8');
     const modals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
 
     expect(investments).toContain('grid grid-cols-2 xl:grid-cols-4');
-    expect(investments).toContain('grid grid-cols-1 xl:grid-cols-2');
+    expect(investments).toContain('grid grid-cols-1 xl:grid-cols-3');
     expect(investments).toContain('Saldo guardado');
-    expect(investments).toContain('Histórico de aportes');
+    expect(investments).toContain('Histórico');
     expect(reports).toContain('grid grid-cols-2 lg:grid-cols-3');
     expect(modals).toContain('Dados principais');
   });
