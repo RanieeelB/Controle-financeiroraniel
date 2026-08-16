@@ -7,10 +7,14 @@ const mocks = vi.hoisted(() => ({
   fixedBillSingle: vi.fn(),
   from: vi.fn(),
   getSession: vi.fn(),
-  paymentEq: vi.fn(),
+  paymentNoteEq: vi.fn(),
   paymentGte: vi.fn(),
   paymentLt: vi.fn(),
+  paymentOrder: vi.fn(),
+  paymentRange: vi.fn(),
   paymentSelect: vi.fn(),
+  paymentStatusEq: vi.fn(),
+  paymentTypeEq: vi.fn(),
   transactionInsert: vi.fn(),
 }));
 
@@ -35,7 +39,7 @@ const persistedBill = {
 };
 
 function setPaymentRows(data: unknown[]) {
-  mocks.paymentLt.mockResolvedValue({ data, error: null });
+  mocks.paymentRange.mockResolvedValue({ data, error: null });
 }
 
 describe('createFixedBillPayment', () => {
@@ -48,14 +52,18 @@ describe('createFixedBillPayment', () => {
       data: { session: { user: { id: 'session-user' } } },
     });
     mocks.fixedBillSingle.mockResolvedValue({ data: persistedBill, error: null });
-    mocks.paymentLt.mockResolvedValue({ data: [], error: null });
+    mocks.paymentRange.mockResolvedValue({ data: [], error: null });
     mocks.transactionInsert.mockResolvedValue({ error: null });
 
     mocks.fixedBillSelect.mockReturnValue({ eq: mocks.fixedBillEq });
     mocks.fixedBillEq.mockReturnValue({ single: mocks.fixedBillSingle });
-    mocks.paymentSelect.mockReturnValue({ eq: mocks.paymentEq });
-    mocks.paymentEq.mockReturnValue({ gte: mocks.paymentGte });
+    mocks.paymentSelect.mockReturnValue({ eq: mocks.paymentNoteEq });
+    mocks.paymentNoteEq.mockReturnValue({ eq: mocks.paymentTypeEq });
+    mocks.paymentTypeEq.mockReturnValue({ eq: mocks.paymentStatusEq });
+    mocks.paymentStatusEq.mockReturnValue({ gte: mocks.paymentGte });
     mocks.paymentGte.mockReturnValue({ lt: mocks.paymentLt });
+    mocks.paymentLt.mockReturnValue({ order: mocks.paymentOrder });
+    mocks.paymentOrder.mockReturnValue({ range: mocks.paymentRange });
     mocks.from.mockImplementation((table: string) => {
       if (table === 'fixed_bills') return { select: mocks.fixedBillSelect };
       if (table === 'transactions') {
@@ -156,7 +164,7 @@ describe('createFixedBillPayment', () => {
 
   it('throws a payment read error', async () => {
     const readError = { code: '57014', message: 'query cancelled' };
-    mocks.paymentLt.mockResolvedValue({ data: null, error: readError });
+    mocks.paymentRange.mockResolvedValue({ data: null, error: readError });
 
     await expect(createFixedBillPayment({
       billId: persistedBill.id,
@@ -210,6 +218,48 @@ describe('createFixedBillPayment', () => {
     expect(mocks.emitFinancialDataChanged).not.toHaveBeenCalled();
   });
 
+  it('includes later payment pages when validating the fresh remainder', async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, index) => ({
+      id: `payment-${String(index).padStart(4, '0')}`,
+      notes: 'fixed_bill:bill-1',
+      status: 'pago',
+      type: 'gasto',
+      amount: 1,
+    }));
+    const secondPage = [{
+      id: 'payment-1000',
+      notes: 'fixed_bill:bill-1',
+      status: 'pago',
+      type: 'gasto',
+      amount: 500,
+    }];
+    mocks.fixedBillSingle.mockResolvedValue({
+      data: { ...persistedBill, amount: 2000 },
+      error: null,
+    });
+    mocks.paymentRange
+      .mockResolvedValueOnce({ data: firstPage, error: null })
+      .mockResolvedValueOnce({ data: secondPage, error: null });
+
+    await expect(createFixedBillPayment({
+      billId: persistedBill.id,
+      amount: 600,
+      selectedMonthKey: '2026-08',
+    })).resolves.toEqual({
+      status: 'rejected',
+      code: 'exceeds_remaining',
+      remainingAmount: 500,
+    });
+
+    expect(mocks.paymentOrder.mock.calls).toEqual([
+      ['id', { ascending: true }],
+      ['id', { ascending: true }],
+    ]);
+    expect(mocks.paymentRange.mock.calls).toEqual([[0, 999], [1000, 1999]]);
+    expect(mocks.transactionInsert).not.toHaveBeenCalled();
+    expect(mocks.emitFinancialDataChanged).not.toHaveBeenCalled();
+  });
+
   it('trusts persisted bill fields and inserts one exact normalized payment payload', async () => {
     vi.setSystemTime(new Date(2026, 7, 31, 23, 59, 59));
     mocks.fixedBillSingle.mockResolvedValue({
@@ -233,9 +283,13 @@ describe('createFixedBillPayment', () => {
     expect(mocks.fixedBillEq).toHaveBeenCalledWith('id', 'persisted-id');
     expect(mocks.fixedBillSingle).toHaveBeenCalledTimes(1);
     expect(mocks.paymentSelect).toHaveBeenCalledWith('id, notes, status, type, amount');
-    expect(mocks.paymentEq).toHaveBeenCalledWith('notes', 'fixed_bill:persisted-id');
+    expect(mocks.paymentNoteEq).toHaveBeenCalledWith('notes', 'fixed_bill:persisted-id');
+    expect(mocks.paymentTypeEq).toHaveBeenCalledWith('type', 'gasto');
+    expect(mocks.paymentStatusEq).toHaveBeenCalledWith('status', 'pago');
     expect(mocks.paymentGte).toHaveBeenCalledWith('date', '2026-08-01');
     expect(mocks.paymentLt).toHaveBeenCalledWith('date', '2026-09-01');
+    expect(mocks.paymentOrder).toHaveBeenCalledWith('id', { ascending: true });
+    expect(mocks.paymentRange).toHaveBeenCalledWith(0, 999);
     expect(mocks.transactionInsert).toHaveBeenCalledTimes(1);
     expect(mocks.transactionInsert).toHaveBeenCalledWith({
       type: 'gasto',

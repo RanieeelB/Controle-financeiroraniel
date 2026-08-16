@@ -303,6 +303,35 @@ export type CreateFixedBillPaymentResult =
     remainingAmount?: number;
   };
 
+const FIXED_BILL_PAYMENT_PAGE_SIZE = 1000;
+
+async function readFixedBillPayments(input: {
+  note: string;
+  startDate: string;
+  endDate: string;
+}) {
+  const payments: FixedBillPaymentRecord[] = [];
+
+  for (let from = 0; ; from += FIXED_BILL_PAYMENT_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, notes, status, type, amount')
+      .eq('notes', input.note)
+      .eq('type', 'gasto')
+      .eq('status', 'pago')
+      .gte('date', input.startDate)
+      .lt('date', input.endDate)
+      .order('id', { ascending: true })
+      .range(from, from + FIXED_BILL_PAYMENT_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    const page = (data ?? []) as FixedBillPaymentRecord[];
+    payments.push(...page);
+    if (page.length < FIXED_BILL_PAYMENT_PAGE_SIZE) return payments;
+  }
+}
+
 export async function createFixedBillPayment(input: {
   billId: string;
   amount: number;
@@ -334,18 +363,15 @@ export async function createFixedBillPayment(input: {
 
   const monthRange = buildMonthRange(currentMonthKey);
   const paymentNote = `fixed_bill:${bill.id}`;
-  const { data: payments, error: paymentsError } = await supabase
-    .from('transactions')
-    .select('id, notes, status, type, amount')
-    .eq('notes', paymentNote)
-    .gte('date', monthRange.startDate)
-    .lt('date', monthRange.endDate);
-
-  if (paymentsError) throw paymentsError;
+  const payments = await readFixedBillPayments({
+    note: paymentNote,
+    startDate: monthRange.startDate,
+    endDate: monthRange.endDate,
+  });
 
   const paidAmount = sumEligibleFixedBillPayments({
     billId: bill.id,
-    payments: (payments ?? []) as FixedBillPaymentRecord[],
+    payments,
     maximumAmount: bill.amount,
   });
   const validation = validateFixedBillPayment({
