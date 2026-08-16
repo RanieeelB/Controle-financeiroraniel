@@ -9,6 +9,7 @@ import {
 import { supabase } from '../lib/supabase';
 import type { FixedBill, DynamicFixedBill } from '../types/financial';
 import { resolveMonthRange, type MonthRange } from '../lib/monthSelection';
+import { collectSupabasePages } from '../lib/supabasePagination';
 
 export function useFixedBills(monthRange?: MonthRange) {
   const [bills, setBills] = useState<DynamicFixedBill[]>([]);
@@ -24,28 +25,27 @@ export function useFixedBills(monthRange?: MonthRange) {
     load: async () => {
         const today = new Date();
         // 1. Fetch all fixed bills
-        const { data: billsData, error: billsError } = await supabase
+        const billsData = await collectSupabasePages<FixedBill>((from, to) => supabase
           .from('fixed_bills')
           .select('*, category:categories(*)')
-          .order('due_day', { ascending: true });
-        
-        if (billsError) throw billsError;
+          .order('due_day', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to));
       
         // 2. Fetch transactions for the current month that are fixed bill payments
-        const txQuery = supabase
+        const txData = await collectSupabasePages<FixedBillPaymentRecord>((from, to) => supabase
           .from('transactions')
           .select('id, notes, status, type, amount')
           .not('notes', 'is', null)
           .like('notes', 'fixed_bill:%')
           .gte('date', effectiveMonthRange.startDate)
-          .lt('date', effectiveMonthRange.endDate);
-      
-        const { data: txData, error: txError } = await txQuery;
-        if (txError) throw txError;
+          .lt('date', effectiveMonthRange.endDate)
+          .order('id', { ascending: true })
+          .range(from, to));
 
         return resolveDynamicFixedBills({
-          bills: (billsData ?? []) as FixedBill[],
-          payments: (txData ?? []) as FixedBillPaymentRecord[],
+          bills: billsData,
+          payments: txData,
           monthKey: effectiveMonthRange.monthKey,
           today,
         }) as DynamicFixedBill[];
