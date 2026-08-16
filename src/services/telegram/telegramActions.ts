@@ -8,7 +8,7 @@ import {
   roundCurrency,
 } from '../../lib/financialPayloads.js';
 import { calculateSummaryCards } from '../../lib/financialPlanning.js';
-import { resolveDynamicFixedBills } from '../../lib/fixedBillPayments.js';
+import { resolveDynamicFixedBills, summarizeFixedBills } from '../../lib/fixedBillPayments.js';
 import type { Category, CreditCard, FinancialGoal, FixedBill, Investment, Transaction } from '../../types/financial.js';
 import type { TelegramParsedMessage } from './telegramParser.js';
 
@@ -709,8 +709,7 @@ async function getMonthlyContext(userId: string, options: CreateTelegramActionsO
     today: now,
   });
 
-  const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + Number(bill.amount), 0);
-  const unpaidFixedBills = mappedBills.reduce((sum, bill) => sum + bill.remainingAmount, 0);
+  const { total: fixedBillsTotal, pending: unpaidFixedBills } = summarizeFixedBills(mappedBills);
   const openInvoiceItems = getOpenInvoiceItems(invoiceItems, normalizedTransactions);
   const openInvoicesTotal = openInvoiceItems.reduce((sum, item) => sum + Number(item.amount), 0);
 

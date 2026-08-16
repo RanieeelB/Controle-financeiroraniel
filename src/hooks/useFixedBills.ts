@@ -7,7 +7,7 @@ import {
 } from '../lib/fixedBillPayments';
 import { supabase } from '../lib/supabase';
 import type { FixedBill, DynamicFixedBill } from '../types/financial';
-import type { MonthRange } from '../lib/monthSelection';
+import { resolveMonthRange, type MonthRange } from '../lib/monthSelection';
 
 export function useFixedBills(monthRange?: MonthRange) {
   const [bills, setBills] = useState<DynamicFixedBill[]>([]);
@@ -16,6 +16,9 @@ export function useFixedBills(monthRange?: MonthRange) {
   const fetchBills = useCallback(async () => {
     setIsLoading(true);
     try {
+      const today = new Date();
+      const effectiveMonthRange = resolveMonthRange(monthRange, today);
+
       // 1. Fetch all fixed bills
       const { data: billsData, error: billsError } = await supabase
         .from('fixed_bills')
@@ -25,29 +28,22 @@ export function useFixedBills(monthRange?: MonthRange) {
       if (billsError) throw billsError;
       
       // 2. Fetch transactions for the current month that are fixed bill payments
-      let txQuery = supabase
+      const txQuery = supabase
         .from('transactions')
         .select('id, notes, status, type, amount')
         .not('notes', 'is', null)
-        .like('notes', 'fixed_bill:%');
-        
-      if (monthRange) {
-        txQuery = txQuery.gte('date', monthRange.startDate).lt('date', monthRange.endDate);
-      }
+        .like('notes', 'fixed_bill:%')
+        .gte('date', effectiveMonthRange.startDate)
+        .lt('date', effectiveMonthRange.endDate);
       
       const { data: txData, error: txError } = await txQuery;
       if (txError) throw txError;
 
-      const today = new Date();
-      const currentMonth = today.getMonth() + 1; // 1-12
-      const currentYear = today.getFullYear();
-      
       if (billsData) {
-        const monthKey = monthRange?.monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
         const dynamicBills = resolveDynamicFixedBills({
           bills: billsData as FixedBill[],
           payments: (txData ?? []) as FixedBillPaymentRecord[],
-          monthKey,
+          monthKey: effectiveMonthRange.monthKey,
           today,
         }) as DynamicFixedBill[];
         

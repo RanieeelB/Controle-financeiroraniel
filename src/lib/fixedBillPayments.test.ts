@@ -63,6 +63,67 @@ describe('fixedBillPayments', () => {
     });
   });
 
+  it('sums fractional bill balances without floating-point drift', () => {
+    const bills = [
+      {
+        ...bill({ id: 'partial-cents', amount: 0.3 }),
+        dynamicStatus: 'pendente',
+        daysOverdue: 0,
+        paidAmount: 0.1,
+        remainingAmount: 0.2,
+        paymentProgress: 33.33,
+        paymentTransactionIds: ['partial-cents-payment'],
+      },
+      {
+        ...bill({ id: 'paid-cents', amount: 0.2 }),
+        dynamicStatus: 'pago',
+        daysOverdue: 0,
+        paidAmount: 0.2,
+        remainingAmount: 0,
+        paymentProgress: 100,
+        paymentTransactionIds: ['paid-cents-payment'],
+      },
+    ] satisfies DynamicFixedBill[];
+
+    expect(summarizeFixedBills(bills)).toEqual({
+      total: 0.5,
+      paid: 0.3,
+      paidCount: 1,
+      pending: 0.2,
+      count: 2,
+    });
+  });
+
+  it('returns zero totals for an empty bill list', () => {
+    expect(summarizeFixedBills([])).toEqual({
+      total: 0,
+      paid: 0,
+      paidCount: 0,
+      pending: 0,
+      count: 0,
+    });
+  });
+
+  it('counts a zero-value bill as fully paid', () => {
+    const zeroBill = {
+      ...bill({ amount: 0 }),
+      dynamicStatus: 'pago',
+      daysOverdue: 0,
+      paidAmount: 0,
+      remainingAmount: 0,
+      paymentProgress: 100,
+      paymentTransactionIds: [],
+    } satisfies DynamicFixedBill;
+
+    expect(summarizeFixedBills([zeroBill])).toEqual({
+      total: 0,
+      paid: 0,
+      paidCount: 1,
+      pending: 0,
+      count: 1,
+    });
+  });
+
   it('extracts a bill id only from an exact fixed-bill note', () => {
     expect(getFixedBillIdFromNote('fixed_bill:bill-1')).toBe('bill-1');
     expect(getFixedBillIdFromNote('fixed_bill:')).toBeNull();

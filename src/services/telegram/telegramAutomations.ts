@@ -1,7 +1,7 @@
 import { buildMonthRange } from '../../lib/monthSelection.js';
 import { buildTransactionPayload, roundCurrency } from '../../lib/financialPayloads.js';
 import { calculateSummaryCards } from '../../lib/financialPlanning.js';
-import { resolveDynamicFixedBills } from '../../lib/fixedBillPayments.js';
+import { resolveDynamicFixedBills, summarizeFixedBills } from '../../lib/fixedBillPayments.js';
 import type { CreditCard, FixedBill, Transaction } from '../../types/financial.js';
 import type { TelegramParseMode, TelegramReplyMarkup } from './telegramService.js';
 
@@ -368,8 +368,7 @@ async function getMonthlyContextForMonth(
     const transaction = findInvoiceTransaction(item, normalizedTransactions);
     return !transaction || transaction.status !== 'pago';
   });
-  const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + Number(bill.amount), 0);
-  const unpaidFixedBills = mappedBills.reduce((sum, bill) => sum + bill.remainingAmount, 0);
+  const { total: fixedBillsTotal, pending: unpaidFixedBills } = summarizeFixedBills(mappedBills);
   const openInvoicesTotal = openInvoiceItems.reduce((sum, item) => sum + Number(item.amount), 0);
 
   return {

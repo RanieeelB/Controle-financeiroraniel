@@ -10,6 +10,10 @@ export function getCurrentMonthKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+export function resolveMonthRange(monthRange?: MonthRange, date = new Date()) {
+  return monthRange ?? buildMonthRange(getCurrentMonthKey(date));
+}
+
 export function buildMonthRange(monthKey: string): MonthRange {
   const [year, month] = monthKey.split('-').map(Number);
   const start = new Date(year, month - 1, 1);
