@@ -166,7 +166,7 @@ export function Investments() {
           <h2 className="font-h1 text-[28px] sm:text-[36px] font-bold text-on-surface mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             Nenhum investimento cadastrado
           </h2>
-          <p className="text-on-surface-variant font-body-md text-[16px] max-w-md mb-8">
+          <p className="text-on-surface-variant font-body-md text-[16px] max-w-[28rem] mb-8">
             Comece a construir seu patrimônio! Adicione caixinhas e investimentos para acompanhar seu crescimento.
           </p>
           <button
