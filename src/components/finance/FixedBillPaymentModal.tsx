@@ -39,7 +39,7 @@ export function FixedBillPaymentModal({
   function startBackgroundRefresh() {
     void Promise.resolve()
       .then(() => onRefresh())
-      .catch(error => console.error(error));
+      .catch(error => console.error('Error refreshing fixed bills:', error));
   }
 
   function closeOnce() {

@@ -112,7 +112,10 @@ describe('FixedBillPaymentModal', () => {
         'O valor excede o saldo restante de R$ 300,00.',
       );
     });
-    await waitFor(() => expect(consoleError).toHaveBeenCalledWith(refreshError));
+    await waitFor(() => expect(consoleError).toHaveBeenCalledWith(
+      'Error refreshing fixed bills:',
+      refreshError,
+    ));
 
     expect(mocks.createFixedBillPayment).toHaveBeenCalledTimes(1);
     expect(mocks.createFixedBillPayment).toHaveBeenCalledWith({
@@ -152,7 +155,10 @@ describe('FixedBillPaymentModal', () => {
     submitValue('100,50');
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(consoleError).toHaveBeenCalledWith(refreshError));
+    await waitFor(() => expect(consoleError).toHaveBeenCalledWith(
+      'Error refreshing fixed bills:',
+      refreshError,
+    ));
 
     expect(mocks.createFixedBillPayment).toHaveBeenCalledTimes(1);
     expect(mocks.createFixedBillPayment).toHaveBeenCalledWith({
@@ -175,7 +181,10 @@ describe('FixedBillPaymentModal', () => {
 
     submitValue('100');
 
-    await waitFor(() => expect(consoleError).toHaveBeenCalledWith(refreshError));
+    await waitFor(() => expect(consoleError).toHaveBeenCalledWith(
+      'Error refreshing fixed bills:',
+      refreshError,
+    ));
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
