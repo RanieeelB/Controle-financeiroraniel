@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
-import { Link2, CheckCircle, ChevronDown, X, Edit3 } from 'lucide-react';
+import { Link2, CheckCircle, ChevronDown, Edit3 } from 'lucide-react';
+import { ModalShell } from './ModalShell';
+export { ProjectionDetailsModal } from './ProjectionDetailsModal';
 import {
   createCreditCard,
   createCreditPurchasesBatch,
@@ -15,12 +16,10 @@ import {
 import { getInstallmentAmount, parseCurrencyValue, formatCurrencyInput, roundCurrency, type InvoicePurchaseBatchItemInput } from '../../lib/financialPayloads';
 import { useCategories } from '../../hooks/useCategories';
 import { useCreditCards } from '../../hooks/useCreditCards';
-import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
 import { useFinancialGoals } from '../../hooks/useFinancialGoals';
 import { useInvestments } from '../../hooks/useInvestments';
 import { supabase } from '../../lib/supabase';
 import { emitFinancialDataChanged } from '../../lib/financialEvents';
-import type { MonthProjection } from '../../hooks/useProjections';
 import type { CreditCard, FixedBill, FinancialGoal, Investment, InvestmentCategory, InvestmentDeposit } from '../../types/financial';
 import {
   PiggyBank,
@@ -57,42 +56,7 @@ const modalFooterClass = 'sticky bottom-0 z-10 -mx-md sm:-mx-lg px-md sm:px-lg p
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-interface ModalShellProps {
-  title: string;
-  subtitle: string;
-  onClose: () => void;
-  children: ReactNode;
-}
 
-function ModalShell({ title, subtitle, onClose, children }: ModalShellProps) {
-  useLockBodyScroll();
-
-  return createPortal(
-    <div className="fixed inset-0 z-[999] isolate flex items-stretch sm:items-center justify-center bg-background/85 backdrop-blur-md p-0 sm:p-md overflow-hidden">
-      <div className="w-full sm:max-w-[36rem] h-[100dvh] sm:h-auto sm:max-h-[90dvh] bg-surface-container-low border border-outline-variant rounded-none sm:rounded-xl shadow-2xl overflow-hidden relative flex flex-col">
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary" />
-        <div className="flex items-start justify-between gap-md px-md sm:px-lg py-md border-b border-outline-variant shrink-0">
-          <div className="min-w-0">
-            <h2 className="font-h2 text-[20px] sm:text-[24px] font-semibold text-on-surface">{title}</h2>
-            <p className="font-body-md text-[14px] sm:text-[15px] text-on-surface-variant">{subtitle}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-on-surface-variant hover:text-primary transition-colors min-h-11 min-w-11 flex items-center justify-center"
-            aria-label="Fechar modal"
-          >
-            <X size={22} />
-          </button>
-        </div>
-        <div className="min-h-0 overflow-y-auto overscroll-contain">
-          {children}
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
 
 function SelectChevron() {
   return <ChevronDown className="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none mr-xs" size={18} />;
@@ -972,53 +936,7 @@ export function FinancialGoalModal({ goal, onClose }: { goal?: FinancialGoal | n
   );
 }
 
-export function ProjectionDetailsModal({ projection, onClose }: { projection: MonthProjection; onClose: () => void }) {
-  return (
-    <ModalShell title={`Detalhes: ${projection.label}`} subtitle="Previsão de gastos e aportes para este mês." onClose={onClose}>
-      <div className="max-h-[70vh] overflow-y-auto p-lg space-y-lg">
-        <div className="grid grid-cols-3 gap-md">
-          <div className="p-md bg-surface-container rounded-lg border border-outline-variant">
-            <span className={labelClass}>Faturas</span>
-            <p className="font-numeral-lg text-[18px] text-primary">R$ {fmt(projection.breakdown.creditCards)}</p>
-          </div>
-          <div className="p-md bg-surface-container rounded-lg border border-outline-variant">
-            <span className={labelClass}>Fixos</span>
-            <p className="font-numeral-lg text-[18px] text-secondary">R$ {fmt(projection.breakdown.fixedBills)}</p>
-          </div>
-          <div className="p-md bg-surface-container rounded-lg border border-outline-variant">
-            <span className={labelClass}>Aportes</span>
-            <p className="font-numeral-lg text-[18px] text-tertiary">R$ {fmt(projection.breakdown.investments)}</p>
-          </div>
-        </div>
 
-        <div className="space-y-sm">
-          <h4 className={labelClass}>Detalhamento</h4>
-          <div className="space-y-xs">
-            {projection.details.map((detail, idx) => (
-              <div key={idx} className="flex items-center justify-between p-sm bg-surface rounded-lg border border-outline-variant/30">
-                <div className="flex flex-col">
-                  <span className="font-body-md text-on-surface">{detail.description}</span>
-                  <span className="text-[11px] uppercase tracking-wider text-on-surface-variant opacity-70">
-                    {detail.type === 'card' ? 'Cartão' : detail.type === 'fixed' ? 'Conta Fixa' : 'Investimento'}
-                  </span>
-                </div>
-                <span className="font-numeral-md text-on-surface">R$ {fmt(detail.amount)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="p-md bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between">
-          <span className="font-semibold text-on-surface">Total Estimado</span>
-          <span className="font-numeral-lg text-[22px] text-primary">R$ {fmt(projection.total)}</span>
-        </div>
-      </div>
-      <div className="p-lg border-t border-outline-variant flex justify-end">
-        <button type="button" onClick={onClose} className="px-lg py-sm bg-surface-variant text-on-surface-variant rounded-lg hover:bg-outline-variant/20 transition-all font-semibold">Fechar</button>
-      </div>
-    </ModalShell>
-  );
-}
 
 export function InvestmentEditDepositModal({ deposit, investment, onClose }: { deposit: InvestmentDeposit; investment: Investment; onClose: () => void }) {
   const [amount, setAmount] = useState(deposit.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
