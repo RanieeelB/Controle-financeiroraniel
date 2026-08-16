@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  calculateOpenInvoiceTotal,
   getInvoiceActionState,
   getInvoicePaymentStatus,
   getPayableInvoiceTransactionIds,
@@ -7,6 +8,38 @@ import {
 } from './invoicePayments';
 
 describe('invoicePayments', () => {
+  it('calculates open invoice totals after indexing transactions exactly once', () => {
+    let notesReads = 0;
+    const transaction = (input: Record<string, unknown>) => Object.defineProperty(input, 'notes', {
+      enumerable: true,
+      get: () => {
+        notesReads += 1;
+        return input.linkedNotes ?? null;
+      },
+    });
+    const transactions = [
+      transaction({ id: 'tx-1', linkedNotes: 'invoice_item:invoice-1', status: 'pago' }),
+      transaction({ id: 'tx-2', linkedNotes: 'invoice_item:invoice-2', status: 'pendente' }),
+      transaction({
+        id: 'tx-legacy',
+        linkedNotes: null,
+        status: 'pago',
+        payment_method: 'credito',
+        description: 'Curso',
+        amount: 80,
+        date: '2026-08-10',
+      }),
+    ];
+
+    expect(calculateOpenInvoiceTotal([
+      { id: 'invoice-1', amount: 100, description: 'Pago', date: '2026-08-01' },
+      { id: 'invoice-2', amount: 40, description: 'Pendente', date: '2026-08-02' },
+      { id: 'invoice-3', amount: 80, description: 'Curso', date: '2026-08-10' },
+      { id: 'invoice-4', amount: 25, description: 'Sem vínculo', date: '2026-08-15' },
+    ], transactions)).toBe(65);
+    expect(notesReads).toBe(transactions.length);
+  });
+
   it('returns pending credit transaction ids for the selected invoice items', () => {
     expect(getPayableInvoiceTransactionIds(
       [

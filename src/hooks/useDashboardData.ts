@@ -8,6 +8,7 @@ import { calculateSummaryCards } from '../lib/financialPlanning';
 import { filterLegacyCarryoverTransactions } from '../lib/legacyCarryover';
 import { supabase } from '../lib/supabase';
 import { collectSupabasePages } from '../lib/supabasePagination';
+import { calculateOpenInvoiceTotal } from '../lib/invoicePayments';
 import type {
   BalanceEvolutionData,
   CategoryExpenseData,
@@ -142,28 +143,10 @@ export function useDashboardData(monthRange?: MonthRange) {
         .filter(transaction => transaction.type === 'gasto')
         .reduce((sum, transaction) => sum + transaction.amount, 0);
       const { fixedBillsTotal, unpaidFixedBills } = buildDashboardFixedBillSummary(mappedBills);
-      const openInvoices = (invoiceData as unknown as Array<{ id: string; amount: number; description: string; date: string }>)
-        .filter((item) => {
-          const linkedTx = mappedTransactions.find(t => t.notes === `invoice_item:${item.id}`);
-          if (linkedTx) {
-            return linkedTx.status !== 'pago';
-          }
-          
-          // Legacy fallback
-          const signature = `${(item.description || '').trim().toLocaleLowerCase('pt-BR')}|${Number(item.amount).toFixed(2)}|${item.date}`;
-          const fallbackTx = mappedTransactions.find(t => {
-            if (t.payment_method !== undefined && t.payment_method !== 'credito') return false;
-            if (!t.description || typeof t.amount !== 'number' || !t.date) return false;
-            const tSig = `${t.description.trim().toLocaleLowerCase('pt-BR')}|${t.amount.toFixed(2)}|${t.date}`;
-            return tSig === signature;
-          });
-          
-          if (fallbackTx) {
-            return fallbackTx.status !== 'pago';
-          }
-          return true; // Not matched, so it's open
-        })
-        .reduce((sum, item) => sum + Number(item.amount), 0);
+      const openInvoices = calculateOpenInvoiceTotal(
+        invoiceData as unknown as Array<{ id: string; amount: number; description: string; date: string }>,
+        mappedTransactions,
+      );
       const savedAmount = mappedGoals.reduce((sum, goal) => sum + goal.current_amount, 0);
 
       const nextSummaryCards = calculateSummaryCards({

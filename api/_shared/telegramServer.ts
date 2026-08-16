@@ -372,6 +372,9 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
         return_percentage: Number(investment.return_percentage ?? 0),
         monthly_contribution: Number(investment.monthly_contribution ?? 0),
         last_auto_contribution_at: typeof investment.last_auto_contribution_at === 'string' ? investment.last_auto_contribution_at : null,
+        icon: typeof investment.icon === 'string' ? investment.icon : 'piggy-bank',
+        goal_id: typeof investment.goal_id === 'string' ? investment.goal_id : null,
+        suggested_investment_percentage: Number(investment.suggested_investment_percentage ?? 0),
         created_at: String(investment.created_at ?? ''),
       }));
     },
