@@ -20,8 +20,8 @@ export function buildMonthRange(monthKey: string): MonthRange {
   const end = new Date(year, month, 1);
   return {
     monthKey,
-    startDate: toDateKey(start),
-    endDate: toDateKey(end),
+    startDate: toLocalDateKey(start),
+    endDate: toLocalDateKey(end),
   };
 }
 
@@ -40,6 +40,6 @@ export function formatMonthLabel(monthKey: string) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function toDateKey(date: Date) {
+export function toLocalDateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }

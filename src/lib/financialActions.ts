@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
 import { emitFinancialDataChanged } from './financialEvents';
+import { buildMonthRange, getCurrentMonthKey, toLocalDateKey } from './monthSelection';
+import {
+  sumEligibleFixedBillPayments,
+  validateFixedBillPayment,
+  type FixedBillPaymentRecord,
+} from './fixedBillPayments';
 
 // Helper function to add months to a YYYY-MM-DD date string
 function addMonthsToDate(dateStr: string, months: number): string {
@@ -287,6 +293,94 @@ export async function payFixedBill(bill: FixedBill) {
   if (txError) throw txError;
 
   emitFinancialDataChanged();
+}
+
+export type CreateFixedBillPaymentResult =
+  | { status: 'created' }
+  | {
+    status: 'rejected';
+    code: 'invalid_month' | 'invalid_amount' | 'exceeds_remaining' | 'bill_not_found';
+    remainingAmount?: number;
+  };
+
+export async function createFixedBillPayment(input: {
+  billId: string;
+  amount: number;
+  selectedMonthKey: string;
+}): Promise<CreateFixedBillPaymentResult> {
+  const now = new Date();
+  const currentMonthKey = getCurrentMonthKey(now);
+
+  if (input.selectedMonthKey !== currentMonthKey) {
+    return { status: 'rejected', code: 'invalid_month' };
+  }
+
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    return { status: 'rejected', code: 'invalid_amount' };
+  }
+
+  const userId = await getUserId();
+  const { data: bill, error: billError } = await supabase
+    .from('fixed_bills')
+    .select('id, description, amount, category_id')
+    .eq('id', input.billId)
+    .single();
+
+  if (billError?.code === 'PGRST116') {
+    return { status: 'rejected', code: 'bill_not_found' };
+  }
+  if (billError) throw billError;
+  if (!bill) return { status: 'rejected', code: 'bill_not_found' };
+
+  const monthRange = buildMonthRange(currentMonthKey);
+  const paymentNote = `fixed_bill:${bill.id}`;
+  const { data: payments, error: paymentsError } = await supabase
+    .from('transactions')
+    .select('id, notes, status, type, amount')
+    .eq('notes', paymentNote)
+    .gte('date', monthRange.startDate)
+    .lt('date', monthRange.endDate);
+
+  if (paymentsError) throw paymentsError;
+
+  const paidAmount = sumEligibleFixedBillPayments({
+    billId: bill.id,
+    payments: (payments ?? []) as FixedBillPaymentRecord[],
+    maximumAmount: bill.amount,
+  });
+  const validation = validateFixedBillPayment({
+    billAmount: bill.amount,
+    paidAmount,
+    paymentAmount: input.amount,
+  });
+
+  if (!validation.ok) {
+    if (validation.code === 'exceeds_remaining') {
+      return {
+        status: 'rejected',
+        code: validation.code,
+        remainingAmount: validation.remainingAmount,
+      };
+    }
+    return { status: 'rejected', code: validation.code };
+  }
+
+  const transactionPayload = buildTransactionPayload({
+    type: 'gasto',
+    description: `Abatimento: ${bill.description}`,
+    amount: validation.amount,
+    date: toLocalDateKey(now),
+    paymentMethod: 'pix',
+    categoryId: bill.category_id,
+    notes: paymentNote,
+  });
+  const { error: insertError } = await supabase
+    .from('transactions')
+    .insert({ ...transactionPayload, user_id: userId });
+
+  if (insertError) throw insertError;
+  emitFinancialDataChanged();
+  return { status: 'created' };
 }
 
 export async function removeFixedBillPayments(transactionIds: string[]) {

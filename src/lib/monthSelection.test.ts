@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { resolveMonthRange, type MonthRange } from './monthSelection';
+import {
+  getCurrentMonthKey,
+  resolveMonthRange,
+  toLocalDateKey,
+  type MonthRange,
+} from './monthSelection';
+
+describe('local date selection', () => {
+  it.each([
+    [new Date(2026, 7, 31, 23, 59, 59), '2026-08-31', '2026-08'],
+    [new Date(2026, 8, 1, 0, 0, 1), '2026-09-01', '2026-09'],
+    [new Date(2027, 0, 1, 0, 0, 1), '2027-01-01', '2027-01'],
+  ])('keeps the local date and month coherent for %s', (date, dateKey, monthKey) => {
+    expect(toLocalDateKey(date)).toBe(dateKey);
+    expect(getCurrentMonthKey(date)).toBe(monthKey);
+  });
+});
 
 describe('resolveMonthRange', () => {
   it('uses the current local month when no range is supplied', () => {
