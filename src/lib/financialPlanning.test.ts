@@ -14,6 +14,9 @@ describe('salary planning helpers', () => {
     })).toEqual({
       amount: 5234.57,
       day_of_month: 31,
+      daily_rate: null,
+      work_start_day: null,
+      work_end_day: null,
     });
   });
 
