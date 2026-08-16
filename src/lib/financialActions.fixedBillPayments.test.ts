@@ -29,7 +29,7 @@ vi.mock('./financialEvents', () => ({
   emitFinancialDataChanged: mocks.emitFinancialDataChanged,
 }));
 
-import { createFixedBillPayment } from './financialActions';
+import { createFinancialTransaction, createFixedBillPayment } from './financialActions';
 
 const persistedBill = {
   id: 'bill-1',
@@ -79,6 +79,31 @@ describe('createFixedBillPayment', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
+
+  it.each([
+    'fixed_bill:forged-id',
+    'fixed_bill:',
+    ' fixed_bill:forged-id',
+    '\tfixed_bill:forged-id',
+    '\nfixed_bill:forged-id',
+    '\uFEFFfixed_bill:forged-id',
+  ])(
+    'reserves the fixed-bill note namespace before auth and table access: %s',
+    async notes => {
+      await expect(createFinancialTransaction({
+        type: 'gasto',
+        description: 'Academia',
+        amount: 90,
+        date: '2026-08-15',
+        paymentMethod: 'pix',
+        notes,
+      })).rejects.toThrow('A marca "fixed_bill:" é reservada para pagamentos de contas fixas.');
+
+      expect(mocks.getSession).not.toHaveBeenCalled();
+      expect(mocks.from).not.toHaveBeenCalled();
+      expect(mocks.emitFinancialDataChanged).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     [new Date(2026, 7, 31, 23, 59, 59), new Date(2026, 8, 1, 0, 0, 1), '2026-08', '2026-08-31', '2026-08-01', '2026-09-01'],

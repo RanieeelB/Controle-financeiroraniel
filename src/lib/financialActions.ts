@@ -122,6 +122,10 @@ export type CreateFinancialTransactionInput = TransactionPayloadInput & {
 };
 
 export async function createFinancialTransaction(input: CreateFinancialTransactionInput) {
+  if (input.notes?.trim().startsWith('fixed_bill:')) {
+    throw new Error('A marca "fixed_bill:" é reservada para pagamentos de contas fixas.');
+  }
+
   if (input.paymentMethod === 'credito') {
     if (!input.cardId) {
       throw new Error('Selecione um cartão para lançar no crédito.');

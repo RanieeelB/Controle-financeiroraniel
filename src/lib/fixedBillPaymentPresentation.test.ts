@@ -13,7 +13,7 @@ describe('getFixedBillPaymentPresentation', () => {
     });
   });
 
-  it('classifies other linked transactions as legacy payments', () => {
+  it('classifies a linked Pagamento description as a legacy payment', () => {
     expect(getFixedBillPaymentPresentation({
       notes: 'fixed_bill:bill-1',
       description: 'Pagamento: Aluguel',
@@ -22,14 +22,20 @@ describe('getFixedBillPaymentPresentation', () => {
       badge: 'Conta fixa',
       context: 'Vinculado à conta fixa',
     });
+  });
+
+  it.each([
+    'Aluguel',
+    'Compra: Aluguel',
+    'abatimento: Aluguel',
+    ' Abatimento: Aluguel',
+    'pagamento: Aluguel',
+    ' Pagamento: Aluguel',
+  ])('does not classify an exact link with the unapproved description %s', description => {
     expect(getFixedBillPaymentPresentation({
       notes: 'fixed_bill:bill-1',
-      description: 'Aluguel',
-    })).toEqual({
-      kind: 'legacy',
-      badge: 'Conta fixa',
-      context: 'Vinculado à conta fixa',
-    });
+      description,
+    })).toBeNull();
   });
 
   it.each([

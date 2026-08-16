@@ -22,9 +22,13 @@ export function getFixedBillPaymentPresentation(
     };
   }
 
-  return {
-    kind: 'legacy',
-    badge: 'Conta fixa',
-    context: 'Vinculado à conta fixa',
-  };
+  if (transaction.description.startsWith('Pagamento:')) {
+    return {
+      kind: 'legacy',
+      badge: 'Conta fixa',
+      context: 'Vinculado à conta fixa',
+    };
+  }
+
+  return null;
 }
