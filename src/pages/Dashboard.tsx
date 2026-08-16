@@ -20,7 +20,8 @@ export function Dashboard() {
     balanceEvolution, 
     categoryExpense, 
     monthlyAnalysis, 
-    isLoading 
+    isLoading,
+    refetch,
   } = useDashboardData(selectedMonthRange);
 
   if (isLoading) {
@@ -50,7 +51,11 @@ export function Dashboard() {
 
       {/* Bottom Data Rows */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-lg lg:gap-xl min-w-0">
-        <UpcomingBills data={fixedBills} />
+        <UpcomingBills
+          data={fixedBills}
+          selectedMonthKey={selectedMonthRange.monthKey}
+          onRefresh={refetch}
+        />
         
         {/* Right Column: Cards & Goals */}
         <div className="flex flex-col gap-lg min-w-0">

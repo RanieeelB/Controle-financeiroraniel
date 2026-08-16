@@ -177,6 +177,7 @@ export function useDashboardData(monthRange?: MonthRange) {
     categoryExpense,
     monthlyAnalysis,
     isLoading,
+    refetch: fetchData,
   };
 }
 

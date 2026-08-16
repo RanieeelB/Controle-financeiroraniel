@@ -127,6 +127,30 @@ describe('layout width classes', () => {
     expect(upcomingBills).toContain('hidden md:block');
   });
 
+  it('shares fixed bill payment progress and partial-payment modals across bill surfaces', () => {
+    const progress = readFileSync(join(process.cwd(), 'src/components/finance/FixedBillPaymentProgress.tsx'), 'utf8');
+    const fixedBills = readFileSync(join(process.cwd(), 'src/pages/FixedBills.tsx'), 'utf8');
+    const upcomingBills = readFileSync(join(process.cwd(), 'src/components/dashboard/UpcomingBills.tsx'), 'utf8');
+    const dashboard = readFileSync(join(process.cwd(), 'src/pages/Dashboard.tsx'), 'utf8');
+    const dashboardData = readFileSync(join(process.cwd(), 'src/hooks/useDashboardData.ts'), 'utf8');
+
+    expect(progress).toContain('role="progressbar"');
+    expect(progress).toContain('Pago R$');
+    expect(progress).toContain('Falta R$');
+    expect(progress).toContain('Adicionar abatimento');
+
+    for (const contents of [fixedBills, upcomingBills]) {
+      expect(contents).toContain('FixedBillPaymentProgress');
+      expect(contents).toContain('FixedBillPaymentModal');
+      expect(contents).not.toContain('payFixedBill');
+      expect(contents).not.toContain('removeFixedBillPayments');
+    }
+
+    expect(dashboardData).toContain('refetch: fetchData');
+    expect(dashboard).toContain('selectedMonthKey={selectedMonthRange.monthKey}');
+    expect(dashboard).toContain('onRefresh={refetch}');
+  });
+
   it('keeps dashboard metrics and charts dense on mobile without losing desktop hierarchy', () => {
     const dashboard = readFileSync(join(process.cwd(), 'src/pages/Dashboard.tsx'), 'utf8');
     const summaryCards = readFileSync(join(process.cwd(), 'src/components/dashboard/SummaryCardsGrid.tsx'), 'utf8');
