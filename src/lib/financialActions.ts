@@ -315,7 +315,7 @@ export async function createFixedBillPayment(input: {
     return { status: 'rejected', code: 'invalid_month' };
   }
 
-  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+  if (!Number.isFinite(input.amount) || Math.round(input.amount * 100) <= 0) {
     return { status: 'rejected', code: 'invalid_amount' };
   }
 

@@ -108,7 +108,7 @@ describe('createFixedBillPayment', () => {
     expect(mocks.emitFinancialDataChanged).not.toHaveBeenCalled();
   });
 
-  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+  it.each([0, -1, 0.001, Number.NaN, Number.POSITIVE_INFINITY])(
     'rejects the invalid input amount %s before persistence',
     async amount => {
       await expect(createFixedBillPayment({
