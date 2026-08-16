@@ -29,7 +29,7 @@ import {
   Wallet,
   Zap,
 } from 'lucide-react';
-import { useState, useEffect, useCallback, type ElementType } from 'react';
+import { useState, useEffect, type ElementType } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { InvestmentDepositModal, InvestmentEditDepositModal, InvestmentModal } from '../components/finance/FinanceModals';
 import { useInvestments } from '../hooks/useInvestments';
@@ -98,12 +98,8 @@ export function Investments() {
   const [depositInvestment, setDepositInvestment] = useState<Investment | null>(null);
   const [editInvestment, setEditInvestment] = useState<Investment | null>(null);
   const [editingDeposit, setEditingDeposit] = useState<{ deposit: InvestmentDeposit; investment: Investment } | null>(null);
-  const [animationKey, setAnimationKey] = useState(0);
+  const animationKey = investments.length;
   const [monthlyIncome, setMonthlyIncome] = useState(0);
-
-  useEffect(() => {
-    setAnimationKey(prev => prev + 1);
-  }, [investments.length]);
 
   useEffect(() => {
     async function fetchMonthlyIncome() {
@@ -134,10 +130,6 @@ export function Investments() {
     }
     void fetchMonthlyIncome();
   }, [selectedMonthRange]);
-
-  const handleDepositAdded = useCallback(() => {
-    setAnimationKey(prev => prev + 1);
-  }, []);
 
   if (isLoading) {
     return (
@@ -269,10 +261,7 @@ export function Investments() {
                 isPositive={isPositive}
                 delay={index * 100}
                 monthlyIncome={monthlyIncome}
-                onDeposit={() => {
-                  setDepositInvestment(investment);
-                  handleDepositAdded();
-                }}
+                onDeposit={() => setDepositInvestment(investment)}
                 onEdit={() => setEditInvestment(investment)}
                 onEditDeposit={(deposit) => setEditingDeposit({ deposit, investment })}
                 onDeleteDeposit={async (deposit: ReturnType<typeof getInvestmentDeposits>[number]) => {
@@ -607,7 +596,7 @@ function InvestmentEditModal({ investment, onClose }: InvestmentEditModalProps) 
     }
   }
 
-  const SelectedIcon = getIconByName(icon);
+  const SelectedIcon = INVESTMENT_ICONS.find(item => item.name === icon)?.icon ?? PiggyBank;
   const colorScheme = catColors[investment.category];
   const selectedGoal = goals.find(g => g.id === goalId);
 
