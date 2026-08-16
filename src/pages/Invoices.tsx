@@ -6,12 +6,14 @@ import { useOutletContext } from 'react-router-dom';
 import { InvoicePurchaseModal } from '../components/finance/FinanceModals';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { deleteInvoicePurchase, payCreditInvoiceTransactions, reopenCreditInvoiceTransactions } from '../lib/financialActions';
+import { getInvoicePurchaseSchedule } from '../lib/invoiceBreakdown';
+import { formatMonthLabel } from '../lib/monthSelection';
 import { getInvoiceActionState, getInvoicePaymentStatus, getPaidInvoiceTransactionIds, getPayableInvoiceTransactionIds } from '../lib/invoicePayments';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function Invoices() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
-  const { cards, invoiceItems, creditTransactions, isLoading, refetch } = useCreditCards(selectedMonthRange);
+  const { cards, invoiceItems, creditTransactions, isLoading, getCardItems, getCardInvoiceSummary, refetch } = useCreditCards(selectedMonthRange);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [payingCardId, setPayingCardId] = useState<string | null>(null);
   const [selectedInvoiceCardId, setSelectedInvoiceCardId] = useState<string | null>(null);
@@ -30,7 +32,8 @@ export function Invoices() {
   const selectedInvoiceState = selectedInvoiceCard ? getCardInvoiceState(selectedInvoiceCard.id) : null;
 
   function getCardInvoiceState(cardId: string) {
-    const cardItems = invoiceItems.filter(item => item.card_id === cardId);
+    const cardItems = getCardItems(cardId);
+    const invoiceSummary = getCardInvoiceSummary(cardId);
     const invoiceStatus = getInvoicePaymentStatus(cardItems, creditTransactions);
     const payableTransactionIds = getPayableInvoiceTransactionIds(cardItems, creditTransactions);
     const paidTransactionIds = getPaidInvoiceTransactionIds(cardItems, creditTransactions);
@@ -40,9 +43,9 @@ export function Invoices() {
       paidTransactionIds,
       isPayingInvoice: payingCardId === cardId,
     });
-    const cardTotal = cardItems.reduce((sum, item) => sum + item.amount, 0);
+    const cardTotal = invoiceSummary.total;
 
-    return { cardItems, invoiceStatus, payableTransactionIds, paidTransactionIds, invoiceAction, cardTotal };
+    return { cardItems, invoiceSummary, invoiceStatus, payableTransactionIds, paidTransactionIds, invoiceAction, cardTotal };
   }
 
   async function handleToggleInvoicePayment(cardId: string) {
@@ -84,7 +87,7 @@ export function Invoices() {
 
       <section className="space-y-sm">
         {cards.map(card => {
-          const { cardItems, invoiceStatus, invoiceAction, cardTotal } = getCardInvoiceState(card.id);
+          const { cardItems, invoiceSummary, invoiceStatus, invoiceAction, cardTotal } = getCardInvoiceState(card.id);
           const limitUsed = card.credit_limit > 0 ? Math.min(100, Math.round((cardTotal / card.credit_limit) * 100)) : 0;
 
           return (
@@ -100,7 +103,7 @@ export function Invoices() {
               </div>
 
               <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-wider text-on-surface-variant">Fatura e vencimento</p>
+                <p className="text-[11px] uppercase tracking-wider text-on-surface-variant">Total da fatura</p>
                 <div className="flex items-end justify-between gap-md mt-xs">
                   <p className="font-numeral-lg text-[22px] sm:text-[24px] font-semibold text-on-surface break-words">R$ {fmt(cardTotal)}</p>
                   <span className={`inline-flex text-[10px] font-semibold px-sm py-[2px] rounded-full uppercase border shrink-0 ${
@@ -110,6 +113,16 @@ export function Invoices() {
                   }`}>
                     {invoiceStatus === 'paid' ? 'Paga' : 'Aberta'}
                   </span>
+                </div>
+                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-md gap-y-0.5 text-[12px] text-on-surface-variant mt-xs">
+                  <div>
+                    <span>Compras à vista: </span>
+                    <span className="text-on-surface font-medium">R$ {fmt(invoiceSummary.cashPurchases)}</span>
+                  </div>
+                  <div>
+                    <span>Compras parceladas: </span>
+                    <span className="text-on-surface font-medium">R$ {fmt(invoiceSummary.installmentPurchases)}</span>
+                  </div>
                 </div>
                 <p className="text-[12px] text-on-surface-variant mt-xs">Vence dia {card.due_day} • {cardItems.length} compra(s)</p>
                 <div className="w-full bg-surface-variant rounded-full h-1.5 mt-sm overflow-hidden">
@@ -211,7 +224,11 @@ export function Invoices() {
               <div className="min-w-0">
                 <p className="text-[12px] uppercase tracking-wider text-on-surface-variant">Fatura de {selectedInvoiceCard.name}</p>
                 <h3 className="font-h2 text-[22px] font-semibold text-on-surface truncate">R$ {fmt(selectedInvoiceState.cardTotal)}</h3>
-                <p className="text-[13px] text-on-surface-variant">Vence dia {selectedInvoiceCard.due_day} • {selectedInvoiceState.cardItems.length} compra(s)</p>
+                <div className="flex flex-wrap gap-x-md gap-y-1 text-[12px] text-on-surface-variant mt-1">
+                  <span>À vista: <strong className="text-on-surface font-medium">R$ {fmt(selectedInvoiceState.invoiceSummary.cashPurchases)}</strong></span>
+                  <span>Parcelado: <strong className="text-on-surface font-medium">R$ {fmt(selectedInvoiceState.invoiceSummary.installmentPurchases)}</strong></span>
+                  <span>Vence dia {selectedInvoiceCard.due_day} • {selectedInvoiceState.cardItems.length} compra(s)</span>
+                </div>
               </div>
               <button
                 type="button"
@@ -250,20 +267,37 @@ export function Invoices() {
                 </div>
               ) : (
                 <div className="space-y-sm">
-                  {selectedInvoiceState.cardItems.map(item => (
-                    <div key={item.id} className="rounded-xl border border-outline-variant/60 bg-surface p-md min-w-0">
-                      <div className="flex items-start justify-between gap-md min-w-0">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-on-surface truncate">{item.description}</p>
-                          <p className="text-[13px] text-on-surface-variant mt-1">
-                            {item.category?.name || 'Sem categoria'} • {new Date(item.date).toLocaleDateString('pt-BR')}
-                            {item.total_installments > 1 && ` • ${item.current_installment}/${item.total_installments}`}
-                          </p>
+                  {selectedInvoiceState.cardItems.map(item => {
+                    const schedule = getInvoicePurchaseSchedule(item);
+
+                    return (
+                      <div key={item.id} className="rounded-xl border border-outline-variant/60 bg-surface p-md min-w-0">
+                        <div className="flex items-start justify-between gap-md min-w-0">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-sm flex-wrap">
+                              <p className="font-semibold text-on-surface truncate">{item.description}</p>
+                              {schedule.kind === 'installment' && (
+                                <span className="bg-secondary/10 text-secondary border border-secondary/30 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase">
+                                  Parcela {schedule.currentInstallment} de {schedule.totalInstallments}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[13px] text-on-surface-variant mt-1">
+                              {item.category?.name || 'Sem categoria'} • {new Date(item.date).toLocaleDateString('pt-BR')}
+                            </p>
+                            {schedule.kind === 'installment' && (
+                              <p className="text-[12px] text-on-surface-variant mt-0.5">
+                                {schedule.endingMonthKey
+                                  ? `Previsão de término: ${formatMonthLabel(schedule.endingMonthKey)}`
+                                  : 'Término indisponível'}
+                              </p>
+                            )}
+                          </div>
+                          <p className="font-numeral-lg text-[16px] text-on-surface shrink-0">R$ {fmt(item.amount)}</p>
                         </div>
-                        <p className="font-numeral-lg text-[16px] text-on-surface shrink-0">R$ {fmt(item.amount)}</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
