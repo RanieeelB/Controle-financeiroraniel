@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProjections, type MonthProjection } from '../../hooks/useProjections';
-import { ProjectionDetailsModal } from '../finance/FinanceModals';
+import { ProjectionDetailsModal } from '../finance/ProjectionDetailsModal';
 import { TrendingUp, ArrowUpRight, Calendar } from 'lucide-react';
 
 interface ProjectionsSectionProps {
@@ -40,6 +40,16 @@ export function ProjectionsSection({ baseMonthKey }: ProjectionsSectionProps) {
               <div className="flex justify-between gap-md text-[13px] min-w-0">
                 <span className="text-on-surface-variant">Cartão:</span>
                 <span className="font-medium text-primary text-right">R$ {fmt(proj.breakdown.creditCards)}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-xs text-[11px] text-on-surface-variant pl-sm">
+                <div>
+                  <span>À vista: </span>
+                  <span className="text-on-surface font-medium">R$ {fmt(proj.breakdown.cashPurchases)}</span>
+                </div>
+                <div className="text-right">
+                  <span>Parcelado: </span>
+                  <span className="text-on-surface font-medium">R$ {fmt(proj.breakdown.installmentPurchases)}</span>
+                </div>
               </div>
               <div className="flex justify-between gap-md text-[13px] min-w-0">
                 <span className="text-on-surface-variant">Fixos + Aportes:</span>

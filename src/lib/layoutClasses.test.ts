@@ -39,7 +39,7 @@ describe('layout width classes', () => {
     const modalFiles = [
       'src/components/dashboard/NewTransactionModal.tsx',
       'src/components/dashboard/PjTaxesModal.tsx',
-      'src/components/finance/FinanceModals.tsx',
+      'src/components/finance/ModalShell.tsx',
     ];
 
     for (const file of modalFiles) {
@@ -53,7 +53,7 @@ describe('layout width classes', () => {
     const modalFiles = [
       'src/components/dashboard/NewTransactionModal.tsx',
       'src/components/dashboard/PjTaxesModal.tsx',
-      'src/components/finance/FinanceModals.tsx',
+      'src/components/finance/ModalShell.tsx',
     ];
     const lockHook = readFileSync(join(process.cwd(), 'src/hooks/useLockBodyScroll.ts'), 'utf8');
 
@@ -64,9 +64,11 @@ describe('layout width classes', () => {
       expect(contents, file).toContain('z-[999]');
     }
 
+    const modalShell = readFileSync(join(process.cwd(), 'src/components/finance/ModalShell.tsx'), 'utf8');
     const financeModals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
-    expect(financeModals).toContain('createPortal');
-    expect(financeModals).toContain('document.body');
+    expect(modalShell).toContain('createPortal');
+    expect(modalShell).toContain('document.body');
+    expect(financeModals).toContain("export { ProjectionDetailsModal } from './ProjectionDetailsModal'");
   });
 
   it('sets minimum table widths only inside horizontal scroll regions', () => {
@@ -292,11 +294,12 @@ describe('layout width classes', () => {
   });
 
   it('keeps modals above sticky chrome with stable internal form footers', () => {
+    const modalShell = readFileSync(join(process.cwd(), 'src/components/finance/ModalShell.tsx'), 'utf8');
     const financeModals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
     const transactionModal = readFileSync(join(process.cwd(), 'src/components/dashboard/NewTransactionModal.tsx'), 'utf8');
     const taxesModal = readFileSync(join(process.cwd(), 'src/components/dashboard/PjTaxesModal.tsx'), 'utf8');
 
-    expect(financeModals).toContain('z-[999]');
+    expect(modalShell).toContain('z-[999]');
     expect(financeModals).toContain('modalBodyClass');
     expect(financeModals).toContain('modalFooterClass');
     expect(financeModals).toContain('CartãoPreview');
