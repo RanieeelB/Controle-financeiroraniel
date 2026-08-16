@@ -39,7 +39,7 @@ const persistedBill = {
 };
 
 function setPaymentRows(data: unknown[]) {
-  mocks.paymentRange.mockResolvedValue({ data, error: null });
+  mocks.paymentRange.mockResolvedValueOnce({ data, error: null });
 }
 
 describe('createFixedBillPayment', () => {
@@ -239,7 +239,8 @@ describe('createFixedBillPayment', () => {
     });
     mocks.paymentRange
       .mockResolvedValueOnce({ data: firstPage, error: null })
-      .mockResolvedValueOnce({ data: secondPage, error: null });
+      .mockResolvedValueOnce({ data: secondPage, error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
 
     await expect(createFixedBillPayment({
       billId: persistedBill.id,
@@ -254,8 +255,70 @@ describe('createFixedBillPayment', () => {
     expect(mocks.paymentOrder.mock.calls).toEqual([
       ['id', { ascending: true }],
       ['id', { ascending: true }],
+      ['id', { ascending: true }],
     ]);
-    expect(mocks.paymentRange.mock.calls).toEqual([[0, 999], [1000, 1999]]);
+    expect(mocks.paymentRange.mock.calls).toEqual([
+      [0, 999],
+      [1000, 1999],
+      [1001, 2000],
+    ]);
+    expect(mocks.transactionInsert).not.toHaveBeenCalled();
+    expect(mocks.emitFinancialDataChanged).not.toHaveBeenCalled();
+  });
+
+  it('continues after a nonempty page below the requested client page size', async () => {
+    const firstPage = [
+      {
+        id: 'payment-0000',
+        notes: 'fixed_bill:bill-1',
+        status: 'pago',
+        type: 'gasto',
+        amount: 100,
+      },
+      {
+        id: 'payment-0001',
+        notes: 'fixed_bill:bill-1',
+        status: 'pago',
+        type: 'gasto',
+        amount: 100,
+      },
+    ];
+    const secondPage = [{
+      id: 'payment-0002',
+      notes: 'fixed_bill:bill-1',
+      status: 'pago',
+      type: 'gasto',
+      amount: 300,
+    }];
+    mocks.fixedBillSingle.mockResolvedValue({
+      data: { ...persistedBill, amount: 1000 },
+      error: null,
+    });
+    mocks.paymentRange
+      .mockResolvedValueOnce({ data: firstPage, error: null })
+      .mockResolvedValueOnce({ data: secondPage, error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+
+    await expect(createFixedBillPayment({
+      billId: persistedBill.id,
+      amount: 600,
+      selectedMonthKey: '2026-08',
+    })).resolves.toEqual({
+      status: 'rejected',
+      code: 'exceeds_remaining',
+      remainingAmount: 500,
+    });
+
+    expect(mocks.paymentOrder.mock.calls).toEqual([
+      ['id', { ascending: true }],
+      ['id', { ascending: true }],
+      ['id', { ascending: true }],
+    ]);
+    expect(mocks.paymentRange.mock.calls).toEqual([
+      [0, 999],
+      [2, 1001],
+      [3, 1002],
+    ]);
     expect(mocks.transactionInsert).not.toHaveBeenCalled();
     expect(mocks.emitFinancialDataChanged).not.toHaveBeenCalled();
   });

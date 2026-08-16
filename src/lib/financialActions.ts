@@ -312,7 +312,7 @@ async function readFixedBillPayments(input: {
 }) {
   const payments: FixedBillPaymentRecord[] = [];
 
-  for (let from = 0; ; from += FIXED_BILL_PAYMENT_PAGE_SIZE) {
+  for (let from = 0; ;) {
     const { data, error } = await supabase
       .from('transactions')
       .select('id, notes, status, type, amount')
@@ -327,8 +327,10 @@ async function readFixedBillPayments(input: {
     if (error) throw error;
 
     const page = (data ?? []) as FixedBillPaymentRecord[];
+    if (page.length === 0) return payments;
+
     payments.push(...page);
-    if (page.length < FIXED_BILL_PAYMENT_PAGE_SIZE) return payments;
+    from += page.length;
   }
 }
 
