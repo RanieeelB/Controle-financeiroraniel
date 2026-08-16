@@ -153,21 +153,21 @@ describe('Expenses fixed bill payment history', () => {
 
     for (const record of renderedCopies('Abatimento: Aluguel')) {
       fireEvent.click(within(record).getByRole('button', { name: 'Ações de Abatimento: Aluguel' }));
-      expect(within(record).getByRole('menuitem', { name: 'Excluir abatimento' })).toBeTruthy();
-      expect(within(record).queryByRole('menuitem', { name: /Marcar como/ })).toBeNull();
+      expect(within(record).getByRole('button', { name: 'Excluir abatimento' })).toBeTruthy();
+      expect(within(record).queryByRole('button', { name: /Marcar como/ })).toBeNull();
     }
 
     for (const record of renderedCopies('Pagamento: Energia')) {
       fireEvent.click(within(record).getByRole('button', { name: 'Ações de Pagamento: Energia' }));
-      expect(within(record).getByRole('menuitem', { name: 'Excluir pagamento' })).toBeTruthy();
-      expect(within(record).queryByRole('menuitem', { name: /Marcar como/ })).toBeNull();
+      expect(within(record).getByRole('button', { name: 'Excluir pagamento' })).toBeTruthy();
+      expect(within(record).queryByRole('button', { name: /Marcar como/ })).toBeNull();
     }
 
     for (const description of ['Academia', 'Academia vinculada']) {
       for (const record of renderedCopies(description)) {
         fireEvent.click(within(record).getByRole('button', { name: `Ações de ${description}` }));
-        expect(within(record).getByRole('menuitem', { name: 'Marcar como pago' })).toBeTruthy();
-        expect(within(record).getByRole('menuitem', { name: 'Excluir' })).toBeTruthy();
+        expect(within(record).getByRole('button', { name: 'Marcar como pago' })).toBeTruthy();
+        expect(within(record).getByRole('button', { name: 'Excluir' })).toBeTruthy();
       }
     }
   });
@@ -178,7 +178,7 @@ describe('Expenses fixed bill payment history', () => {
     const mobilePayment = renderedCopies('Abatimento: Aluguel')[0];
 
     fireEvent.click(within(mobilePayment).getByRole('button', { name: 'Ações de Abatimento: Aluguel' }));
-    fireEvent.click(within(mobilePayment).getByRole('menuitem', { name: 'Excluir abatimento' }));
+    fireEvent.click(within(mobilePayment).getByRole('button', { name: 'Excluir abatimento' }));
 
     await waitFor(() => expect(mocks.deleteFinancialTransaction).toHaveBeenCalledTimes(1));
     expect(mocks.deleteFinancialTransaction).toHaveBeenCalledWith(partialPayment);
@@ -222,14 +222,14 @@ describe('Expenses fixed bill payment history', () => {
     const mobilePayment = renderedCopies('Abatimento: Aluguel')[0];
 
     fireEvent.click(within(mobilePayment).getByRole('button', { name: 'Ações de Abatimento: Aluguel' }));
-    fireEvent.click(within(mobilePayment).getByRole('menuitem', { name: 'Excluir abatimento' }));
+    fireEvent.click(within(mobilePayment).getByRole('button', { name: 'Excluir abatimento' }));
 
     await waitFor(() => expect(screen.queryByPlaceholderText('Buscar gasto...')).toBeNull());
     expect(completeRefetch).toBeTypeOf('function');
 
     await act(async () => completeRefetch?.());
 
-    const search = await screen.findByPlaceholderText('Buscar gasto...');
+    const search = await screen.findByRole('textbox', { name: 'Buscar gastos' });
     await waitFor(() => expect(document.activeElement).toBe(search));
     expect(screen.queryByText('Abatimento: Aluguel')).toBeNull();
   });

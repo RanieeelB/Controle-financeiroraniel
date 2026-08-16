@@ -41,7 +41,7 @@ export function RecordActionsMenu({
   useEffect(() => {
     if (!isOpen) return;
     menuRef.current
-      ?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
+      ?.querySelector<HTMLButtonElement>('button:not(:disabled)')
       ?.focus();
   }, [isOpen]);
 
@@ -119,7 +119,6 @@ export function RecordActionsMenu({
         ref={buttonRef}
         aria-controls={menuId}
         aria-expanded={isOpen}
-        aria-haspopup="menu"
         aria-label={`Ações de ${label}`}
         className="text-on-surface-variant hover:text-primary transition-all p-xs rounded-md hover:bg-surface-variant"
         disabled={isDeleting}
@@ -136,16 +135,13 @@ export function RecordActionsMenu({
         <div
           id={menuId}
           ref={menuRef}
-          aria-label={`Ações de ${label}`}
           className="absolute right-0 top-full mt-1 z-50 w-[11rem] overflow-hidden rounded-lg border border-outline-variant bg-surface-container-high shadow-xl"
-          role="menu"
         >
           {onPrimaryAction && (
             <button
               className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-primary hover:bg-primary/10 disabled:opacity-60"
               disabled={isDeleting}
               onClick={handlePrimaryAction}
-              role="menuitem"
               type="button"
             >
               <Pencil size={16} />
@@ -157,7 +153,6 @@ export function RecordActionsMenu({
             className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-error hover:bg-error/10 disabled:opacity-60"
             disabled={isDeleting}
             onClick={handleDelete}
-            role="menuitem"
             type="button"
           >
             <Trash2 size={16} />

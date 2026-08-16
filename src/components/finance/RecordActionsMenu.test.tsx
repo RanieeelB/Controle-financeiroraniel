@@ -21,17 +21,19 @@ describe('RecordActionsMenu', () => {
     );
 
     const trigger = screen.getByRole('button', { name: 'Ações de Academia' });
-    expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
+    expect(trigger.getAttribute('aria-haspopup')).toBeNull();
 
     fireEvent.click(trigger);
 
-    const menu = screen.getByRole('menu', { name: 'Ações de Academia' });
-    expect(menu.id).not.toBe('');
-    expect(trigger.getAttribute('aria-controls')).toBe(menu.id);
+    const popup = trigger.parentElement?.querySelector<HTMLDivElement>('[id]');
+    expect(popup).toBeTruthy();
+    expect(trigger.getAttribute('aria-controls')).toBe(popup?.id);
+    expect(screen.queryByRole('menu')).toBeNull();
 
-    const edit = screen.getByRole('menuitem', { name: 'Editar' });
+    const edit = screen.getByRole('button', { name: 'Editar' });
     expect(edit).toBeTruthy();
-    expect(screen.getByRole('menuitem', { name: 'Excluir' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Excluir' })).toBeTruthy();
+    expect(edit.tabIndex).toBe(0);
     expect(document.activeElement).toBe(edit);
   });
 
@@ -48,15 +50,15 @@ describe('RecordActionsMenu', () => {
 
     const trigger = screen.getByRole('button', { name: 'Ações de Academia' });
     fireEvent.click(trigger);
-    const primaryAction = screen.getByRole('menuitem', { name: 'Marcar como pago' });
+    const primaryAction = screen.getByRole('button', { name: 'Marcar como pago' });
 
     expect(primaryAction).toBeTruthy();
-    expect(screen.getByRole('menuitem', { name: 'Excluir' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Excluir' })).toBeTruthy();
 
     fireEvent.click(primaryAction);
 
     expect(onPrimaryAction).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Excluir' })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -71,9 +73,9 @@ describe('RecordActionsMenu', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Ações de Abatimento: Aluguel' }));
 
-    expect(screen.queryByRole('menuitem', { name: 'Editar' })).toBeNull();
-    expect(screen.queryByRole('menuitem', { name: /Marcar como/ })).toBeNull();
-    expect(screen.getByRole('menuitem', { name: 'Excluir abatimento' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Marcar como/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Excluir abatimento' })).toBeTruthy();
   });
 
   it('closes on Escape and restores focus to the trigger', () => {
@@ -87,12 +89,14 @@ describe('RecordActionsMenu', () => {
     const trigger = screen.getByRole('button', { name: 'Ações de Academia' });
 
     fireEvent.click(trigger);
-    const firstItem = screen.getByRole('menuitem', { name: 'Editar' });
+    const firstItem = screen.getByRole('button', { name: 'Editar' });
     expect(document.activeElement).toBe(firstItem);
+    expect(fireEvent.keyDown(firstItem, { key: 'Tab' })).toBe(true);
+    expect(screen.getByRole('button', { name: 'Excluir' })).toBeTruthy();
 
     fireEvent.keyDown(firstItem, { key: 'Escape' });
 
-    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -109,13 +113,13 @@ describe('RecordActionsMenu', () => {
 
     const trigger = screen.getByRole('button', { name: 'Ações de Abatimento: Aluguel' });
     fireEvent.click(trigger);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Excluir abatimento' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir abatimento' }));
 
     expect(confirm).toHaveBeenCalledWith(
       'Excluir Abatimento: Aluguel? Essa ação não pode ser desfeita.',
     );
     await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Excluir abatimento' })).toBeNull());
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -134,14 +138,14 @@ describe('RecordActionsMenu', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Ações de Abatimento: Aluguel' }));
-    const deleteItem = screen.getByRole('menuitem', { name: 'Excluir abatimento' });
+    const deleteItem = screen.getByRole('button', { name: 'Excluir abatimento' });
     fireEvent.click(deleteItem);
 
     await waitFor(() => expect(alert).toHaveBeenCalledWith('Não foi possível excluir. Tente novamente.'));
     expect(confirm).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(consoleError).toHaveBeenCalledWith('Error deleting record:', error);
-    expect(screen.getByRole('menu')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Excluir abatimento' })).toBeTruthy();
     expect((deleteItem as HTMLButtonElement).disabled).toBe(false);
     expect(document.activeElement).toBe(deleteItem);
   });
@@ -163,9 +167,9 @@ describe('RecordActionsMenu', () => {
 
     render(<Harness />);
     fireEvent.click(screen.getByRole('button', { name: 'Ações de Academia' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Excluir' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir' }));
 
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Excluir' })).toBeNull());
     expect(focusFallback).toHaveBeenCalledTimes(1);
   });
 
@@ -186,9 +190,9 @@ describe('RecordActionsMenu', () => {
 
     render(<Harness />);
     fireEvent.click(screen.getByRole('button', { name: 'Ações de Academia' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Editar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
 
-    expect(screen.queryByRole('menu')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull();
     expect(focusFallback).not.toHaveBeenCalled();
   });
 });

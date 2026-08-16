@@ -114,6 +114,7 @@ export function Expenses() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} />
             <input
               ref={searchInputRef}
+              aria-label="Buscar gastos"
               className="bg-surface border border-outline-variant rounded-lg pl-10 pr-md py-sm text-on-surface font-body-md text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all w-full sm:w-64 placeholder-on-surface-variant/50"
               placeholder="Buscar gasto..."
               type="text"
