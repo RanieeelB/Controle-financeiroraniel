@@ -17,63 +17,72 @@ export function CategoryExpenseChart({ data }: CategoryExpenseChartProps) {
   return (
     <div className="glass-card rounded-xl p-md sm:p-lg flex flex-col overflow-hidden min-w-0">
       <h3 className="font-h2 text-[18px] sm:text-[24px] font-semibold text-on-background mb-md">Gastos por categoria</h3>
-      
-      <div className="relative flex items-center justify-center h-[150px] min-[390px]:h-[145px] sm:h-[180px]">
-        {hasData ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                innerRadius="52%"
-                outerRadius="72%"
-                paddingAngle={5}
-                dataKey="value"
-                stroke="none"
-              >
-                <LabelList
-                  dataKey="percentage"
-                  position="outside"
-                  className="fill-on-surface text-[11px] font-semibold"
-                  formatter={(value) => {
-                    const percentage = Number(value);
-                    return percentage >= 8 ? `${percentage}%` : '';
-                  }}
+
+      {hasData ? (
+        <>
+          <div className="relative w-full h-[150px] min-[390px]:h-[145px] sm:h-[180px] flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  innerRadius="52%"
+                  outerRadius="72%"
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  <LabelList
+                    dataKey="percentage"
+                    position="outside"
+                    className="fill-on-surface text-[11px] font-semibold"
+                    formatter={(value) => {
+                      const percentage = Number(value);
+                      return percentage >= 8 ? `${percentage}%` : '';
+                    }}
+                  />
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#111827', borderColor: '#243041', borderRadius: '8px' }}
+                  itemStyle={{ fontWeight: 'bold' }}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Gasto']}
                 />
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#111827', borderColor: '#243041', borderRadius: '8px' }}
-                itemStyle={{ fontWeight: 'bold' }}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                formatter={(value: any) => [`R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Gasto']}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="w-[140px] h-[140px] sm:w-[150px] sm:h-[150px] rounded-full border-4 border-dashed border-outline-variant flex items-center justify-center">
-            <PieChartIcon className="text-outline-variant" size={32} />
-          </div>
-        )}
+              </PieChart>
+            </ResponsiveContainer>
 
-        {hasData && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <PieChartIcon className="text-on-surface-variant" size={20} />
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <PieChartIcon className="text-on-surface-variant" size={20} />
+              <span className="font-numeral-lg text-[12px] text-on-surface-variant mt-xs">
+                {Math.round(totalValue).toLocaleString('pt-BR')}
+              </span>
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className="flex gap-sm mt-md w-full justify-center text-[12px] flex-wrap">
-        {chartData.length > 0 ? chartData.map((item) => (
-          <div key={item.name} className="flex items-center gap-xs min-w-0">
-            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }}></div>
-            <span className="truncate">{item.name} {item.percentage}%</span>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-sm mt-md w-full text-[12px]">
+            {chartData.map(item => (
+              <li key={item.name} className="flex items-center justify-between gap-sm min-w-0">
+                <span className="flex items-center gap-xs min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }}></span>
+                  <span className="truncate text-on-surface">{item.name}</span>
+                </span>
+                <span className="font-numeral-lg text-on-surface-variant whitespace-nowrap">
+                  R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <div className="flex-1 min-h-[220px] flex flex-col items-center justify-center gap-md text-center text-on-surface-variant">
+          <div className="w-16 h-16 rounded-full bg-surface-variant flex items-center justify-center">
+            <PieChartIcon size={28} />
           </div>
-        )) : (
-          <span className="text-on-surface-variant">Sem dados de gastos</span>
-        )}
-      </div>
+          <p className="font-body-md text-[14px]">Sem gastos categorizados neste mês.</p>
+        </div>
+      )}
     </div>
   );
 }

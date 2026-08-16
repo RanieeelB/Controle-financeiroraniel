@@ -2,16 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { getFinancialDataVersion, subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { createFinancialRefreshCoordinator } from '../lib/financialRefreshCoordinator';
 import { filterLegacyCarryoverTransactions } from '../lib/legacyCarryover';
+import type { MonthRange } from '../lib/monthSelection';
 import { supabase } from '../lib/supabase';
 import { collectSupabasePages } from '../lib/supabasePagination';
 import type { Transaction } from '../types/financial';
-import type { MonthRange } from '../lib/monthSelection';
 
 export function useTransactions(type?: 'entrada' | 'gasto', monthRange?: MonthRange) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshCoordinator] = useState(() => createFinancialRefreshCoordinator<Transaction[]>());
-
   const startDate = monthRange?.startDate;
   const endDate = monthRange?.endDate;
   const queryKey = `${type ?? '*'}:${startDate ?? '*'}:${endDate ?? '*'}`;
