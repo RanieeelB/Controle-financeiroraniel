@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
 import { buildDashboardFixedBillSummary } from '../lib/dashboardFixedBillSummary';
@@ -47,13 +47,18 @@ export function useDashboardData(monthRange?: MonthRange) {
   const [categoryExpense, setCategoryExpense] = useState<CategoryExpenseData[]>([]);
   const [monthlyAnalysis, setMonthlyAnalysis] = useState<MonthlyAnalysis>(defaultAnalysis);
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
+  const inFlightRef = useRef<Promise<void> | null>(null);
 
   const startDate = monthRange?.startDate;
   const endDate = monthRange?.endDate;
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
+  const fetchData = useCallback(() => {
+    if (inFlightRef.current) return inFlightRef.current;
+
+    const request = (async () => {
+      if (!hasLoadedRef.current) setIsLoading(true);
+      try {
       let txQuery = supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false });
       if (startDate) txQuery = txQuery.gte('date', startDate);
       if (endDate) txQuery = txQuery.lt('date', endDate);
@@ -148,11 +153,19 @@ export function useDashboardData(monthRange?: MonthRange) {
       setBalanceEvolution(buildBalanceEvolution(mappedTransactions, today));
       setCategoryExpense(buildCategoryExpense(mappedTransactions));
       setMonthlyAnalysis(buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length));
-    } catch (error) {
-      console.error('Error fetching Supabase data:', error);
-    } finally {
-      setIsLoading(false);
-    }
+      } catch (error) {
+        console.error('Error fetching Supabase data:', error);
+      } finally {
+        hasLoadedRef.current = true;
+        setIsLoading(false);
+      }
+    })();
+
+    inFlightRef.current = request;
+    void request.finally(() => {
+      if (inFlightRef.current === request) inFlightRef.current = null;
+    });
+    return request;
   }, [startDate, endDate, monthRange]);
 
   useEffect(() => {

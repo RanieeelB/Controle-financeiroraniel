@@ -43,6 +43,7 @@ describe('FixedBillPaymentProgress', () => {
     expect(progress.getAttribute('aria-valuemin')).toBe('0');
     expect(progress.getAttribute('aria-valuemax')).toBe('700');
     expect(progress.getAttribute('aria-valuenow')).toBe('350');
+    expect(progress.getAttribute('aria-valuetext')).toBe('R$ 350,00 pagos de R$ 700,00');
     expect((progress.firstElementChild as HTMLElement).style.width).toBe('50%');
   });
 
@@ -56,7 +57,7 @@ describe('FixedBillPaymentProgress', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Adicionar abatimento' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar abatimento para Aluguel' }));
 
     expect(onAddPayment).toHaveBeenCalledTimes(1);
   });
@@ -70,7 +71,7 @@ describe('FixedBillPaymentProgress', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Adicionar abatimento' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Adicionar abatimento para Aluguel' })).toBeNull();
   });
 
   it('shows a paid state without an action when there is no remaining amount', () => {
@@ -93,7 +94,7 @@ describe('FixedBillPaymentProgress', () => {
 
     expect(screen.getByText('Pago')).toBeTruthy();
     expect(screen.getByText('Falta R$ 0,00')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Adicionar abatimento' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Adicionar abatimento para Aluguel' })).toBeNull();
   });
 
   it('uses compact responsive classes when embedded in bill lists', () => {
@@ -108,7 +109,7 @@ describe('FixedBillPaymentProgress', () => {
 
     expect(container.firstElementChild?.className).toContain('min-w-0');
     expect(container.firstElementChild?.className).toContain('space-y-xs');
-    expect(screen.getByRole('button', { name: 'Adicionar abatimento' }).className).toContain('w-full');
-    expect(screen.getByRole('button', { name: 'Adicionar abatimento' }).className).toContain('sm:w-auto');
+    expect(screen.getByRole('button', { name: 'Adicionar abatimento para Aluguel' }).className).toContain('w-full');
+    expect(screen.getByRole('button', { name: 'Adicionar abatimento para Aluguel' }).className).toContain('sm:w-auto');
   });
 });

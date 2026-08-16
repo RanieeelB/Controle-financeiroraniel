@@ -16,12 +16,14 @@ export function FixedBillPaymentProgress({
 }: FixedBillPaymentProgressProps) {
   const isPaid = bill.remainingAmount <= 0;
   const progress = Math.min(100, Math.max(0, bill.paymentProgress));
+  const formattedAmount = formatPaymentCurrency(bill.amount);
+  const formattedPaidAmount = formatPaymentCurrency(bill.paidAmount);
 
   return (
     <div className={`min-w-0 ${compact ? 'space-y-xs' : 'space-y-sm'}`}>
       <div className="flex items-center justify-between gap-sm">
         <p className={`font-numeral-lg font-semibold text-on-surface ${compact ? 'text-[16px]' : 'text-[18px]'}`}>
-          {formatPaymentCurrency(bill.amount)}
+          {formattedAmount}
         </p>
         {isPaid && (
           <span className="rounded-full border border-primary/30 bg-primary-container/20 px-sm py-[2px] text-[11px] font-semibold uppercase tracking-wider text-primary">
@@ -36,6 +38,7 @@ export function FixedBillPaymentProgress({
         aria-valuemin={0}
         aria-valuemax={bill.amount}
         aria-valuenow={bill.paidAmount}
+        aria-valuetext={`${formattedPaidAmount} pagos de ${formattedAmount}`}
         className="h-1.5 w-full overflow-hidden rounded-full bg-surface-variant"
       >
         <div
@@ -53,6 +56,7 @@ export function FixedBillPaymentProgress({
         <button
           type="button"
           onClick={onAddPayment}
+          aria-label={`Adicionar abatimento para ${bill.description}`}
           className={`min-h-11 rounded-lg border border-primary/40 px-md py-xs font-label-md text-[13px] font-semibold text-primary transition-colors hover:bg-primary/10 ${compact ? 'w-full sm:w-auto' : ''}`}
         >
           Adicionar abatimento

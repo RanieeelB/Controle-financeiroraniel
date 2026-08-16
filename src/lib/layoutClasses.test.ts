@@ -133,6 +133,7 @@ describe('layout width classes', () => {
     const upcomingBills = readFileSync(join(process.cwd(), 'src/components/dashboard/UpcomingBills.tsx'), 'utf8');
     const dashboard = readFileSync(join(process.cwd(), 'src/pages/Dashboard.tsx'), 'utf8');
     const dashboardData = readFileSync(join(process.cwd(), 'src/hooks/useDashboardData.ts'), 'utf8');
+    const fixedBillsData = readFileSync(join(process.cwd(), 'src/hooks/useFixedBills.ts'), 'utf8');
 
     expect(progress).toContain('role="progressbar"');
     expect(progress).toContain('Pago R$');
@@ -144,6 +145,15 @@ describe('layout width classes', () => {
       expect(contents).toContain('FixedBillPaymentModal');
       expect(contents).not.toContain('payFixedBill');
       expect(contents).not.toContain('removeFixedBillPayments');
+      expect(contents).toContain('selectedPaymentBillId');
+    }
+    expect(fixedBills).toContain('bills.find');
+    expect(upcomingBills).toContain('data.find');
+
+    for (const contents of [fixedBillsData, dashboardData]) {
+      expect(contents).toContain('useRef<Promise<void> | null>');
+      expect(contents).toContain('if (inFlightRef.current) return inFlightRef.current');
+      expect(contents).toContain('if (!hasLoadedRef.current)');
     }
 
     expect(dashboardData).toContain('refetch: fetchData');

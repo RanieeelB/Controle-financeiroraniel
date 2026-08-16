@@ -22,7 +22,10 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export function UpcomingBills({ data, selectedMonthKey, onRefresh }: UpcomingBillsProps) {
-  const [selectedPaymentBill, setSelectedPaymentBill] = useState<DynamicFixedBill | null>(null);
+  const [selectedPaymentBillId, setSelectedPaymentBillId] = useState<string | null>(null);
+  const selectedPaymentBill = selectedPaymentBillId
+    ? data.find(bill => bill.id === selectedPaymentBillId) ?? null
+    : null;
   const isCurrentMonth = selectedMonthKey === getCurrentMonthKey();
 
   if (data.length === 0) {
@@ -64,7 +67,7 @@ export function UpcomingBills({ data, selectedMonthKey, onRefresh }: UpcomingBil
                 <FixedBillPaymentProgress
                   bill={bill}
                   canAddPayment={isCurrentMonth && bill.remainingAmount > 0}
-                  onAddPayment={() => setSelectedPaymentBill(bill)}
+                  onAddPayment={() => setSelectedPaymentBillId(bill.id)}
                   compact
                 />
               </div>
@@ -110,7 +113,7 @@ export function UpcomingBills({ data, selectedMonthKey, onRefresh }: UpcomingBil
                       <FixedBillPaymentProgress
                         bill={bill}
                         canAddPayment={isCurrentMonth && bill.remainingAmount > 0}
-                        onAddPayment={() => setSelectedPaymentBill(bill)}
+                        onAddPayment={() => setSelectedPaymentBillId(bill.id)}
                         compact
                       />
                     </td>
@@ -140,7 +143,7 @@ export function UpcomingBills({ data, selectedMonthKey, onRefresh }: UpcomingBil
         <FixedBillPaymentModal
           bill={selectedPaymentBill}
           selectedMonthKey={selectedMonthKey}
-          onClose={() => setSelectedPaymentBill(null)}
+          onClose={() => setSelectedPaymentBillId(null)}
           onRefresh={onRefresh}
         />
       )}

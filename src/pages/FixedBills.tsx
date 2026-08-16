@@ -15,8 +15,11 @@ export function FixedBills() {
   const { bills, isLoading, totals, categoryBreakdown, refetch } = useFixedBills(selectedMonthRange);
   const [isFixedBillModalOpen, setIsFixedBillModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<DynamicFixedBill | null>(null);
-  const [selectedPaymentBill, setSelectedPaymentBill] = useState<DynamicFixedBill | null>(null);
+  const [selectedPaymentBillId, setSelectedPaymentBillId] = useState<string | null>(null);
   const [activeBillAction, setActiveBillAction] = useState<string | null>(null);
+  const selectedPaymentBill = selectedPaymentBillId
+    ? bills.find(bill => bill.id === selectedPaymentBillId) ?? null
+    : null;
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
 
@@ -116,7 +119,7 @@ export function FixedBills() {
                   <FixedBillPaymentProgress
                     bill={b}
                     canAddPayment={isCurrentMonth && b.remainingAmount > 0}
-                    onAddPayment={() => setSelectedPaymentBill(b)}
+                    onAddPayment={() => setSelectedPaymentBillId(b.id)}
                     compact
                   />
                 </div>
@@ -150,7 +153,7 @@ export function FixedBills() {
                       <FixedBillPaymentProgress
                         bill={b}
                         canAddPayment={isCurrentMonth && b.remainingAmount > 0}
-                        onAddPayment={() => setSelectedPaymentBill(b)}
+                        onAddPayment={() => setSelectedPaymentBillId(b.id)}
                         compact
                       />
                     </td>
@@ -223,7 +226,7 @@ export function FixedBills() {
         <FixedBillPaymentModal
           bill={selectedPaymentBill}
           selectedMonthKey={selectedMonthRange.monthKey}
-          onClose={() => setSelectedPaymentBill(null)}
+          onClose={() => setSelectedPaymentBillId(null)}
           onRefresh={refetch}
         />
       )}

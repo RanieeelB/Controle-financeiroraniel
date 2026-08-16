@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import {
   resolveDynamicFixedBills,
@@ -12,48 +12,61 @@ import { resolveMonthRange, type MonthRange } from '../lib/monthSelection';
 export function useFixedBills(monthRange?: MonthRange) {
   const [bills, setBills] = useState<DynamicFixedBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const hasLoadedRef = useRef(false);
+  const inFlightRef = useRef<Promise<void> | null>(null);
 
-  const fetchBills = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const today = new Date();
-      const effectiveMonthRange = resolveMonthRange(monthRange, today);
+  const fetchBills = useCallback(() => {
+    if (inFlightRef.current) return inFlightRef.current;
 
-      // 1. Fetch all fixed bills
-      const { data: billsData, error: billsError } = await supabase
-        .from('fixed_bills')
-        .select('*, category:categories(*)')
-        .order('due_day', { ascending: true });
+    const request = (async () => {
+      if (!hasLoadedRef.current) setIsLoading(true);
+      try {
+        const today = new Date();
+        const effectiveMonthRange = resolveMonthRange(monthRange, today);
+
+        // 1. Fetch all fixed bills
+        const { data: billsData, error: billsError } = await supabase
+          .from('fixed_bills')
+          .select('*, category:categories(*)')
+          .order('due_day', { ascending: true });
         
-      if (billsError) throw billsError;
+        if (billsError) throw billsError;
       
-      // 2. Fetch transactions for the current month that are fixed bill payments
-      const txQuery = supabase
-        .from('transactions')
-        .select('id, notes, status, type, amount')
-        .not('notes', 'is', null)
-        .like('notes', 'fixed_bill:%')
-        .gte('date', effectiveMonthRange.startDate)
-        .lt('date', effectiveMonthRange.endDate);
+        // 2. Fetch transactions for the current month that are fixed bill payments
+        const txQuery = supabase
+          .from('transactions')
+          .select('id, notes, status, type, amount')
+          .not('notes', 'is', null)
+          .like('notes', 'fixed_bill:%')
+          .gte('date', effectiveMonthRange.startDate)
+          .lt('date', effectiveMonthRange.endDate);
       
-      const { data: txData, error: txError } = await txQuery;
-      if (txError) throw txError;
+        const { data: txData, error: txError } = await txQuery;
+        if (txError) throw txError;
 
-      if (billsData) {
-        const dynamicBills = resolveDynamicFixedBills({
-          bills: billsData as FixedBill[],
-          payments: (txData ?? []) as FixedBillPaymentRecord[],
-          monthKey: effectiveMonthRange.monthKey,
-          today,
-        }) as DynamicFixedBill[];
+        if (billsData) {
+          const dynamicBills = resolveDynamicFixedBills({
+            bills: billsData as FixedBill[],
+            payments: (txData ?? []) as FixedBillPaymentRecord[],
+            monthKey: effectiveMonthRange.monthKey,
+            today,
+          }) as DynamicFixedBill[];
         
-        setBills(dynamicBills);
+          setBills(dynamicBills);
+        }
+      } catch (error) {
+        console.error('Error fetching fixed bills:', error);
+      } finally {
+        hasLoadedRef.current = true;
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching fixed bills:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    })();
+
+    inFlightRef.current = request;
+    void request.finally(() => {
+      if (inFlightRef.current === request) inFlightRef.current = null;
+    });
+    return request;
   }, [monthRange]);
 
   useEffect(() => {
