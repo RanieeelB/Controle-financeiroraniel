@@ -1,10 +1,14 @@
-import { Wifi, Zap, Landmark, Home, GraduationCap, MonitorPlay, ReceiptText, Check, RotateCcw } from 'lucide-react';
+import { Wifi, Zap, Landmark, Home, GraduationCap, MonitorPlay, ReceiptText } from 'lucide-react';
 import { useState } from 'react';
-import { payFixedBill, removeFixedBillPayments } from '../../lib/financialActions';
+import { getCurrentMonthKey } from '../../lib/monthSelection';
 import type { DynamicFixedBill } from '../../types/financial';
+import { FixedBillPaymentModal } from '../finance/FixedBillPaymentModal';
+import { FixedBillPaymentProgress } from '../finance/FixedBillPaymentProgress';
 
 interface UpcomingBillsProps {
   data: DynamicFixedBill[];
+  selectedMonthKey: string;
+  onRefresh: () => Promise<unknown> | unknown;
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -17,9 +21,12 @@ const iconMap: Record<string, React.ElementType> = {
   receipt: ReceiptText,
 };
 
-export function UpcomingBills({ data }: UpcomingBillsProps) {
-  const [activeBillAction, setActiveBillAction] = useState<string | null>(null);
-  const fmt = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+export function UpcomingBills({ data, selectedMonthKey, onRefresh }: UpcomingBillsProps) {
+  const [selectedPaymentBillId, setSelectedPaymentBillId] = useState<string | null>(null);
+  const selectedPaymentBill = selectedPaymentBillId
+    ? data.find(bill => bill.id === selectedPaymentBillId) ?? null
+    : null;
+  const isCurrentMonth = selectedMonthKey === getCurrentMonthKey();
 
   if (data.length === 0) {
     return (
@@ -30,31 +37,6 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
         </div>
       </div>
     );
-  }
-
-  async function handlePay(bill: DynamicFixedBill) {
-    if (activeBillAction) return;
-    setActiveBillAction(bill.id);
-    try {
-      await payFixedBill(bill);
-    } catch (error) {
-      console.error('Error paying bill:', error);
-    } finally {
-      setActiveBillAction(null);
-    }
-  }
-
-  async function handleReopen(bill: DynamicFixedBill) {
-    if (activeBillAction || bill.paymentTransactionIds.length === 0) return;
-
-    setActiveBillAction(bill.id);
-    try {
-      await removeFixedBillPayments(bill.paymentTransactionIds);
-    } catch (error) {
-      console.error('Error reopening fixed bill payment:', error);
-    } finally {
-      setActiveBillAction(null);
-    }
   }
 
   return (
@@ -80,24 +62,16 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => (status === 'pago' ? handleReopen(bill) : handlePay(bill))}
-                  disabled={activeBillAction === bill.id}
-                  className={`p-2 rounded-lg transition-all min-h-11 min-w-11 shrink-0 ${
-                    status === 'pago'
-                      ? 'text-secondary bg-secondary/10'
-                      : 'text-primary bg-primary/10'
-                  }`}
-                  title={status === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta'}
-                >
-                  {activeBillAction === bill.id ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                  ) : (
-                    status === 'pago' ? <RotateCcw size={18} /> : <Check size={18} />
-                  )}
-                </button>
               </div>
-              <div className="flex items-end justify-between gap-md mt-md">
+              <div className="mt-md">
+                <FixedBillPaymentProgress
+                  bill={bill}
+                  canAddPayment={isCurrentMonth && bill.remainingAmount > 0}
+                  onAddPayment={() => setSelectedPaymentBillId(bill.id)}
+                  compact
+                />
+              </div>
+              <div className="flex items-end justify-between gap-md mt-sm">
                 <span className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider border ${
                   status === 'pago' ? 'bg-primary-container/20 text-primary border-primary/30' :
                   status === 'atrasado' ? 'bg-error-container text-on-error-container border-error/50' :
@@ -105,7 +79,6 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
                 }`}>
                   {status === 'pago' ? 'Pago' : status === 'atrasado' ? 'Atrasado' : 'Pendente'}
                 </span>
-                <p className="font-numeral-lg text-[18px] font-semibold text-on-surface text-right">R$ {fmt(bill.amount)}</p>
               </div>
             </article>
           );
@@ -120,7 +93,6 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
                 <th className="p-md font-normal">Valor</th>
                 <th className="p-md font-normal">Vencimento</th>
                 <th className="p-md font-normal">Status</th>
-                <th className="p-md font-normal text-center">Ação</th>
               </tr>
             </thead>
             <tbody className="text-[14px]">
@@ -137,8 +109,13 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
                       </div>
                       {bill.description}
                     </td>
-                    <td className="p-md font-numeral-lg text-[16px] font-medium">
-                      R$ {fmt(bill.amount)}
+                    <td className="p-md min-w-[15rem]">
+                      <FixedBillPaymentProgress
+                        bill={bill}
+                        canAddPayment={isCurrentMonth && bill.remainingAmount > 0}
+                        onAddPayment={() => setSelectedPaymentBillId(bill.id)}
+                        compact
+                      />
                     </td>
                     <td className={`p-md ${isAtrasado ? 'text-error font-medium' : ''}`}>Dia {bill.due_day}</td>
                     <td className="p-md">
@@ -155,24 +132,6 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
                         )}
                       </div>
                     </td>
-                    <td className="p-md text-center">
-                      <button
-                        onClick={() => (status === 'pago' ? handleReopen(bill) : handlePay(bill))}
-                        disabled={activeBillAction === bill.id}
-                        className={`p-2 rounded transition-all min-h-10 min-w-10 ${
-                          status === 'pago'
-                            ? 'text-secondary hover:text-secondary hover:bg-secondary/10'
-                            : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
-                        }`}
-                        title={status === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta'}
-                      >
-                        {activeBillAction === bill.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        ) : (
-                          status === 'pago' ? <RotateCcw size={18} /> : <Check size={18} />
-                        )}
-                      </button>
-                    </td>
                   </tr>
                 );
               })}
@@ -180,6 +139,14 @@ export function UpcomingBills({ data }: UpcomingBillsProps) {
           </table>
         </div>
       </div>
+      {selectedPaymentBill && (
+        <FixedBillPaymentModal
+          bill={selectedPaymentBill}
+          selectedMonthKey={selectedMonthKey}
+          onClose={() => setSelectedPaymentBillId(null)}
+          onRefresh={onRefresh}
+        />
+      )}
     </div>
   );
 }

@@ -1,60 +1,58 @@
 import { useCallback, useEffect, useState } from 'react';
-import { subscribeFinancialDataChanged } from '../lib/financialEvents';
-import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
+import { getFinancialDataVersion, subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { createFinancialRefreshCoordinator } from '../lib/financialRefreshCoordinator';
+import {
+  resolveDynamicFixedBills,
+  summarizeFixedBills,
+  type FixedBillPaymentRecord,
+} from '../lib/fixedBillPayments';
 import { supabase } from '../lib/supabase';
 import type { FixedBill, DynamicFixedBill } from '../types/financial';
-import type { MonthRange } from '../lib/monthSelection';
+import { resolveMonthRange, type MonthRange } from '../lib/monthSelection';
+import { collectSupabasePages } from '../lib/supabasePagination';
 
 export function useFixedBills(monthRange?: MonthRange) {
   const [bills, setBills] = useState<DynamicFixedBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshCoordinator] = useState(() => createFinancialRefreshCoordinator<DynamicFixedBill[]>());
+  const effectiveMonthRange = resolveMonthRange(monthRange);
+  const queryKey = `${effectiveMonthRange.startDate}:${effectiveMonthRange.endDate}`;
 
-  const fetchBills = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // 1. Fetch all fixed bills
-      const { data: billsData, error: billsError } = await supabase
-        .from('fixed_bills')
-        .select('*, category:categories(*)')
-        .order('due_day', { ascending: true });
-        
-      if (billsError) throw billsError;
+  const fetchBills = useCallback((version = getFinancialDataVersion()) => refreshCoordinator.refresh({
+    key: queryKey,
+    version,
+    onLoadingChange: setIsLoading,
+    load: async () => {
+        const today = new Date();
+        // 1. Fetch all fixed bills
+        const billsData = await collectSupabasePages<FixedBill>((from, to) => supabase
+          .from('fixed_bills')
+          .select('*, category:categories(*)')
+          .order('due_day', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to));
       
-      // 2. Fetch transactions for the current month that are fixed bill payments
-      let txQuery = supabase
-        .from('transactions')
-        .select('id, notes, status')
-        .not('notes', 'is', null)
-        .like('notes', 'fixed_bill:%');
-        
-      if (monthRange) {
-        txQuery = txQuery.gte('date', monthRange.startDate).lt('date', monthRange.endDate);
-      }
-      
-      const { data: txData, error: txError } = await txQuery;
-      if (txError) throw txError;
+        // 2. Fetch transactions for the current month that are fixed bill payments
+        const txData = await collectSupabasePages<FixedBillPaymentRecord>((from, to) => supabase
+          .from('transactions')
+          .select('id, notes, status, type, amount')
+          .not('notes', 'is', null)
+          .like('notes', 'fixed_bill:%')
+          .gte('date', effectiveMonthRange.startDate)
+          .lt('date', effectiveMonthRange.endDate)
+          .order('id', { ascending: true })
+          .range(from, to));
 
-      const today = new Date();
-      const currentMonth = today.getMonth() + 1; // 1-12
-      const currentYear = today.getFullYear();
-      
-      if (billsData) {
-        const monthKey = monthRange?.monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-        const dynamicBills = resolveDynamicFixedBills({
-          bills: billsData as FixedBill[],
-          payments: (txData ?? []) as Array<{ id: string; notes: string | null; status: 'pago' | 'pendente' | 'recebido' }>,
-          monthKey,
+        return resolveDynamicFixedBills({
+          bills: billsData,
+          payments: txData,
+          monthKey: effectiveMonthRange.monthKey,
           today,
         }) as DynamicFixedBill[];
-        
-        setBills(dynamicBills);
-      }
-    } catch (error) {
-      console.error('Error fetching fixed bills:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [monthRange]);
+    },
+    apply: setBills,
+    onError: error => console.error('Error fetching fixed bills:', error),
+  }), [effectiveMonthRange.endDate, effectiveMonthRange.monthKey, effectiveMonthRange.startDate, queryKey, refreshCoordinator]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -64,17 +62,11 @@ export function useFixedBills(monthRange?: MonthRange) {
     return () => window.clearTimeout(timeout);
   }, [fetchBills]);
 
-  useEffect(() => subscribeFinancialDataChanged(() => {
-    void fetchBills();
+  useEffect(() => subscribeFinancialDataChanged(version => {
+    void fetchBills(version);
   }), [fetchBills]);
 
-  const totals = {
-    total: bills.reduce((s, b) => s + b.amount, 0),
-    paid: bills.filter(b => b.dynamicStatus === 'pago').reduce((s, b) => s + b.amount, 0),
-    paidCount: bills.filter(b => b.dynamicStatus === 'pago').length,
-    pending: bills.filter(b => b.dynamicStatus === 'pendente' || b.dynamicStatus === 'atrasado').reduce((s, b) => s + b.amount, 0),
-    count: bills.length,
-  };
+  const totals = summarizeFixedBills(bills);
 
   // Group by category
   const categoryMap = new Map<string, number>();
@@ -90,5 +82,11 @@ export function useFixedBills(monthRange?: MonthRange) {
       percentage: totals.total > 0 ? Math.round((amount / totals.total) * 100) : 0,
     }));
 
-  return { bills, isLoading, totals, categoryBreakdown, refetch: fetchBills };
+  return {
+    bills,
+    isLoading: isLoading || !refreshCoordinator.isCurrentKey(queryKey),
+    totals,
+    categoryBreakdown,
+    refetch: fetchBills,
+  };
 }

@@ -1,15 +1,44 @@
-import { useState } from 'react';
-import { ArrowDownRight, Calendar, Search, Inbox } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowDownRight, Calendar, Search, Inbox, Landmark } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import { RecordActionsMenu } from '../components/finance/RecordActionsMenu';
 import { useTransactions } from '../hooks/useTransactions';
 import { deleteFinancialTransaction, markTransactionStatus } from '../lib/financialActions';
+import {
+  getFixedBillPaymentPresentation,
+  type FixedBillPaymentPresentation,
+} from '../lib/fixedBillPaymentPresentation';
 import type { LayoutContext } from '../components/layout/Layout';
+
+function FixedBillPaymentMeta({ presentation }: { presentation: FixedBillPaymentPresentation }) {
+  return (
+    <div className="mt-sm flex flex-wrap items-center gap-xs text-[12px] text-on-surface-variant">
+      <span
+        aria-hidden="true"
+        className="inline-flex items-center justify-center rounded-md bg-primary/10 p-1 text-primary"
+      >
+        <Landmark aria-hidden="true" size={14} />
+      </span>
+      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 font-medium text-primary">
+        {presentation.badge}
+      </span>
+      <span>{presentation.context}</span>
+    </div>
+  );
+}
 
 export function Expenses() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
   const { transactions, isLoading, totals, topCategory, refetch } = useTransactions('gasto', selectedMonthRange);
   const [searchQuery, setSearchQuery] = useState('');
+  const [shouldFocusSearchAfterDelete, setShouldFocusSearchAfterDelete] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isLoading || !shouldFocusSearchAfterDelete || !searchInputRef.current) return;
+    searchInputRef.current.focus();
+    setShouldFocusSearchAfterDelete(false);
+  }, [isLoading, shouldFocusSearchAfterDelete]);
 
   const filteredTransactions = transactions.filter(t => 
     t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -84,6 +113,8 @@ export function Expenses() {
           <div className="relative w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} />
             <input
+              ref={searchInputRef}
+              aria-label="Buscar gastos"
               className="bg-surface border border-outline-variant rounded-lg pl-10 pr-md py-sm text-on-surface font-body-md text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all w-full sm:w-64 placeholder-on-surface-variant/50"
               placeholder="Buscar gasto..."
               type="text"
@@ -98,42 +129,57 @@ export function Expenses() {
               <Inbox size={40} className="text-outline-variant" />
               <p>{searchQuery ? 'Nenhum gasto encontrado para a busca.' : 'Nenhum gasto registrado ainda.'}</p>
             </div>
-          ) : filteredTransactions.map(t => (
-            <article key={t.id} className="bg-surface border border-outline-variant/50 rounded-xl p-md min-w-0">
-              <div className="flex items-start justify-between gap-md">
-                <div className="min-w-0">
-                  <p className="text-[15px] font-medium text-on-surface truncate">{t.description}</p>
-                  <p className="text-[12px] text-on-surface-variant mt-1">
-                    {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
-                <RecordActionsMenu
-                  label={t.description}
-                  primaryActionLabel={t.status === 'pendente' ? 'Marcar como pago' : 'Marcar como pendente'}
-                  onPrimaryAction={async () => {
-                    await markTransactionStatus(t.id, t.status === 'pendente' ? 'pago' : 'pendente');
-                    await refetch();
-                  }}
-                  onDelete={async () => {
-                    await deleteFinancialTransaction(t);
-                    await refetch();
-                  }}
-                />
-              </div>
-              <div className="mt-md flex items-end justify-between gap-md">
-                <div className="min-w-0">
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surface-bright text-on-surface border border-outline-variant/50 max-w-full">
-                    <span className="truncate">{t.category?.name || 'Sem categoria'}</span>
-                  </span>
-                  <div className={`mt-sm inline-flex items-center gap-1.5 text-sm ${t.status === 'pago' ? 'text-primary' : 'text-secondary'}`}>
-                    <span className={`w-2 h-2 rounded-full ${t.status === 'pago' ? 'bg-primary shadow-[0_0_15px_rgba(0,230,118,0.5)]' : 'bg-secondary'}`}></span>
-                    {t.status === 'pago' ? 'Pago' : 'Pendente'}
+          ) : filteredTransactions.map(t => {
+            const fixedBillPayment = getFixedBillPaymentPresentation(t);
+            return (
+              <article
+                key={t.id}
+                className={`bg-surface border border-outline-variant/50 rounded-xl p-md min-w-0 ${fixedBillPayment ? 'border-l-4 border-l-primary' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-md">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-medium text-on-surface truncate">{t.description}</p>
+                    <p className="text-[12px] text-on-surface-variant mt-1">
+                      {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                    {fixedBillPayment && <FixedBillPaymentMeta presentation={fixedBillPayment} />}
                   </div>
+                  <RecordActionsMenu
+                    label={t.description}
+                    deleteLabel={
+                      fixedBillPayment?.kind === 'partial'
+                        ? 'Excluir abatimento'
+                        : fixedBillPayment ? 'Excluir pagamento' : undefined
+                    }
+                    {...(!fixedBillPayment ? {
+                      primaryActionLabel: t.status === 'pendente' ? 'Marcar como pago' : 'Marcar como pendente',
+                      onPrimaryAction: async () => {
+                        await markTransactionStatus(t.id, t.status === 'pendente' ? 'pago' : 'pendente');
+                        await refetch();
+                      },
+                    } : {})}
+                    onDelete={async () => {
+                      await deleteFinancialTransaction(t);
+                      await refetch();
+                    }}
+                    onDeleteFocusFallback={() => setShouldFocusSearchAfterDelete(true)}
+                  />
                 </div>
-                <p className="font-numeral-lg text-[18px] font-semibold text-tertiary-container text-right shrink-0">R$ {fmt(t.amount)}</p>
-              </div>
-            </article>
-          ))}
+                <div className="mt-md flex items-end justify-between gap-md">
+                  <div className="min-w-0">
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surface-bright text-on-surface border border-outline-variant/50 max-w-full">
+                      <span className="truncate">{t.category?.name || 'Sem categoria'}</span>
+                    </span>
+                    <div className={`mt-sm inline-flex items-center gap-1.5 text-sm ${t.status === 'pago' ? 'text-primary' : 'text-secondary'}`}>
+                      <span className={`w-2 h-2 rounded-full ${t.status === 'pago' ? 'bg-primary shadow-[0_0_15px_rgba(0,230,118,0.5)]' : 'bg-secondary'}`}></span>
+                      {t.status === 'pago' ? 'Pago' : 'Pendente'}
+                    </div>
+                  </div>
+                  <p className="font-numeral-lg text-[18px] font-semibold text-tertiary-container text-right shrink-0">R$ {fmt(t.amount)}</p>
+                </div>
+              </article>
+            );
+          })}
         </div>
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[720px] text-left border-collapse">
@@ -157,38 +203,55 @@ export function Expenses() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredTransactions.map(t => (
-                <tr key={t.id} className="border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors group">
-                  <td className="py-md px-lg text-on-surface">{new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                  <td className="py-md px-lg text-on-surface font-medium">{t.description}</td>
-                  <td className="py-md px-lg">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surface-bright text-on-surface border border-outline-variant/50">
-                      {t.category?.name || 'Sem categoria'}
-                    </span>
-                  </td>
-                  <td className="py-md px-lg">
-                    <span className={`inline-flex items-center gap-1.5 text-sm ${t.status === 'pago' ? 'text-primary' : 'text-secondary'}`}>
-                      <span className={`w-2 h-2 rounded-full ${t.status === 'pago' ? 'bg-primary shadow-[0_0_15px_rgba(0,230,118,0.5)]' : 'bg-secondary'}`}></span>
-                      {t.status === 'pago' ? 'Pago' : 'Pendente'}
-                    </span>
-                  </td>
-                  <td className="py-md px-lg text-right font-numeral-lg text-[24px] font-medium text-on-surface">R$ {fmt(t.amount)}</td>
-                  <td className="py-md px-lg text-right">
-                    <RecordActionsMenu
-                      label={t.description}
-                      primaryActionLabel={t.status === 'pendente' ? 'Marcar como pago' : 'Marcar como pendente'}
-                      onPrimaryAction={async () => {
-                        await markTransactionStatus(t.id, t.status === 'pendente' ? 'pago' : 'pendente');
-                        await refetch();
-                      }}
-                      onDelete={async () => {
-                        await deleteFinancialTransaction(t);
-                        await refetch();
-                      }}
-                    />
-                  </td>
-                </tr>
-              ))}
+              ) : filteredTransactions.map(t => {
+                const fixedBillPayment = getFixedBillPaymentPresentation(t);
+                return (
+                  <tr
+                    key={t.id}
+                    className={`border-b border-outline-variant/30 hover:bg-surface-variant/50 transition-colors group ${fixedBillPayment ? 'border-l-4 border-l-primary' : ''}`}
+                  >
+                    <td className="py-md px-lg text-on-surface">{new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td className="py-md px-lg text-on-surface font-medium">
+                      <span>{t.description}</span>
+                      {fixedBillPayment && <FixedBillPaymentMeta presentation={fixedBillPayment} />}
+                    </td>
+                    <td className="py-md px-lg">
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surface-bright text-on-surface border border-outline-variant/50">
+                        {t.category?.name || 'Sem categoria'}
+                      </span>
+                    </td>
+                    <td className="py-md px-lg">
+                      <span className={`inline-flex items-center gap-1.5 text-sm ${t.status === 'pago' ? 'text-primary' : 'text-secondary'}`}>
+                        <span className={`w-2 h-2 rounded-full ${t.status === 'pago' ? 'bg-primary shadow-[0_0_15px_rgba(0,230,118,0.5)]' : 'bg-secondary'}`}></span>
+                        {t.status === 'pago' ? 'Pago' : 'Pendente'}
+                      </span>
+                    </td>
+                    <td className="py-md px-lg text-right font-numeral-lg text-[24px] font-medium text-on-surface">R$ {fmt(t.amount)}</td>
+                    <td className="py-md px-lg text-right">
+                      <RecordActionsMenu
+                        label={t.description}
+                        deleteLabel={
+                          fixedBillPayment?.kind === 'partial'
+                            ? 'Excluir abatimento'
+                            : fixedBillPayment ? 'Excluir pagamento' : undefined
+                        }
+                        {...(!fixedBillPayment ? {
+                          primaryActionLabel: t.status === 'pendente' ? 'Marcar como pago' : 'Marcar como pendente',
+                          onPrimaryAction: async () => {
+                            await markTransactionStatus(t.id, t.status === 'pendente' ? 'pago' : 'pendente');
+                            await refetch();
+                          },
+                        } : {})}
+                        onDelete={async () => {
+                          await deleteFinancialTransaction(t);
+                          await refetch();
+                        }}
+                        onDeleteFocusFallback={() => setShouldFocusSearchAfterDelete(true)}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

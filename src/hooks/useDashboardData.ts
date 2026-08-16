@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { getFinancialDataVersion, subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { createFinancialRefreshCoordinator } from '../lib/financialRefreshCoordinator';
 import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
+import { buildDashboardFixedBillSummary } from '../lib/dashboardFixedBillSummary';
 import { buildBalanceEvolution } from '../lib/balanceEvolution';
 import { calculateSummaryCards } from '../lib/financialPlanning';
 import { filterLegacyCarryoverTransactions } from '../lib/legacyCarryover';
 import { supabase } from '../lib/supabase';
+import { collectSupabasePages } from '../lib/supabasePagination';
+import { calculateOpenInvoiceTotal } from '../lib/invoicePayments';
 import type {
   BalanceEvolutionData,
   CategoryExpenseData,
@@ -46,36 +50,66 @@ export function useDashboardData(monthRange?: MonthRange) {
   const [categoryExpense, setCategoryExpense] = useState<CategoryExpenseData[]>([]);
   const [monthlyAnalysis, setMonthlyAnalysis] = useState<MonthlyAnalysis>(defaultAnalysis);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshCoordinator] = useState(() => createFinancialRefreshCoordinator<() => void>());
 
   const startDate = monthRange?.startDate;
   const endDate = monthRange?.endDate;
+  const monthKey = monthRange?.monthKey;
+  const queryKey = `${startDate ?? '*'}:${endDate ?? '*'}:${monthKey ?? '*'}`;
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      let txQuery = supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false });
-      if (startDate) txQuery = txQuery.gte('date', startDate);
-      if (endDate) txQuery = txQuery.lt('date', endDate);
+  const fetchData = useCallback((version = getFinancialDataVersion()) => refreshCoordinator.refresh({
+    key: queryKey,
+    version,
+    onLoadingChange: setIsLoading,
+    load: async () => {
+      const transactionsPromise = collectSupabasePages<Record<string, unknown>>((from, to) => {
+        let query = supabase
+          .from('transactions')
+          .select('*, category:categories(*)')
+          .order('date', { ascending: false })
+          .order('id', { ascending: true });
+        if (startDate) query = query.gte('date', startDate);
+        if (endDate) query = query.lt('date', endDate);
+        return query.range(from, to);
+      });
+      const fixedBillsPromise = collectSupabasePages<Record<string, unknown>>((from, to) => supabase
+        .from('fixed_bills')
+        .select('*, category:categories(*)')
+        .order('due_day', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to));
+      const creditCardsPromise = collectSupabasePages<Record<string, unknown>>((from, to) => supabase
+        .from('credit_cards')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to));
+      const invoiceItemsPromise = collectSupabasePages<Record<string, unknown>>((from, to) => {
+        let query = supabase
+          .from('invoice_items')
+          .select('id, amount, description, date')
+          .order('date', { ascending: true })
+          .order('id', { ascending: true });
+        if (startDate) query = query.gte('date', startDate);
+        if (endDate) query = query.lt('date', endDate);
+        return query.range(from, to);
+      });
+      const financialGoalsPromise = collectSupabasePages<Record<string, unknown>>((from, to) => supabase
+        .from('financial_goals')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to));
 
-      let invoiceQuery = supabase.from('invoice_items').select('id, amount, description, date');
-      if (startDate) invoiceQuery = invoiceQuery.gte('date', startDate);
-      if (endDate) invoiceQuery = invoiceQuery.lt('date', endDate);
-
-      const [txResult, billsResult, cardsResult, invoiceResult, goalsResult] = await Promise.all([
-        txQuery,
-        supabase.from('fixed_bills').select('*, category:categories(*)').order('due_day', { ascending: true }),
-        supabase.from('credit_cards').select('*').order('created_at', { ascending: true }),
-        invoiceQuery,
-        supabase.from('financial_goals').select('*').order('created_at', { ascending: true }),
+      const [txData, billsData, cardsData, invoiceData, goalsData] = await Promise.all([
+        transactionsPromise,
+        fixedBillsPromise,
+        creditCardsPromise,
+        invoiceItemsPromise,
+        financialGoalsPromise,
       ]);
 
-      if (txResult.error) throw txResult.error;
-      if (billsResult.error) throw billsResult.error;
-      if (cardsResult.error) throw cardsResult.error;
-      if (invoiceResult.error) throw invoiceResult.error;
-      if (goalsResult.error) throw goalsResult.error;
-
-      const mappedTransactions = filterLegacyCarryoverTransactions((txResult.data ?? []).map((transaction: Record<string, unknown>) => ({
+      const mappedTransactions = filterLegacyCarryoverTransactions(txData.map((transaction: Record<string, unknown>) => ({
         ...transaction,
         amount: Number(transaction.amount),
       })) as Transaction[]);
@@ -85,18 +119,18 @@ export function useDashboardData(monthRange?: MonthRange) {
       const currentYear = today.getFullYear();
       
       const mappedBills = resolveDynamicFixedBills({
-        bills: (billsResult.data ?? []) as DynamicFixedBill[],
+        bills: billsData as unknown as DynamicFixedBill[],
         payments: mappedTransactions,
-        monthKey: monthRange?.monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+        monthKey: monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
         today,
       }) as DynamicFixedBill[];
 
-      const mappedCards = (cardsResult.data ?? []).map((card: Record<string, unknown>) => ({
+      const mappedCards = cardsData.map((card: Record<string, unknown>) => ({
         ...card,
         credit_limit: Number(card.credit_limit),
       })) as CreditCard[];
 
-      const mappedGoals = (goalsResult.data ?? []).map((goal: Record<string, unknown>) => ({
+      const mappedGoals = goalsData.map((goal: Record<string, unknown>) => ({
         ...goal,
         target_amount: Number(goal.target_amount),
         current_amount: Number(goal.current_amount),
@@ -108,54 +142,38 @@ export function useDashboardData(monthRange?: MonthRange) {
       const totalExpense = mappedTransactions
         .filter(transaction => transaction.type === 'gasto')
         .reduce((sum, transaction) => sum + transaction.amount, 0);
-      const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + bill.amount, 0);
-      const unpaidFixedBills = mappedBills
-        .filter(bill => bill.dynamicStatus !== 'pago')
-        .reduce((sum, bill) => sum + bill.amount, 0);
-      const openInvoices = (invoiceResult.data as Array<{ id: string; amount: number; description: string; date: string }> ?? [])
-        .filter((item) => {
-          const linkedTx = mappedTransactions.find(t => t.notes === `invoice_item:${item.id}`);
-          if (linkedTx) {
-            return linkedTx.status !== 'pago';
-          }
-          
-          // Legacy fallback
-          const signature = `${(item.description || '').trim().toLocaleLowerCase('pt-BR')}|${Number(item.amount).toFixed(2)}|${item.date}`;
-          const fallbackTx = mappedTransactions.find(t => {
-            if (t.payment_method !== undefined && t.payment_method !== 'credito') return false;
-            if (!t.description || typeof t.amount !== 'number' || !t.date) return false;
-            const tSig = `${t.description.trim().toLocaleLowerCase('pt-BR')}|${t.amount.toFixed(2)}|${t.date}`;
-            return tSig === signature;
-          });
-          
-          if (fallbackTx) {
-            return fallbackTx.status !== 'pago';
-          }
-          return true; // Not matched, so it's open
-        })
-        .reduce((sum, item) => sum + Number(item.amount), 0);
+      const { fixedBillsTotal, unpaidFixedBills } = buildDashboardFixedBillSummary(mappedBills);
+      const openInvoices = calculateOpenInvoiceTotal(
+        invoiceData as unknown as Array<{ id: string; amount: number; description: string; date: string }>,
+        mappedTransactions,
+      );
       const savedAmount = mappedGoals.reduce((sum, goal) => sum + goal.current_amount, 0);
 
-      setTransactions(mappedTransactions);
-      setFixedBills(mappedBills);
-      setCreditCards(mappedCards);
-      setFinancialGoals(mappedGoals);
-      setSummaryCards(calculateSummaryCards({
+      const nextSummaryCards = calculateSummaryCards({
         transactions: mappedTransactions,
         savedAmount,
         openInvoices,
         fixedBillsTotal,
         unpaidFixedBills,
-      }));
-      setBalanceEvolution(buildBalanceEvolution(mappedTransactions, today));
-      setCategoryExpense(buildCategoryExpense(mappedTransactions));
-      setMonthlyAnalysis(buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length));
-    } catch (error) {
-      console.error('Error fetching Supabase data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [startDate, endDate, monthRange]);
+      });
+      const nextBalanceEvolution = buildBalanceEvolution(mappedTransactions, today);
+      const nextCategoryExpense = buildCategoryExpense(mappedTransactions);
+      const nextMonthlyAnalysis = buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length);
+
+      return () => {
+        setTransactions(mappedTransactions);
+        setFixedBills(mappedBills);
+        setCreditCards(mappedCards);
+        setFinancialGoals(mappedGoals);
+        setSummaryCards(nextSummaryCards);
+        setBalanceEvolution(nextBalanceEvolution);
+        setCategoryExpense(nextCategoryExpense);
+        setMonthlyAnalysis(nextMonthlyAnalysis);
+      };
+    },
+    apply: applyData => applyData(),
+    onError: error => console.error('Error fetching Supabase data:', error),
+  }), [endDate, monthKey, queryKey, refreshCoordinator, startDate]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -165,8 +183,8 @@ export function useDashboardData(monthRange?: MonthRange) {
     return () => window.clearTimeout(timeout);
   }, [fetchData]);
 
-  useEffect(() => subscribeFinancialDataChanged(() => {
-    void fetchData();
+  useEffect(() => subscribeFinancialDataChanged(version => {
+    void fetchData(version);
   }), [fetchData]);
 
   return {
@@ -178,7 +196,8 @@ export function useDashboardData(monthRange?: MonthRange) {
     balanceEvolution,
     categoryExpense,
     monthlyAnalysis,
-    isLoading,
+    isLoading: isLoading || !refreshCoordinator.isCurrentKey(queryKey),
+    refetch: fetchData,
   };
 }
 

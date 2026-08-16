@@ -4,6 +4,22 @@ type InvoicePaymentItem = Pick<InvoiceItem, 'id'> & Partial<Pick<InvoiceItem, 'd
 type InvoicePaymentTransaction = Pick<Transaction, 'id' | 'notes' | 'status'> & Partial<Pick<Transaction, 'description' | 'amount' | 'date' | 'payment_method'>>;
 type InvoiceStatus = ReturnType<typeof getInvoicePaymentStatus>;
 
+export function calculateOpenInvoiceTotal(
+  items: Array<Pick<InvoiceItem, 'id' | 'amount'> & Partial<Pick<InvoiceItem, 'description' | 'date'>>>,
+  transactions: InvoicePaymentTransaction[],
+) {
+  const { linkedTransactionsByItemId, fallbackBuckets } = indexInvoiceTransactions(transactions);
+
+  return items.reduce((sum, item) => {
+    const linkedTransaction = linkedTransactionsByItemId.get(item.id);
+    const signature = linkedTransaction ? null : getLegacyInvoiceSignature(item);
+    const fallbackTransaction = signature ? fallbackBuckets.get(signature)?.[0] : undefined;
+    const matchedTransaction = linkedTransaction ?? fallbackTransaction;
+
+    return matchedTransaction?.status === 'pago' ? sum : sum + Number(item.amount);
+  }, 0);
+}
+
 export function getInvoiceActionState(input: {
   invoiceStatus: InvoiceStatus;
   payableTransactionIds: string[];
@@ -95,12 +111,31 @@ function getMatchedInvoiceTransactions(
   items: InvoicePaymentItem[],
   transactions: InvoicePaymentTransaction[],
 ) {
+  const { linkedTransactionsByItemId, fallbackBuckets } = indexInvoiceTransactions(transactions);
+
+  return items.flatMap(item => {
+    const linkedTransaction = linkedTransactionsByItemId.get(item.id);
+    if (linkedTransaction) return [linkedTransaction];
+
+    const signature = getLegacyInvoiceSignature(item);
+    if (!signature) return [];
+
+    const bucket = fallbackBuckets.get(signature);
+    if (!bucket?.length) return [];
+
+    const [matchedTransaction] = bucket.splice(0, 1);
+    return matchedTransaction ? [matchedTransaction] : [];
+  });
+}
+
+function indexInvoiceTransactions(transactions: InvoicePaymentTransaction[]) {
   const linkedTransactionsByItemId = new Map<string, InvoicePaymentTransaction>();
   const fallbackBuckets = new Map<string, InvoicePaymentTransaction[]>();
 
   transactions.forEach(transaction => {
-    const linkedItemId = transaction.notes?.startsWith('invoice_item:')
-      ? transaction.notes.replace('invoice_item:', '')
+    const notes = transaction.notes;
+    const linkedItemId = notes?.startsWith('invoice_item:')
+      ? notes.replace('invoice_item:', '')
       : null;
 
     if (linkedItemId) {
@@ -118,19 +153,7 @@ function getMatchedInvoiceTransactions(
     fallbackBuckets.set(signature, bucket);
   });
 
-  return items.flatMap(item => {
-    const linkedTransaction = linkedTransactionsByItemId.get(item.id);
-    if (linkedTransaction) return [linkedTransaction];
-
-    const signature = getLegacyInvoiceSignature(item);
-    if (!signature) return [];
-
-    const bucket = fallbackBuckets.get(signature);
-    if (!bucket?.length) return [];
-
-    const [matchedTransaction] = bucket.splice(0, 1);
-    return matchedTransaction ? [matchedTransaction] : [];
-  });
+  return { linkedTransactionsByItemId, fallbackBuckets };
 }
 
 function canUseLegacyFallback(transaction: InvoicePaymentTransaction) {

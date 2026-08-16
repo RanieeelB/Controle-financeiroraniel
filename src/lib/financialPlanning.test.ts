@@ -14,6 +14,9 @@ describe('salary planning helpers', () => {
     })).toEqual({
       amount: 5234.57,
       day_of_month: 31,
+      daily_rate: null,
+      work_start_day: null,
+      work_end_day: null,
     });
   });
 
@@ -53,6 +56,31 @@ describe('salary planning helpers', () => {
       totalExpense: 3000,
       savedAmount: 900,
       openInvoices: 1800,
+      fixedBillsTotal: 700,
+    });
+  });
+
+  it('projects a partial fixed bill payment plus its remaining balance only once', () => {
+    expect(calculateSummaryCards({
+      transactions: [
+        {
+          type: 'gasto',
+          amount: 350,
+          status: 'pago',
+          notes: 'fixed_bill:bill-1',
+        },
+      ],
+      savedAmount: 0,
+      openInvoices: 0,
+      fixedBillsTotal: 700,
+      unpaidFixedBills: 350,
+    })).toEqual({
+      currentBalance: -350,
+      projectedBalance: -700,
+      totalIncome: 0,
+      totalExpense: 350,
+      savedAmount: 0,
+      openInvoices: 0,
       fixedBillsTotal: 700,
     });
   });

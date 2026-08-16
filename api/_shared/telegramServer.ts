@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { createTelegramLinkService, type TelegramConnectionRecord } from '../../src/services/telegram/telegramLinkService.js';
 import { buildFixedBillPaymentPayload } from '../../src/services/telegram/telegramAutomations.js';
+import { collectSupabasePages } from '../../src/lib/supabasePagination.js';
 import type { CreditCard, FinancialGoal, FixedBill, Investment, SalarySetting, Transaction } from '../../src/types/financial.js';
 
 export function getServerEnv() {
@@ -265,15 +266,17 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
       return data;
     },
     async listMonthTransactions(input: { userId: string; startDate: string; endDate: string }) {
-      const { data, error } = await supabase
+      const data = await collectSupabasePages<Record<string, unknown>>((from, to) => supabase
         .from('transactions')
         .select('id, type, amount, status, notes, description, date, payment_method, category:categories(name, color)')
         .eq('user_id', input.userId)
         .gte('date', input.startDate)
-        .lt('date', input.endDate);
+        .lt('date', input.endDate)
+        .order('date', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to));
 
-      if (error) throw error;
-      return ((data ?? []) as Array<Record<string, unknown>>).map(transaction => ({
+      return data.map(transaction => ({
         id: String(transaction.id),
         type: transaction.type as Transaction['type'],
         amount: Number(transaction.amount),
@@ -286,15 +289,17 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
       }));
     },
     async listMonthInvoiceItems(input: { userId: string; startDate: string; endDate: string }) {
-      const { data, error } = await supabase
+      const data = await collectSupabasePages<Record<string, unknown>>((from, to) => supabase
         .from('invoice_items')
         .select('id, card_id, amount, description, date, credit_card:credit_cards(id, name, last_digits, brand)')
         .eq('user_id', input.userId)
         .gte('date', input.startDate)
-        .lt('date', input.endDate);
+        .lt('date', input.endDate)
+        .order('date', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to));
 
-      if (error) throw error;
-      return ((data ?? []) as Array<Record<string, unknown>>).map(item => ({
+      return data.map(item => ({
         id: String(item.id),
         card_id: typeof item.card_id === 'string' ? item.card_id : undefined,
         amount: Number(item.amount),
@@ -304,14 +309,15 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
       }));
     },
     async listCreditCards(userId: string) {
-      const { data, error } = await supabase
+      const data = await collectSupabasePages<Record<string, unknown>>((from, to) => supabase
         .from('credit_cards')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to));
 
-      if (error) throw error;
-      return ((data ?? []) as Array<Record<string, unknown>>).map(card => ({
+      return data.map(card => ({
         id: String(card.id),
         user_id: typeof card.user_id === 'string' ? card.user_id : null,
         name: String(card.name ?? ''),
@@ -326,14 +332,15 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
       })) as CreditCard[];
     },
     async listFixedBills(userId: string) {
-      const { data, error } = await supabase
+      const data = await collectSupabasePages<Record<string, unknown>>((from, to) => supabase
         .from('fixed_bills')
         .select('*')
         .eq('user_id', userId)
-        .order('due_day', { ascending: true });
+        .order('due_day', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to));
 
-      if (error) throw error;
-      return ((data ?? []) as Array<Record<string, unknown>>).map(bill => ({
+      return data.map(bill => ({
         id: String(bill.id),
         user_id: typeof bill.user_id === 'string' ? bill.user_id : null,
         description: String(bill.description ?? ''),
@@ -346,14 +353,15 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
       }));
     },
     async listInvestments(userId: string) {
-      const { data, error } = await supabase
+      const data = await collectSupabasePages<Record<string, unknown>>((from, to) => supabase
         .from('investments')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to));
 
-      if (error) throw error;
-      return ((data ?? []) as Array<Record<string, unknown>>).map(investment => ({
+      return data.map(investment => ({
         id: String(investment.id),
         user_id: typeof investment.user_id === 'string' ? investment.user_id : null,
         name: String(investment.name ?? ''),
@@ -364,6 +372,9 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
         return_percentage: Number(investment.return_percentage ?? 0),
         monthly_contribution: Number(investment.monthly_contribution ?? 0),
         last_auto_contribution_at: typeof investment.last_auto_contribution_at === 'string' ? investment.last_auto_contribution_at : null,
+        icon: typeof investment.icon === 'string' ? investment.icon : 'piggy-bank',
+        goal_id: typeof investment.goal_id === 'string' ? investment.goal_id : null,
+        suggested_investment_percentage: Number(investment.suggested_investment_percentage ?? 0),
         created_at: String(investment.created_at ?? ''),
       }));
     },
@@ -418,14 +429,15 @@ export function createTelegramWebhookRepository(supabase: SupabaseClient) {
       if (error) throw error;
     },
     async listFinancialGoals(userId: string) {
-      const { data, error } = await supabase
+      const data = await collectSupabasePages<Record<string, unknown>>((from, to) => supabase
         .from('financial_goals')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to));
 
-      if (error) throw error;
-      return ((data ?? []) as Array<Record<string, unknown>>).map(goal => ({
+      return data.map(goal => ({
         id: String(goal.id),
         user_id: typeof goal.user_id === 'string' ? goal.user_id : null,
         title: String(goal.title ?? ''),

@@ -191,5 +191,8 @@ export interface MonthlyAnalysis {
 export type DynamicFixedBill = FixedBill & {
   dynamicStatus: 'pago' | 'pendente' | 'atrasado';
   daysOverdue: number;
+  paidAmount: number;
+  remainingAmount: number;
+  paymentProgress: number;
   paymentTransactionIds: string[];
 };

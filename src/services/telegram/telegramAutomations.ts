@@ -1,7 +1,7 @@
 import { buildMonthRange } from '../../lib/monthSelection.js';
 import { buildTransactionPayload, roundCurrency } from '../../lib/financialPayloads.js';
 import { calculateSummaryCards } from '../../lib/financialPlanning.js';
-import { resolveDynamicFixedBills } from '../../lib/fixedBillPayments.js';
+import { resolveDynamicFixedBills, summarizeFixedBills } from '../../lib/fixedBillPayments.js';
 import type { CreditCard, FixedBill, Transaction } from '../../types/financial.js';
 import type { TelegramParseMode, TelegramReplyMarkup } from './telegramService.js';
 
@@ -307,18 +307,18 @@ async function handleAutomationCallback(
   if (action === 'payfix') {
     const bill = context.fixedBills.find(item => item.id === recordId);
     if (!bill) return { text: '⚠️ <b>Não encontrei essa conta fixa.</b>' };
-    if (bill.dynamicStatus === 'pago') return { text: 'ℹ️ <b>Essa conta fixa já estava marcada como paga.</b>' };
+    if (bill.remainingAmount <= 0) return { text: 'ℹ️ <b>Essa conta fixa já estava marcada como paga.</b>' };
 
     await repo.insertFixedBillPayment({
       userId,
       billId: bill.id,
       monthKey,
       description: bill.description,
-      amount: Number(bill.amount),
+      amount: bill.remainingAmount,
       categoryId: bill.category_id,
       date: todayKey,
     });
-    return { text: `✅ <b>Conta fixa marcada como paga</b>\n\n${escapeTelegramHtml(bill.description)} · ${formatCurrency(Number(bill.amount))}` };
+    return { text: `✅ <b>Conta fixa marcada como paga</b>\n\n${escapeTelegramHtml(bill.description)} · ${formatCurrency(bill.remainingAmount)}` };
   }
 
   return null;
@@ -356,6 +356,8 @@ async function getMonthlyContextForMonth(
     bills: fixedBills,
     payments: normalizedTransactions.map(transaction => ({
       id: transaction.id,
+      type: transaction.type,
+      amount: transaction.amount,
       notes: transaction.notes,
       status: transaction.status,
     })),
@@ -366,10 +368,7 @@ async function getMonthlyContextForMonth(
     const transaction = findInvoiceTransaction(item, normalizedTransactions);
     return !transaction || transaction.status !== 'pago';
   });
-  const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + Number(bill.amount), 0);
-  const unpaidFixedBills = mappedBills
-    .filter(bill => bill.dynamicStatus !== 'pago')
-    .reduce((sum, bill) => sum + Number(bill.amount), 0);
+  const { total: fixedBillsTotal, pending: unpaidFixedBills } = summarizeFixedBills(mappedBills);
   const openInvoicesTotal = openInvoiceItems.reduce((sum, item) => sum + Number(item.amount), 0);
 
   return {

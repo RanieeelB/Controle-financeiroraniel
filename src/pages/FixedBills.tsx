@@ -1,49 +1,32 @@
-import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Check, RotateCcw, Pencil, Trash2 } from 'lucide-react';
+import { Landmark, CheckCircle2, Clock, Filter, Inbox, Plus, PieChart, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { FixedBillModal } from '../components/finance/FinanceModals';
+import { FixedBillPaymentModal } from '../components/finance/FixedBillPaymentModal';
+import { FixedBillPaymentProgress } from '../components/finance/FixedBillPaymentProgress';
 import { useFixedBills } from '../hooks/useFixedBills';
 import type { DynamicFixedBill } from '../types/financial';
-import { payFixedBill, removeFixedBillPayments, deleteFixedBill } from '../lib/financialActions';
+import { deleteFixedBill } from '../lib/financialActions';
+import { getCurrentMonthKey } from '../lib/monthSelection';
 import { useOutletContext } from 'react-router-dom';
 import type { LayoutContext } from '../components/layout/Layout';
 
 export function FixedBills() {
   const { selectedMonthRange } = useOutletContext<LayoutContext>();
-  const { bills, isLoading, totals, categoryBreakdown } = useFixedBills(selectedMonthRange);
+  const { bills, isLoading, totals, categoryBreakdown, refetch } = useFixedBills(selectedMonthRange);
   const [isFixedBillModalOpen, setIsFixedBillModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<DynamicFixedBill | null>(null);
+  const [selectedPaymentBillId, setSelectedPaymentBillId] = useState<string | null>(null);
   const [activeBillAction, setActiveBillAction] = useState<string | null>(null);
+  const selectedPaymentBill = selectedPaymentBillId
+    ? bills.find(bill => bill.id === selectedPaymentBillId) ?? null
+    : null;
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
   const paidPct = totals.count > 0 ? Math.round((totals.paidCount / totals.count) * 100) : 0;
   const colors = ['bg-primary', 'bg-secondary', 'bg-tertiary-container', 'bg-outline'];
-
-  async function handlePay(bill: DynamicFixedBill) {
-    if (activeBillAction) return;
-    setActiveBillAction(bill.id);
-    try {
-      await payFixedBill(bill);
-    } catch (error) {
-      console.error('Error paying bill:', error);
-    } finally {
-      setActiveBillAction(null);
-    }
-  }
-
-  async function handleReopen(bill: DynamicFixedBill) {
-    if (activeBillAction || bill.paymentTransactionIds.length === 0) return;
-
-    setActiveBillAction(bill.id);
-    try {
-      await removeFixedBillPayments(bill.paymentTransactionIds);
-    } catch (error) {
-      console.error('Error reopening fixed bill payment:', error);
-    } finally {
-      setActiveBillAction(null);
-    }
-  }
+  const isCurrentMonth = selectedMonthRange.monthKey === getCurrentMonthKey();
 
   async function handleDelete(bill: DynamicFixedBill) {
     if (activeBillAction) return;
@@ -82,10 +65,10 @@ export function FixedBills() {
           <span className="font-numeral-lg text-[24px] min-[390px]:text-[28px] sm:text-[32px] text-on-surface break-words">R$ {fmt(totals.total)}</span>
         </div>
         <div className="bg-surface-container border border-outline-variant rounded-lg p-md sm:p-lg min-w-0">
-          <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Contas Pagas</span><CheckCircle2 className="text-secondary" size={24} /></div>
+          <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Total pago</span><CheckCircle2 className="text-secondary" size={24} /></div>
           <span className="font-numeral-lg text-[24px] min-[390px]:text-[28px] sm:text-[32px] text-on-surface break-words">R$ {fmt(totals.paid)}</span>
           <div className="w-full bg-surface-variant rounded-full h-1.5 mt-md overflow-hidden"><div className="bg-secondary h-full rounded-full" style={{ width: `${paidPct}%` }}></div></div>
-          <div className="flex justify-between mt-xs"><span className="text-[12px] text-on-surface-variant">{totals.paidCount} de {totals.count} contas</span><span className="text-[12px] text-secondary">{paidPct}%</span></div>
+          <div className="flex justify-between mt-xs"><span className="text-[12px] text-on-surface-variant">{totals.paidCount} de {totals.count} totalmente quitadas</span><span className="text-[12px] text-secondary">{paidPct}%</span></div>
         </div>
         <div className="bg-surface-container border border-outline-variant rounded-lg p-md sm:p-lg min-w-0">
           <div className="flex justify-between items-start mb-md"><span className="text-on-surface-variant">Pendente</span><Clock className="text-tertiary-container" size={24} /></div>
@@ -130,25 +113,17 @@ export function FixedBills() {
                     >
                       <Trash2 size={18} />
                     </button>
-                    <button
-                      onClick={() => (b.dynamicStatus === 'pago' ? handleReopen(b) : handlePay(b))}
-                      disabled={activeBillAction === b.id}
-                      className={`p-2 rounded-lg transition-all min-h-11 min-w-11 ${
-                        b.dynamicStatus === 'pago'
-                          ? 'text-secondary bg-secondary/10'
-                          : 'text-primary bg-primary/10'
-                      }`}
-                      title={b.dynamicStatus === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta neste mês'}
-                    >
-                      {activeBillAction === b.id ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                      ) : (
-                        b.dynamicStatus === 'pago' ? <RotateCcw size={20} /> : <Check size={20} />
-                      )}
-                    </button>
                   </div>
                 </div>
-                <div className="mt-md flex items-end justify-between gap-md">
+                <div className="mt-md">
+                  <FixedBillPaymentProgress
+                    bill={b}
+                    canAddPayment={isCurrentMonth && b.remainingAmount > 0}
+                    onAddPayment={() => setSelectedPaymentBillId(b.id)}
+                    compact
+                  />
+                </div>
+                <div className="mt-sm flex items-end justify-between gap-md">
                   <div className="min-w-0">
                     <p className="text-[12px] text-on-surface-variant truncate">{b.category?.name || 'Sem categoria'}</p>
                     <span className={`mt-sm inline-flex items-center justify-center font-label-md text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase tracking-wider border ${
@@ -157,7 +132,6 @@ export function FixedBills() {
                       'bg-surface-variant text-on-surface border-outline-variant'
                     }`}>{b.dynamicStatus === 'pago' ? 'Pago' : b.dynamicStatus === 'atrasado' ? 'Atrasado' : 'Pendente'}</span>
                   </div>
-                  <p className="font-numeral-lg text-[18px] font-semibold text-on-surface text-right shrink-0">R$ {fmt(b.amount)}</p>
                 </div>
               </article>
             ))}
@@ -175,7 +149,14 @@ export function FixedBills() {
                     <td className="py-md px-lg text-on-surface">{b.description}</td>
                     <td className="py-md px-lg text-on-surface-variant">{b.category?.name || '—'}</td>
                     <td className={`py-md px-lg ${b.dynamicStatus === 'atrasado' ? 'text-error font-medium' : ''}`}>Dia {b.due_day}</td>
-                    <td className="py-md px-lg font-numeral-lg text-[16px] text-right">R$ {fmt(b.amount)}</td>
+                    <td className="py-md px-lg min-w-[16rem]">
+                      <FixedBillPaymentProgress
+                        bill={b}
+                        canAddPayment={isCurrentMonth && b.remainingAmount > 0}
+                        onAddPayment={() => setSelectedPaymentBillId(b.id)}
+                        compact
+                      />
+                    </td>
                     <td className="py-md px-lg text-center">
                       <div className="flex flex-col items-center justify-center">
                         <span className={`inline-flex items-center justify-center font-label-md text-[11px] font-semibold px-sm py-[2px] rounded-full uppercase tracking-wider w-24 ${
@@ -204,22 +185,6 @@ export function FixedBills() {
                           title="Excluir conta"
                         >
                           <Trash2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => (b.dynamicStatus === 'pago' ? handleReopen(b) : handlePay(b))}
-                          disabled={activeBillAction === b.id}
-                          className={`p-2 rounded-lg transition-all ${
-                            b.dynamicStatus === 'pago'
-                              ? 'text-secondary hover:text-secondary hover:bg-secondary/10'
-                              : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
-                          }`}
-                          title={b.dynamicStatus === 'pago' ? 'Desmarcar pagamento desta conta no mês' : 'Pagar conta neste mês'}
-                        >
-                          {activeBillAction === b.id ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                          ) : (
-                            b.dynamicStatus === 'pago' ? <RotateCcw size={20} /> : <Check size={20} />
-                          )}
                         </button>
                       </div>
                     </td>
@@ -256,6 +221,14 @@ export function FixedBills() {
 
       {isFixedBillModalOpen && (
         <FixedBillModal bill={editingBill} onClose={() => { setIsFixedBillModalOpen(false); setEditingBill(null); }} />
+      )}
+      {selectedPaymentBill && (
+        <FixedBillPaymentModal
+          bill={selectedPaymentBill}
+          selectedMonthKey={selectedMonthRange.monthKey}
+          onClose={() => setSelectedPaymentBillId(null)}
+          onRefresh={refetch}
+        />
       )}
     </div>
   );

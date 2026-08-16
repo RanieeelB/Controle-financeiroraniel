@@ -127,6 +127,40 @@ describe('layout width classes', () => {
     expect(upcomingBills).toContain('hidden md:block');
   });
 
+  it('shares fixed bill payment progress and partial-payment modals across bill surfaces', () => {
+    const progress = readFileSync(join(process.cwd(), 'src/components/finance/FixedBillPaymentProgress.tsx'), 'utf8');
+    const fixedBills = readFileSync(join(process.cwd(), 'src/pages/FixedBills.tsx'), 'utf8');
+    const upcomingBills = readFileSync(join(process.cwd(), 'src/components/dashboard/UpcomingBills.tsx'), 'utf8');
+    const dashboard = readFileSync(join(process.cwd(), 'src/pages/Dashboard.tsx'), 'utf8');
+    const dashboardData = readFileSync(join(process.cwd(), 'src/hooks/useDashboardData.ts'), 'utf8');
+    const fixedBillsData = readFileSync(join(process.cwd(), 'src/hooks/useFixedBills.ts'), 'utf8');
+
+    expect(progress).toContain('role="progressbar"');
+    expect(progress).toContain('Pago R$');
+    expect(progress).toContain('Falta R$');
+    expect(progress).toContain('Adicionar abatimento');
+
+    for (const contents of [fixedBills, upcomingBills]) {
+      expect(contents).toContain('FixedBillPaymentProgress');
+      expect(contents).toContain('FixedBillPaymentModal');
+      expect(contents).not.toContain('payFixedBill');
+      expect(contents).not.toContain('removeFixedBillPayments');
+      expect(contents).toContain('selectedPaymentBillId');
+    }
+    expect(fixedBills).toContain('bills.find');
+    expect(upcomingBills).toContain('data.find');
+
+    for (const contents of [fixedBillsData, dashboardData]) {
+      expect(contents).toContain('createFinancialRefreshCoordinator');
+      expect(contents).toContain('getFinancialDataVersion');
+      expect(contents).toContain('refreshCoordinator.isCurrentKey(queryKey)');
+    }
+
+    expect(dashboardData).toContain('refetch: fetchData');
+    expect(dashboard).toContain('selectedMonthKey={selectedMonthRange.monthKey}');
+    expect(dashboard).toContain('onRefresh={refetch}');
+  });
+
   it('keeps dashboard metrics and charts dense on mobile without losing desktop hierarchy', () => {
     const dashboard = readFileSync(join(process.cwd(), 'src/pages/Dashboard.tsx'), 'utf8');
     const summaryCards = readFileSync(join(process.cwd(), 'src/components/dashboard/SummaryCardsGrid.tsx'), 'utf8');
@@ -244,15 +278,15 @@ describe('layout width classes', () => {
     expect(modals).toContain('sticky bottom-0');
   });
 
-  it('uses compact two-column mobile summaries for investments and reports', () => {
+  it('uses compact responsive summaries for investments and reports', () => {
     const investments = readFileSync(join(process.cwd(), 'src/pages/Investments.tsx'), 'utf8');
     const reports = readFileSync(join(process.cwd(), 'src/pages/Reports.tsx'), 'utf8');
     const modals = readFileSync(join(process.cwd(), 'src/components/finance/FinanceModals.tsx'), 'utf8');
 
     expect(investments).toContain('grid grid-cols-2 xl:grid-cols-4');
-    expect(investments).toContain('grid grid-cols-1 xl:grid-cols-2');
+    expect(investments).toContain('grid grid-cols-1 xl:grid-cols-3');
     expect(investments).toContain('Saldo guardado');
-    expect(investments).toContain('Histórico de aportes');
+    expect(investments).toContain('Histórico');
     expect(reports).toContain('grid grid-cols-2 lg:grid-cols-3');
     expect(modals).toContain('Dados principais');
   });

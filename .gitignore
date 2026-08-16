@@ -25,4 +25,5 @@ dist-ssr
 .env.local
 AGENTS.md
 .superpowers/
+.worktrees/
 
