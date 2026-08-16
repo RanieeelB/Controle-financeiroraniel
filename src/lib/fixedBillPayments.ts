@@ -8,6 +8,12 @@ function toCents(value: number) {
   return Math.round(value * 100);
 }
 
+function toNonNegativeCents(value: number) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return 0;
+  const cents = toCents(value);
+  return Number.isFinite(cents) ? cents : 0;
+}
+
 function fromCents(value: number) {
   return value / 100;
 }
@@ -29,7 +35,7 @@ function collectEligibleFixedBillPayments(input: {
   payments: FixedBillPaymentRecord[];
   maximumAmount: number;
 }) {
-  const maximumCents = Math.max(0, toCents(input.maximumAmount));
+  const maximumCents = toNonNegativeCents(input.maximumAmount);
   let paidCents = 0;
   const paymentTransactionIds: string[] = [];
 
@@ -60,12 +66,22 @@ export function validateFixedBillPayment(input: {
   paidAmount: number;
   paymentAmount: number;
 }) {
-  const billCents = Math.max(0, toCents(input.billAmount));
-  const paidCents = Math.max(0, Math.min(toCents(input.paidAmount), billCents));
+  const hasValidBillAmount = typeof input.billAmount === 'number'
+    && Number.isFinite(input.billAmount)
+    && input.billAmount >= 0;
+  const hasValidPaidAmount = typeof input.paidAmount === 'number'
+    && Number.isFinite(input.paidAmount)
+    && input.paidAmount >= 0;
+  const billCents = hasValidBillAmount ? toNonNegativeCents(input.billAmount) : 0;
+  const paidCents = hasValidPaidAmount
+    ? Math.min(toNonNegativeCents(input.paidAmount), billCents)
+    : 0;
   const remainingCents = billCents - paidCents;
 
   if (
-    typeof input.paymentAmount !== 'number'
+    !hasValidBillAmount
+    || !hasValidPaidAmount
+    || typeof input.paymentAmount !== 'number'
     || !Number.isFinite(input.paymentAmount)
     || input.paymentAmount <= 0
   ) {
@@ -114,7 +130,7 @@ export function resolveDynamicFixedBills(input: {
   const isViewingPastMonth = viewYear < currentYear || (viewYear === currentYear && viewMonth < currentMonth);
 
   return bills.map((bill): DynamicFixedBill => {
-    const amountCents = Math.max(0, toCents(Number(bill.amount)));
+    const amountCents = toNonNegativeCents(Number(bill.amount));
     const amount = fromCents(amountCents);
     const { paidAmount, paymentTransactionIds } = collectEligibleFixedBillPayments({
       billId: bill.id,
@@ -123,9 +139,12 @@ export function resolveDynamicFixedBills(input: {
     });
     const paidCents = toCents(paidAmount);
     const remainingAmount = fromCents(amountCents - paidCents);
-    const paymentProgress = amountCents > 0
-      ? Math.min(100, Math.round((paidCents / amountCents) * 10_000) / 100)
-      : 0;
+    let paymentProgress = 0;
+    if (remainingAmount === 0) {
+      paymentProgress = 100;
+    } else if (amountCents > 0) {
+      paymentProgress = Math.min(100, Math.round((paidCents / amountCents) * 10_000) / 100);
+    }
     let dynamicStatus: DynamicFixedBill['dynamicStatus'] = 'pendente';
     let daysOverdue = 0;
 

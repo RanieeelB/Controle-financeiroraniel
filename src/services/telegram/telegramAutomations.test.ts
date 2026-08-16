@@ -161,4 +161,23 @@ describe('telegramAutomations', () => {
     }));
     expect(result.text).toContain('Conta fixa marcada como paga');
   });
+
+  it('pays only the remaining fixed-bill balance from the confirmation callback', async () => {
+    const { runner, repo } = buildRunner();
+    repo.listMonthTransactions.mockResolvedValueOnce([
+      { id: 'bill-payment-1', type: 'gasto', amount: 350, status: 'pago', notes: 'fixed_bill:bill-1', description: 'Aluguel', date: '2026-05-09', category: { name: 'Contas' } },
+    ]);
+    repo.listFixedBills.mockResolvedValueOnce([
+      { id: 'bill-1', amount: 700, due_day: 11, description: 'Aluguel', status: 'pendente', icon: 'receipt', user_id: 'user-1', category_id: null, created_at: '2026-05-01T00:00:00Z' },
+    ]);
+
+    const result = await runner.handleAutomationCallback('user-1', 'auto:payfix:bill-1:2026-05');
+
+    expect(repo.insertFixedBillPayment).toHaveBeenCalledWith(expect.objectContaining({
+      billId: 'bill-1',
+      amount: 350,
+    }));
+    expect(result.text).toContain('R$ 350,00');
+    expect(result.text).not.toContain('R$ 700,00');
+  });
 });

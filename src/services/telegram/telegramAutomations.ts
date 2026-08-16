@@ -307,18 +307,18 @@ async function handleAutomationCallback(
   if (action === 'payfix') {
     const bill = context.fixedBills.find(item => item.id === recordId);
     if (!bill) return { text: '⚠️ <b>Não encontrei essa conta fixa.</b>' };
-    if (bill.dynamicStatus === 'pago') return { text: 'ℹ️ <b>Essa conta fixa já estava marcada como paga.</b>' };
+    if (bill.remainingAmount <= 0) return { text: 'ℹ️ <b>Essa conta fixa já estava marcada como paga.</b>' };
 
     await repo.insertFixedBillPayment({
       userId,
       billId: bill.id,
       monthKey,
       description: bill.description,
-      amount: Number(bill.amount),
+      amount: bill.remainingAmount,
       categoryId: bill.category_id,
       date: todayKey,
     });
-    return { text: `✅ <b>Conta fixa marcada como paga</b>\n\n${escapeTelegramHtml(bill.description)} · ${formatCurrency(Number(bill.amount))}` };
+    return { text: `✅ <b>Conta fixa marcada como paga</b>\n\n${escapeTelegramHtml(bill.description)} · ${formatCurrency(bill.remainingAmount)}` };
   }
 
   return null;

@@ -74,6 +74,18 @@ describe('fixedBillPayments', () => {
     });
   });
 
+  it('reports a normalized zero-value bill as fully paid', () => {
+    const [result] = resolveDynamicFixedBills({
+      bills: [bill({ amount: 0 })], payments: [],
+      monthKey: '2026-05', today: new Date('2026-05-09T12:00:00.000Z'),
+    });
+
+    expect(result).toMatchObject({
+      amount: 0, paidAmount: 0, remainingAmount: 0,
+      paymentProgress: 100, dynamicStatus: 'pago',
+    });
+  });
+
   it('recalculates the balance and status after payments are deleted', () => {
     const input = {
       bills: [bill({ due_day: 5 })], monthKey: '2026-05',
@@ -134,6 +146,15 @@ describe('fixedBillPayments', () => {
     })).toBe(100);
   });
 
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])(
+    'returns zero for nonfinite maximum amount %s',
+    maximumAmount => {
+      expect(sumEligibleFixedBillPayments({
+        billId: 'bill-1', payments: [payment({ amount: 10 })], maximumAmount,
+      })).toBe(0);
+    },
+  );
+
   it('caps legacy overpayment while preserving the bill amount invariant', () => {
     const [result] = resolveDynamicFixedBills({
       bills: [bill({ amount: 100 })],
@@ -174,4 +195,24 @@ describe('fixedBillPayments', () => {
     expect(validateFixedBillPayment({ billAmount: 100, paidAmount: 70, paymentAmount: 29.999 }))
       .toEqual({ ok: true, amount: 30, remainingAfterPayment: 0 });
   });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])(
+    'rejects nonfinite bill amount %s with a finite remaining balance',
+    billAmount => {
+      const result = validateFixedBillPayment({ billAmount, paidAmount: 0, paymentAmount: 10 });
+
+      expect(result).toMatchObject({ ok: false, code: 'invalid_amount' });
+      expect(Number.isFinite(result.remainingAmount)).toBe(true);
+    },
+  );
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])(
+    'rejects nonfinite paid amount %s with a finite remaining balance',
+    paidAmount => {
+      const result = validateFixedBillPayment({ billAmount: 100, paidAmount, paymentAmount: 10 });
+
+      expect(result).toMatchObject({ ok: false, code: 'invalid_amount' });
+      expect(Number.isFinite(result.remainingAmount)).toBe(true);
+    },
+  );
 });
