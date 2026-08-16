@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import type { CreditCard, InvoiceItem, Transaction } from '../types/financial';
 import type { MonthRange } from '../lib/monthSelection';
 
+import { getCardInvoiceSummary as calculateCardInvoiceSummary } from '../lib/creditCardInvoiceSummary';
+
 export function useCreditCards(monthRange?: MonthRange) {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
@@ -76,9 +78,22 @@ export function useCreditCards(monthRange?: MonthRange) {
     return invoiceItems.filter(i => i.card_id === cardId);
   }
 
-  function getCardTotal(cardId: string) {
-    return getCardItems(cardId).reduce((s, i) => s + i.amount, 0);
+  function getCardInvoiceSummary(cardId: string) {
+    return calculateCardInvoiceSummary(invoiceItems, cardId);
   }
 
-  return { cards, invoiceItems, creditTransactions, isLoading, getCardItems, getCardTotal, refetch: fetchData };
+  function getCardTotal(cardId: string) {
+    return getCardInvoiceSummary(cardId).total;
+  }
+
+  return {
+    cards,
+    invoiceItems,
+    creditTransactions,
+    isLoading,
+    getCardItems,
+    getCardInvoiceSummary,
+    getCardTotal,
+    refetch: fetchData,
+  };
 }
