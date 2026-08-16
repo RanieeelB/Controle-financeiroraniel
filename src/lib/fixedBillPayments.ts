@@ -21,6 +21,14 @@ export function sumEligibleFixedBillPayments(input: {
   payments: FixedBillPaymentRecord[];
   maximumAmount: number;
 }) {
+  return collectEligibleFixedBillPayments(input).paidAmount;
+}
+
+function collectEligibleFixedBillPayments(input: {
+  billId: string;
+  payments: FixedBillPaymentRecord[];
+  maximumAmount: number;
+}) {
   const maximumCents = Math.max(0, toCents(input.maximumAmount));
   let paidCents = 0;
   const paymentTransactionIds: string[] = [];
@@ -52,22 +60,31 @@ export function validateFixedBillPayment(input: {
   paidAmount: number;
   paymentAmount: number;
 }) {
+  const billCents = Math.max(0, toCents(input.billAmount));
+  const paidCents = Math.max(0, Math.min(toCents(input.paidAmount), billCents));
+  const remainingCents = billCents - paidCents;
+
   if (
     typeof input.paymentAmount !== 'number'
     || !Number.isFinite(input.paymentAmount)
     || input.paymentAmount <= 0
   ) {
-    return { ok: false as const, code: 'invalid_amount' as const };
+    return {
+      ok: false as const,
+      code: 'invalid_amount' as const,
+      remainingAmount: fromCents(remainingCents),
+    };
   }
 
-  const billCents = Math.max(0, toCents(input.billAmount));
-  const paidCents = Math.max(0, Math.min(toCents(input.paidAmount), billCents));
   const paymentCents = toCents(input.paymentAmount);
   if (paymentCents <= 0) {
-    return { ok: false as const, code: 'invalid_amount' as const };
+    return {
+      ok: false as const,
+      code: 'invalid_amount' as const,
+      remainingAmount: fromCents(remainingCents),
+    };
   }
 
-  const remainingCents = billCents - paidCents;
   if (paymentCents > remainingCents) {
     return {
       ok: false as const,
@@ -99,7 +116,7 @@ export function resolveDynamicFixedBills(input: {
   return bills.map((bill): DynamicFixedBill => {
     const amountCents = Math.max(0, toCents(Number(bill.amount)));
     const amount = fromCents(amountCents);
-    const { paidAmount, paymentTransactionIds } = sumEligibleFixedBillPayments({
+    const { paidAmount, paymentTransactionIds } = collectEligibleFixedBillPayments({
       billId: bill.id,
       payments,
       maximumAmount: amount,

@@ -117,7 +117,21 @@ describe('fixedBillPayments', () => {
     ];
 
     expect(sumEligibleFixedBillPayments({ billId: 'bill-1', payments: invalidPayments, maximumAmount: 120 }))
-      .toEqual({ paidAmount: 0, paymentTransactionIds: [] });
+      .toBe(0);
+
+    const [result] = resolveDynamicFixedBills({
+      bills: [bill()], payments: invalidPayments,
+      monthKey: '2026-05', today: new Date('2026-05-09T12:00:00.000Z'),
+    });
+    expect(result.paymentTransactionIds).toEqual([]);
+  });
+
+  it('returns the capped paid amount from the public sum helper', () => {
+    expect(sumEligibleFixedBillPayments({
+      billId: 'bill-1',
+      payments: [payment({ id: 'tx-1', amount: 70 }), payment({ id: 'tx-2', amount: 50 })],
+      maximumAmount: 100,
+    })).toBe(100);
   });
 
   it('caps legacy overpayment while preserving the bill amount invariant', () => {
@@ -147,7 +161,7 @@ describe('fixedBillPayments', () => {
     'rejects invalid payment amount %s',
     paymentAmount => {
       expect(validateFixedBillPayment({ billAmount: 100, paidAmount: 20, paymentAmount }))
-        .toEqual({ ok: false, code: 'invalid_amount' });
+        .toEqual({ ok: false, code: 'invalid_amount', remainingAmount: 80 });
     },
   );
 

@@ -109,6 +109,22 @@ describe('telegramAutomations', () => {
     }));
   });
 
+  it('keeps the original fixed-bill value in morning reminders after a partial payment', async () => {
+    const { runner, sendMessage, repo } = buildRunner(new Date('2026-05-10T11:00:00.000Z'));
+    repo.listMonthTransactions.mockResolvedValueOnce([
+      { id: 'bill-payment-1', type: 'gasto', amount: 350, status: 'pago', notes: 'fixed_bill:bill-1', description: 'Aluguel', date: '2026-05-10', category: { name: 'Contas' } },
+    ]);
+    repo.listFixedBills.mockResolvedValueOnce([
+      { id: 'bill-1', amount: 700, due_day: 11, description: 'Aluguel', status: 'pendente', icon: 'receipt', user_id: 'user-1', category_id: null, created_at: '2026-05-01T00:00:00Z' },
+    ]);
+
+    await runner.runDueAutomations();
+
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringMatching(/Agenda da manhã[\s\S]*Aluguel · R\$ 700,00/),
+    }));
+  });
+
   it('sends a low balance alert when the projected month balance is negative', async () => {
     const { runner, sendMessage, repo } = buildRunner();
     repo.listMonthTransactions.mockResolvedValueOnce([
