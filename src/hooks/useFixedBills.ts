@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { useCallback, useEffect, useState } from 'react';
+import { getFinancialDataVersion, subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { createFinancialRefreshCoordinator } from '../lib/financialRefreshCoordinator';
 import {
   resolveDynamicFixedBills,
   summarizeFixedBills,
@@ -12,18 +13,16 @@ import { resolveMonthRange, type MonthRange } from '../lib/monthSelection';
 export function useFixedBills(monthRange?: MonthRange) {
   const [bills, setBills] = useState<DynamicFixedBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const hasLoadedRef = useRef(false);
-  const inFlightRef = useRef<Promise<void> | null>(null);
+  const [refreshCoordinator] = useState(() => createFinancialRefreshCoordinator<DynamicFixedBill[]>());
+  const effectiveMonthRange = resolveMonthRange(monthRange);
+  const queryKey = `${effectiveMonthRange.startDate}:${effectiveMonthRange.endDate}`;
 
-  const fetchBills = useCallback(() => {
-    if (inFlightRef.current) return inFlightRef.current;
-
-    const request = (async () => {
-      if (!hasLoadedRef.current) setIsLoading(true);
-      try {
+  const fetchBills = useCallback((version = getFinancialDataVersion()) => refreshCoordinator.refresh({
+    key: queryKey,
+    version,
+    onLoadingChange: setIsLoading,
+    load: async () => {
         const today = new Date();
-        const effectiveMonthRange = resolveMonthRange(monthRange, today);
-
         // 1. Fetch all fixed bills
         const { data: billsData, error: billsError } = await supabase
           .from('fixed_bills')
@@ -44,30 +43,16 @@ export function useFixedBills(monthRange?: MonthRange) {
         const { data: txData, error: txError } = await txQuery;
         if (txError) throw txError;
 
-        if (billsData) {
-          const dynamicBills = resolveDynamicFixedBills({
-            bills: billsData as FixedBill[],
-            payments: (txData ?? []) as FixedBillPaymentRecord[],
-            monthKey: effectiveMonthRange.monthKey,
-            today,
-          }) as DynamicFixedBill[];
-        
-          setBills(dynamicBills);
-        }
-      } catch (error) {
-        console.error('Error fetching fixed bills:', error);
-      } finally {
-        hasLoadedRef.current = true;
-        setIsLoading(false);
-      }
-    })();
-
-    inFlightRef.current = request;
-    void request.finally(() => {
-      if (inFlightRef.current === request) inFlightRef.current = null;
-    });
-    return request;
-  }, [monthRange]);
+        return resolveDynamicFixedBills({
+          bills: (billsData ?? []) as FixedBill[],
+          payments: (txData ?? []) as FixedBillPaymentRecord[],
+          monthKey: effectiveMonthRange.monthKey,
+          today,
+        }) as DynamicFixedBill[];
+    },
+    apply: setBills,
+    onError: error => console.error('Error fetching fixed bills:', error),
+  }), [effectiveMonthRange.endDate, effectiveMonthRange.monthKey, effectiveMonthRange.startDate, queryKey, refreshCoordinator]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -77,8 +62,8 @@ export function useFixedBills(monthRange?: MonthRange) {
     return () => window.clearTimeout(timeout);
   }, [fetchBills]);
 
-  useEffect(() => subscribeFinancialDataChanged(() => {
-    void fetchBills();
+  useEffect(() => subscribeFinancialDataChanged(version => {
+    void fetchBills(version);
   }), [fetchBills]);
 
   const totals = summarizeFixedBills(bills);
@@ -97,5 +82,11 @@ export function useFixedBills(monthRange?: MonthRange) {
       percentage: totals.total > 0 ? Math.round((amount / totals.total) * 100) : 0,
     }));
 
-  return { bills, isLoading, totals, categoryBreakdown, refetch: fetchBills };
+  return {
+    bills,
+    isLoading: isLoading || !refreshCoordinator.isCurrentKey(queryKey),
+    totals,
+    categoryBreakdown,
+    refetch: fetchBills,
+  };
 }

@@ -151,9 +151,9 @@ describe('layout width classes', () => {
     expect(upcomingBills).toContain('data.find');
 
     for (const contents of [fixedBillsData, dashboardData]) {
-      expect(contents).toContain('useRef<Promise<void> | null>');
-      expect(contents).toContain('if (inFlightRef.current) return inFlightRef.current');
-      expect(contents).toContain('if (!hasLoadedRef.current)');
+      expect(contents).toContain('createFinancialRefreshCoordinator');
+      expect(contents).toContain('getFinancialDataVersion');
+      expect(contents).toContain('refreshCoordinator.isCurrentKey(queryKey)');
     }
 
     expect(dashboardData).toContain('refetch: fetchData');

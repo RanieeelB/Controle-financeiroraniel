@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { useCallback, useEffect, useState } from 'react';
+import { getFinancialDataVersion, subscribeFinancialDataChanged } from '../lib/financialEvents';
+import { createFinancialRefreshCoordinator } from '../lib/financialRefreshCoordinator';
 import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
 import { buildDashboardFixedBillSummary } from '../lib/dashboardFixedBillSummary';
 import { buildBalanceEvolution } from '../lib/balanceEvolution';
@@ -47,18 +48,18 @@ export function useDashboardData(monthRange?: MonthRange) {
   const [categoryExpense, setCategoryExpense] = useState<CategoryExpenseData[]>([]);
   const [monthlyAnalysis, setMonthlyAnalysis] = useState<MonthlyAnalysis>(defaultAnalysis);
   const [isLoading, setIsLoading] = useState(true);
-  const hasLoadedRef = useRef(false);
-  const inFlightRef = useRef<Promise<void> | null>(null);
+  const [refreshCoordinator] = useState(() => createFinancialRefreshCoordinator<() => void>());
 
   const startDate = monthRange?.startDate;
   const endDate = monthRange?.endDate;
+  const monthKey = monthRange?.monthKey;
+  const queryKey = `${startDate ?? '*'}:${endDate ?? '*'}:${monthKey ?? '*'}`;
 
-  const fetchData = useCallback(() => {
-    if (inFlightRef.current) return inFlightRef.current;
-
-    const request = (async () => {
-      if (!hasLoadedRef.current) setIsLoading(true);
-      try {
+  const fetchData = useCallback((version = getFinancialDataVersion()) => refreshCoordinator.refresh({
+    key: queryKey,
+    version,
+    onLoadingChange: setIsLoading,
+    load: async () => {
       let txQuery = supabase.from('transactions').select('*, category:categories(*)').order('date', { ascending: false });
       if (startDate) txQuery = txQuery.gte('date', startDate);
       if (endDate) txQuery = txQuery.lt('date', endDate);
@@ -93,7 +94,7 @@ export function useDashboardData(monthRange?: MonthRange) {
       const mappedBills = resolveDynamicFixedBills({
         bills: (billsResult.data ?? []) as DynamicFixedBill[],
         payments: mappedTransactions,
-        monthKey: monthRange?.monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
+        monthKey: monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`,
         today,
       }) as DynamicFixedBill[];
 
@@ -139,34 +140,31 @@ export function useDashboardData(monthRange?: MonthRange) {
         .reduce((sum, item) => sum + Number(item.amount), 0);
       const savedAmount = mappedGoals.reduce((sum, goal) => sum + goal.current_amount, 0);
 
-      setTransactions(mappedTransactions);
-      setFixedBills(mappedBills);
-      setCreditCards(mappedCards);
-      setFinancialGoals(mappedGoals);
-      setSummaryCards(calculateSummaryCards({
+      const nextSummaryCards = calculateSummaryCards({
         transactions: mappedTransactions,
         savedAmount,
         openInvoices,
         fixedBillsTotal,
         unpaidFixedBills,
-      }));
-      setBalanceEvolution(buildBalanceEvolution(mappedTransactions, today));
-      setCategoryExpense(buildCategoryExpense(mappedTransactions));
-      setMonthlyAnalysis(buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length));
-      } catch (error) {
-        console.error('Error fetching Supabase data:', error);
-      } finally {
-        hasLoadedRef.current = true;
-        setIsLoading(false);
-      }
-    })();
+      });
+      const nextBalanceEvolution = buildBalanceEvolution(mappedTransactions, today);
+      const nextCategoryExpense = buildCategoryExpense(mappedTransactions);
+      const nextMonthlyAnalysis = buildMonthlyAnalysis(totalIncome, totalExpense, mappedTransactions.length);
 
-    inFlightRef.current = request;
-    void request.finally(() => {
-      if (inFlightRef.current === request) inFlightRef.current = null;
-    });
-    return request;
-  }, [startDate, endDate, monthRange]);
+      return () => {
+        setTransactions(mappedTransactions);
+        setFixedBills(mappedBills);
+        setCreditCards(mappedCards);
+        setFinancialGoals(mappedGoals);
+        setSummaryCards(nextSummaryCards);
+        setBalanceEvolution(nextBalanceEvolution);
+        setCategoryExpense(nextCategoryExpense);
+        setMonthlyAnalysis(nextMonthlyAnalysis);
+      };
+    },
+    apply: applyData => applyData(),
+    onError: error => console.error('Error fetching Supabase data:', error),
+  }), [endDate, monthKey, queryKey, refreshCoordinator, startDate]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -176,8 +174,8 @@ export function useDashboardData(monthRange?: MonthRange) {
     return () => window.clearTimeout(timeout);
   }, [fetchData]);
 
-  useEffect(() => subscribeFinancialDataChanged(() => {
-    void fetchData();
+  useEffect(() => subscribeFinancialDataChanged(version => {
+    void fetchData(version);
   }), [fetchData]);
 
   return {
@@ -189,7 +187,7 @@ export function useDashboardData(monthRange?: MonthRange) {
     balanceEvolution,
     categoryExpense,
     monthlyAnalysis,
-    isLoading,
+    isLoading: isLoading || !refreshCoordinator.isCurrentKey(queryKey),
     refetch: fetchData,
   };
 }
