@@ -80,15 +80,17 @@ export function RecordActionsMenu({
           ref={menuRef}
           className="absolute right-0 top-full mt-1 z-50 w-[11rem] overflow-hidden rounded-lg border border-outline-variant bg-surface-container-high shadow-xl"
         >
-          <button
-            className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-primary hover:bg-primary/10 disabled:opacity-60"
-            disabled={isDeleting}
-            onClick={handlePrimaryAction}
-            type="button"
-          >
-            <Pencil size={16} />
-            {primaryActionLabel || 'Editar'}
-          </button>
+          {onPrimaryAction && (
+            <button
+              className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-primary hover:bg-primary/10 disabled:opacity-60"
+              disabled={isDeleting}
+              onClick={handlePrimaryAction}
+              type="button"
+            >
+              <Pencil size={16} />
+              {primaryActionLabel || 'Editar'}
+            </button>
+          )}
           <button
             className="flex w-full items-center gap-sm px-md py-sm text-left text-[14px] text-error hover:bg-error/10 disabled:opacity-60"
             disabled={isDeleting}
