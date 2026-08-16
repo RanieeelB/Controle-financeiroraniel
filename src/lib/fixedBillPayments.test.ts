@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { FixedBill } from '../types/financial';
+import type { DynamicFixedBill, FixedBill } from '../types/financial';
 import {
   getFixedBillIdFromNote,
   resolveDynamicFixedBills,
+  summarizeFixedBills,
   sumEligibleFixedBillPayments,
   validateFixedBillPayment,
   type FixedBillPaymentRecord,
@@ -31,6 +32,37 @@ const payment = (overrides: Partial<FixedBillPaymentRecord> = {}): FixedBillPaym
 });
 
 describe('fixedBillPayments', () => {
+  it('summarizes partial and fully paid bills in cents', () => {
+    const bills = [
+      {
+        ...bill({ id: 'partial-bill', amount: 700 }),
+        dynamicStatus: 'pendente',
+        daysOverdue: 0,
+        paidAmount: 350,
+        remainingAmount: 350,
+        paymentProgress: 50,
+        paymentTransactionIds: ['partial-payment'],
+      },
+      {
+        ...bill({ id: 'paid-bill', amount: 200 }),
+        dynamicStatus: 'pago',
+        daysOverdue: 0,
+        paidAmount: 200,
+        remainingAmount: 0,
+        paymentProgress: 100,
+        paymentTransactionIds: ['full-payment'],
+      },
+    ] satisfies DynamicFixedBill[];
+
+    expect(summarizeFixedBills(bills)).toEqual({
+      total: 900,
+      paid: 550,
+      paidCount: 1,
+      pending: 350,
+      count: 2,
+    });
+  });
+
   it('extracts a bill id only from an exact fixed-bill note', () => {
     expect(getFixedBillIdFromNote('fixed_bill:bill-1')).toBe('bill-1');
     expect(getFixedBillIdFromNote('fixed_bill:')).toBeNull();

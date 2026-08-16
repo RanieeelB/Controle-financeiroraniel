@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
 import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
+import { buildDashboardFixedBillSummary } from '../lib/dashboardFixedBillSummary';
 import { buildBalanceEvolution } from '../lib/balanceEvolution';
 import { calculateSummaryCards } from '../lib/financialPlanning';
 import { filterLegacyCarryoverTransactions } from '../lib/legacyCarryover';
@@ -108,10 +109,7 @@ export function useDashboardData(monthRange?: MonthRange) {
       const totalExpense = mappedTransactions
         .filter(transaction => transaction.type === 'gasto')
         .reduce((sum, transaction) => sum + transaction.amount, 0);
-      const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + bill.amount, 0);
-      const unpaidFixedBills = mappedBills
-        .filter(bill => bill.dynamicStatus !== 'pago')
-        .reduce((sum, bill) => sum + bill.amount, 0);
+      const { fixedBillsTotal, unpaidFixedBills } = buildDashboardFixedBillSummary(mappedBills);
       const openInvoices = (invoiceResult.data as Array<{ id: string; amount: number; description: string; date: string }> ?? [])
         .filter((item) => {
           const linkedTx = mappedTransactions.find(t => t.notes === `invoice_item:${item.id}`);

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeFinancialDataChanged } from '../lib/financialEvents';
-import { resolveDynamicFixedBills } from '../lib/fixedBillPayments';
+import {
+  resolveDynamicFixedBills,
+  summarizeFixedBills,
+  type FixedBillPaymentRecord,
+} from '../lib/fixedBillPayments';
 import { supabase } from '../lib/supabase';
 import type { FixedBill, DynamicFixedBill } from '../types/financial';
 import type { MonthRange } from '../lib/monthSelection';
@@ -23,7 +27,7 @@ export function useFixedBills(monthRange?: MonthRange) {
       // 2. Fetch transactions for the current month that are fixed bill payments
       let txQuery = supabase
         .from('transactions')
-        .select('id, notes, status')
+        .select('id, notes, status, type, amount')
         .not('notes', 'is', null)
         .like('notes', 'fixed_bill:%');
         
@@ -42,7 +46,7 @@ export function useFixedBills(monthRange?: MonthRange) {
         const monthKey = monthRange?.monthKey ?? `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
         const dynamicBills = resolveDynamicFixedBills({
           bills: billsData as FixedBill[],
-          payments: (txData ?? []) as Array<{ id: string; notes: string | null; status: 'pago' | 'pendente' | 'recebido' }>,
+          payments: (txData ?? []) as FixedBillPaymentRecord[],
           monthKey,
           today,
         }) as DynamicFixedBill[];
@@ -68,13 +72,7 @@ export function useFixedBills(monthRange?: MonthRange) {
     void fetchBills();
   }), [fetchBills]);
 
-  const totals = {
-    total: bills.reduce((s, b) => s + b.amount, 0),
-    paid: bills.filter(b => b.dynamicStatus === 'pago').reduce((s, b) => s + b.amount, 0),
-    paidCount: bills.filter(b => b.dynamicStatus === 'pago').length,
-    pending: bills.filter(b => b.dynamicStatus === 'pendente' || b.dynamicStatus === 'atrasado').reduce((s, b) => s + b.amount, 0),
-    count: bills.length,
-  };
+  const totals = summarizeFixedBills(bills);
 
   // Group by category
   const categoryMap = new Map<string, number>();

@@ -22,6 +22,28 @@ export function getFixedBillIdFromNote(note?: string | null) {
   return note?.match(FIXED_BILL_NOTE_PATTERN)?.[1] ?? null;
 }
 
+export function summarizeFixedBills(bills: DynamicFixedBill[]) {
+  let totalCents = 0;
+  let paidCents = 0;
+  let pendingCents = 0;
+  let paidCount = 0;
+
+  for (const bill of bills) {
+    totalCents += toNonNegativeCents(bill.amount);
+    paidCents += toNonNegativeCents(bill.paidAmount);
+    pendingCents += toNonNegativeCents(bill.remainingAmount);
+    if (bill.remainingAmount === 0) paidCount += 1;
+  }
+
+  return {
+    total: fromCents(totalCents),
+    paid: fromCents(paidCents),
+    paidCount,
+    pending: fromCents(pendingCents),
+    count: bills.length,
+  };
+}
+
 export function sumEligibleFixedBillPayments(input: {
   billId: string;
   payments: FixedBillPaymentRecord[];

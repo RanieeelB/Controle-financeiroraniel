@@ -60,6 +60,31 @@ describe('salary planning helpers', () => {
     });
   });
 
+  it('projects a partial fixed bill payment plus its remaining balance only once', () => {
+    expect(calculateSummaryCards({
+      transactions: [
+        {
+          type: 'gasto',
+          amount: 350,
+          status: 'pago',
+          notes: 'fixed_bill:bill-1',
+        },
+      ],
+      savedAmount: 0,
+      openInvoices: 0,
+      fixedBillsTotal: 700,
+      unpaidFixedBills: 350,
+    })).toEqual({
+      currentBalance: -350,
+      projectedBalance: -700,
+      totalIncome: 0,
+      totalExpense: 350,
+      savedAmount: 0,
+      openInvoices: 0,
+      fixedBillsTotal: 700,
+    });
+  });
+
   it('ignores legacy carryover entries in the dashboard summary', () => {
     expect(calculateSummaryCards({
       transactions: [
