@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DynamicFixedBill } from '../../types/financial';
 
@@ -39,7 +40,7 @@ function renderModal(overrides: Partial<{
   const onClose = overrides.onClose ?? vi.fn();
   const onRefresh = overrides.onRefresh ?? vi.fn();
 
-  render(
+  const view = render(
     <FixedBillPaymentModal
       bill={bill}
       selectedMonthKey="2026-08"
@@ -48,7 +49,7 @@ function renderModal(overrides: Partial<{
     />,
   );
 
-  return { onClose, onRefresh };
+  return { onClose, onRefresh, ...view };
 }
 
 function submitValue(value: string) {
@@ -89,6 +90,141 @@ describe('FixedBillPaymentModal', () => {
 
     expect(screen.getByRole('alert').textContent).toBe('Informe um valor maior que zero.');
     expect(mocks.createFixedBillPayment).not.toHaveBeenCalled();
+  });
+
+  it('focuses the amount input when opened', () => {
+    renderModal();
+
+    expect(document.activeElement).toBe(screen.getByLabelText('Valor do abatimento'));
+  });
+
+  it('wraps focus forward and backward inside the dialog', () => {
+    renderModal();
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar abatimento' });
+    const close = screen.getByRole('button', { name: 'Fechar modal' });
+    const submit = screen.getByRole('button', { name: 'Salvar abatimento' });
+
+    submit.focus();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(document.activeElement).toBe(close);
+
+    close.focus();
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(submit);
+  });
+
+  it('closes on Escape and restores focus to the opener', async () => {
+    const onClose = vi.fn();
+
+    function Harness() {
+      const [isOpen, setIsOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setIsOpen(true)}>Abrir abatimento</button>
+          {isOpen && (
+            <FixedBillPaymentModal
+              bill={bill}
+              selectedMonthKey="2026-08"
+              onClose={() => {
+                onClose();
+                setIsOpen(false);
+              }}
+              onRefresh={vi.fn()}
+            />
+          )}
+        </>
+      );
+    }
+
+    render(<Harness />);
+    const opener = screen.getByRole('button', { name: 'Abrir abatimento' });
+    opener.focus();
+    fireEvent.click(opener);
+
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar abatimento' });
+    expect(document.activeElement).toBe(screen.getByLabelText('Valor do abatimento'));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it('ignores Escape while a save is pending', async () => {
+    let resolveAction!: (result: { status: 'created' }) => void;
+    mocks.createFixedBillPayment.mockReturnValue(new Promise(resolve => {
+      resolveAction = resolve;
+    }));
+    const { onClose } = renderModal();
+    const dialog = screen.getByRole('dialog', { name: 'Adicionar abatimento' });
+
+    submitValue('100');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Adicionar abatimento' })).toBeTruthy();
+
+    resolveAction({ status: 'created' });
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it('makes current and later body siblings inert and restores exact prior attributes', async () => {
+    const background = document.createElement('main');
+    const preHiddenBackground = document.createElement('aside');
+    const laterBackground = document.createElement('div');
+    background.setAttribute('aria-hidden', 'false');
+    preHiddenBackground.setAttribute('aria-hidden', 'true');
+    preHiddenBackground.setAttribute('inert', 'inert');
+    document.body.append(background, preHiddenBackground);
+
+    try {
+      const { unmount } = renderModal();
+      document.body.append(laterBackground);
+
+      expect(background.getAttribute('aria-hidden')).toBe('true');
+      expect(background.hasAttribute('inert')).toBe(true);
+      expect(preHiddenBackground.getAttribute('aria-hidden')).toBe('true');
+      expect(preHiddenBackground.hasAttribute('inert')).toBe(true);
+      await waitFor(() => {
+        expect(laterBackground.getAttribute('aria-hidden')).toBe('true');
+        expect(laterBackground.hasAttribute('inert')).toBe(true);
+      });
+
+      unmount();
+
+      expect(background.getAttribute('aria-hidden')).toBe('false');
+      expect(background.hasAttribute('inert')).toBe(false);
+      expect(preHiddenBackground.getAttribute('aria-hidden')).toBe('true');
+      expect(preHiddenBackground.getAttribute('inert')).toBe('inert');
+      expect(laterBackground.getAttribute('aria-hidden')).toBeNull();
+      expect(laterBackground.hasAttribute('inert')).toBe(false);
+    } finally {
+      background.remove();
+      preHiddenBackground.remove();
+      laterBackground.remove();
+    }
+  });
+
+  it('associates validation errors with the generated input id and clears them on edit', () => {
+    renderModal();
+    const input = screen.getByLabelText('Valor do abatimento');
+
+    expect(input.id).not.toBe('fixed-bill-payment-value');
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+    expect(input.getAttribute('aria-describedby')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar abatimento' }));
+    const alert = screen.getByRole('alert');
+
+    expect(alert.id).not.toBe('');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe(alert.id);
+
+    fireEvent.change(input, { target: { value: '10' } });
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(input.getAttribute('aria-invalid')).toBe('false');
+    expect(input.getAttribute('aria-describedby')).toBeNull();
   });
 
   it('keeps stale input, applies the fresh remainder, and isolates a rejecting refresh', async () => {
@@ -142,6 +278,49 @@ describe('FixedBillPaymentModal', () => {
     expect(screen.getByRole('dialog', { name: 'Adicionar abatimento' })).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
     expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  it('unlocks after a persistence failure so a retry can succeed', async () => {
+    mocks.createFixedBillPayment
+      .mockRejectedValueOnce(new Error('insert failed'))
+      .mockResolvedValueOnce({ status: 'created' });
+    const { onClose, onRefresh } = renderModal();
+
+    submitValue('100');
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(
+      'Não foi possível salvar o abatimento. Tente novamente.',
+    ));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar abatimento' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(mocks.createFixedBillPayment).toHaveBeenCalledTimes(2);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers keyboard containment when focus leaves after a failed save', async () => {
+    mocks.createFixedBillPayment.mockRejectedValue(new Error('insert failed'));
+    const { onClose } = renderModal();
+    const previousTabIndex = document.body.getAttribute('tabindex');
+
+    submitValue('100');
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+
+    try {
+      document.body.tabIndex = -1;
+      document.body.focus();
+      fireEvent.keyDown(document, { key: 'Tab' });
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Fechar modal' }));
+
+      document.body.focus();
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    } finally {
+      if (previousTabIndex === null) {
+        document.body.removeAttribute('tabindex');
+      } else {
+        document.body.setAttribute('tabindex', previousTabIndex);
+      }
+    }
   });
 
   it('closes once and isolates a rejecting refresh after creation', async () => {
@@ -224,5 +403,22 @@ describe('FixedBillPaymentModal', () => {
       );
     });
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('unlocks after a rejected result so a retry can succeed', async () => {
+    mocks.createFixedBillPayment
+      .mockResolvedValueOnce({ status: 'rejected', code: 'invalid_month' })
+      .mockResolvedValueOnce({ status: 'created' });
+    const { onClose, onRefresh } = renderModal();
+
+    submitValue('100');
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(
+      'Selecione o mês atual para adicionar um abatimento.',
+    ));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar abatimento' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(mocks.createFixedBillPayment).toHaveBeenCalledTimes(2);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });

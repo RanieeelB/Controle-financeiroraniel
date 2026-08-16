@@ -1,4 +1,12 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type RefObject,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle, X } from 'lucide-react';
 import { useLockBodyScroll } from '../../hooks/useLockBodyScroll';
@@ -19,6 +27,79 @@ interface FixedBillPaymentModalProps {
   onRefresh: () => Promise<unknown> | unknown;
 }
 
+const focusableSelector = [
+  'button:not([disabled])',
+  'a[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+function useModalAccessibility(
+  overlayRef: RefObject<HTMLDivElement | null>,
+  initialFocusRef: RefObject<HTMLInputElement | null>,
+) {
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const backgroundStates = new Map<HTMLElement, {
+      ariaHidden: string | null;
+      inertAttribute: string | null;
+      inertProperty: boolean;
+    }>();
+
+    function isolateBackground(element: HTMLElement) {
+      if (element === overlay || backgroundStates.has(element)) return;
+      backgroundStates.set(element, {
+        ariaHidden: element.getAttribute('aria-hidden'),
+        inertAttribute: element.getAttribute('inert'),
+        inertProperty: element.inert,
+      });
+      element.inert = true;
+      element.setAttribute('inert', '');
+      element.setAttribute('aria-hidden', 'true');
+    }
+
+    Array.from(document.body.children).forEach(element => {
+      isolateBackground(element as HTMLElement);
+    });
+    const backgroundObserver = new MutationObserver(records => {
+      records.forEach(record => {
+        record.addedNodes.forEach(node => {
+          if (node instanceof HTMLElement) isolateBackground(node);
+        });
+      });
+    });
+    backgroundObserver.observe(document.body, { childList: true });
+
+    initialFocusRef.current?.focus();
+
+    return () => {
+      backgroundObserver.disconnect();
+      backgroundStates.forEach((state, element) => {
+        element.inert = state.inertProperty;
+        if (state.inertAttribute === null) {
+          element.removeAttribute('inert');
+        } else {
+          element.setAttribute('inert', state.inertAttribute);
+        }
+
+        if (state.ariaHidden === null) {
+          element.removeAttribute('aria-hidden');
+        } else {
+          element.setAttribute('aria-hidden', state.ariaHidden);
+        }
+      });
+      previousFocus?.focus();
+    };
+  }, [initialFocusRef, overlayRef]);
+}
+
 export function FixedBillPaymentModal({
   bill,
   selectedMonthKey,
@@ -27,6 +108,11 @@ export function FixedBillPaymentModal({
 }: FixedBillPaymentModalProps) {
   useLockBodyScroll();
   const titleId = useId();
+  const inputId = useId();
+  const errorId = useId();
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const savingRef = useRef(false);
   const closedRef = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -35,6 +121,7 @@ export function FixedBillPaymentModal({
     remainingAmount: bill.remainingAmount,
     error: null,
   });
+  useModalAccessibility(overlayRef, inputRef);
 
   function startBackgroundRefresh() {
     void Promise.resolve()
@@ -42,16 +129,52 @@ export function FixedBillPaymentModal({
       .catch(error => console.error('Error refreshing fixed bills:', error));
   }
 
-  function closeOnce() {
+  const closeOnce = useCallback(() => {
     if (closedRef.current) return;
     closedRef.current = true;
     onClose();
-  }
+  }, [onClose]);
 
   function handleClose() {
     if (savingRef.current) return;
     closeOnce();
   }
+
+  const handleDialogKeyDown = useCallback((event: globalThis.KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (!savingRef.current) closeOnce();
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+    if (focusableElements.length === 0) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusableElements[0];
+    const last = focusableElements[focusableElements.length - 1];
+    const activeElement = document.activeElement;
+    const focusIsInside = activeElement instanceof Node && dialog.contains(activeElement);
+
+    if (event.shiftKey && (activeElement === first || !focusIsInside)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (activeElement === last || !focusIsInside)) {
+      event.preventDefault();
+      first.focus();
+    }
+  }, [closeOnce]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleDialogKeyDown);
+    return () => document.removeEventListener('keydown', handleDialogKeyDown);
+  }, [handleDialogKeyDown]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,8 +219,12 @@ export function FixedBillPaymentModal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[999] isolate flex items-stretch sm:items-center justify-center bg-background/85 backdrop-blur-md p-0 sm:p-md overflow-hidden">
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-[999] isolate flex items-stretch sm:items-center justify-center bg-background/85 backdrop-blur-md p-0 sm:p-md overflow-hidden"
+    >
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -143,18 +270,21 @@ export function FixedBillPaymentModal({
 
             <div>
               <label
-                htmlFor="fixed-bill-payment-value"
+                htmlFor={inputId}
                 className="block font-label-md text-[13px] font-semibold text-on-surface-variant mb-xs uppercase tracking-wider"
               >
                 Valor do abatimento
               </label>
               <input
-                id="fixed-bill-payment-value"
+                ref={inputRef}
+                id={inputId}
                 type="text"
                 inputMode="decimal"
                 autoComplete="off"
                 value={formState.value}
                 disabled={isSaving}
+                aria-invalid={Boolean(formState.error)}
+                aria-describedby={formState.error ? errorId : undefined}
                 onChange={event => setFormState(current => ({
                   ...current,
                   value: event.target.value,
@@ -167,6 +297,7 @@ export function FixedBillPaymentModal({
 
             {formState.error && (
               <div
+                id={errorId}
                 role="alert"
                 className="rounded-lg border border-error/40 bg-error-container/20 px-md py-sm text-on-error-container text-[14px]"
               >
