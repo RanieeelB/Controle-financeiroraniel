@@ -148,6 +148,24 @@ describe('telegramActions', () => {
     expect(response).toContain('<b>Total:</b> R$ 270,00');
   });
 
+  it('shows only the remaining amount for a partially paid fixed bill', async () => {
+    const { repo, actions } = buildActions();
+    repo.listFixedBills.mockResolvedValueOnce([
+      { id: 'bill-1', amount: 700, due_day: 15, description: 'Aluguel', status: 'pendente', icon: 'receipt', user_id: 'user-1', category_id: null, created_at: '2026-05-01T00:00:00Z' },
+    ]);
+    repo.listMonthTransactions.mockResolvedValueOnce([
+      { id: 'bill-payment-1', type: 'gasto', amount: 350, status: 'pago', notes: 'fixed_bill:bill-1', description: 'Aluguel', date: '2026-05-10' },
+    ]);
+
+    const response = await actions.handleParsedMessageForUser('user-1', {
+      intent: 'list_fixed_bills',
+      data: { description: 'Contas fixas', date: '2026-05-10' },
+    });
+
+    expect(response).toContain('<b>Em aberto:</b> R$ 350,00');
+    expect(response).not.toContain('<b>Em aberto:</b> R$ 700,00');
+  });
+
   it('returns a specific card invoice by card name', async () => {
     const { actions } = buildActions();
 

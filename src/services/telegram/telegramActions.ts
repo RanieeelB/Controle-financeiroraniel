@@ -700,6 +700,8 @@ async function getMonthlyContext(userId: string, options: CreateTelegramActionsO
     bills: fixedBills,
     payments: normalizedTransactions.map(transaction => ({
       id: transaction.id,
+      type: transaction.type,
+      amount: transaction.amount,
       notes: transaction.notes,
       status: transaction.status,
     })),
@@ -708,9 +710,7 @@ async function getMonthlyContext(userId: string, options: CreateTelegramActionsO
   });
 
   const fixedBillsTotal = mappedBills.reduce((sum, bill) => sum + Number(bill.amount), 0);
-  const unpaidFixedBills = mappedBills
-    .filter(bill => bill.dynamicStatus !== 'pago')
-    .reduce((sum, bill) => sum + Number(bill.amount), 0);
+  const unpaidFixedBills = mappedBills.reduce((sum, bill) => sum + bill.remainingAmount, 0);
   const openInvoiceItems = getOpenInvoiceItems(invoiceItems, normalizedTransactions);
   const openInvoicesTotal = openInvoiceItems.reduce((sum, item) => sum + Number(item.amount), 0);
 

@@ -55,6 +55,25 @@ describe('telegramAutomations', () => {
     }));
   });
 
+  it('subtracts only the remaining fixed-bill balance in the 18h projection', async () => {
+    const { runner, sendMessage, repo } = buildRunner();
+    repo.listMonthTransactions.mockResolvedValueOnce([
+      { id: 'income-1', type: 'entrada', amount: 6500, status: 'recebido', notes: null, description: 'Salário', date: '2026-05-05', category: { name: 'Salário' } },
+      { id: 'expense-1', type: 'gasto', amount: 200, status: 'pago', notes: null, description: 'Mercado', date: '2026-05-10', category: { name: 'Mercado' } },
+      { id: 'invoice-tx-1', type: 'gasto', amount: 300, status: 'pendente', notes: 'invoice_item:invoice-1', description: 'Cartão', date: '2026-05-08', payment_method: 'credito', category: { name: 'Outros' } },
+      { id: 'bill-payment-1', type: 'gasto', amount: 350, status: 'pago', notes: 'fixed_bill:bill-1', description: 'Aluguel', date: '2026-05-10', category: { name: 'Contas' } },
+    ]);
+    repo.listFixedBills.mockResolvedValueOnce([
+      { id: 'bill-1', amount: 700, due_day: 11, description: 'Aluguel', status: 'pendente', icon: 'receipt', user_id: 'user-1', category_id: null, created_at: '2026-05-01T00:00:00Z' },
+    ]);
+
+    await runner.runDueAutomations();
+
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Sobra projetada do mês: R$ 5.300,00'),
+    }));
+  });
+
   it('skips the 18h daily summary when there was no movement today', async () => {
     const { runner, sendMessage, repo } = buildRunner();
     repo.listMonthTransactions.mockResolvedValueOnce([
